@@ -26,8 +26,8 @@ export function DuelPet({
   const m = mood ?? storeMood
 
   // mood → intensity (v5 §17.2): calm = standoff only, sad = desaturated + rain
+  // (happy/focused/full moods get the complete loop incl. the dragon flyby)
   const calm = m === 'idle' || m === 'tired'
-  const epic = m === 'happy' // energized/happy → dragon every cycle
   const sad = m === 'worried'
 
   const stageClass = `duel-stage ${calm ? 'duel-calm' : ''} ${sad ? 'duel-sad' : ''} ${
