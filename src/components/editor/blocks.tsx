@@ -110,13 +110,11 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
   // §15.2 slash menu: text starting with "/" becomes a block-type query
   const [slashIndex, setSlashIndex] = useState(0)
   const slashQuery = !readOnly && block.content.startsWith('/') ? block.content.slice(1) : null
-  const slashMatches = useMemo(
-    () =>
-      slashQuery === null
-        ? []
-        : SLASH_TYPES.filter((t) => BLOCK_LABEL[t].toLowerCase().startsWith(slashQuery.toLowerCase().slice(0, 12))),
-    [slashQuery]
-  )
+  const slashMatches = useMemo(() => {
+    if (slashQuery === null) return []
+    const q = slashQuery.trim().toLowerCase()
+    return SLASH_TYPES.filter((t) => BLOCK_LABEL[t].toLowerCase().includes(q) || t.includes(q))
+  }, [slashQuery])
   const slashOpen = slashQuery !== null && slashMatches.length > 0
 
   const applySlash = (t: BlockType) => {
@@ -366,31 +364,29 @@ export function BlockView({
           }}
         />
       )
-      if (edgeless) {
-        // Edgeless: just the container chrome — children are free-positioned
-        body = (
-          <div className="flex h-full w-full flex-col rounded-token border border-dashed border-line-strong bg-surface/25 p-2">
-            {titleInput('mb-1 shrink-0')}
+      const kids = session.blocks
+        .filter((b) => b.parentId === block.id)
+        .sort((a, b) => a.order - b.order)
+      // Both modes show the children — in Edgeless they are stacked inside the
+      // frame chrome (free-positioned blocks that land on the frame are
+      // re-parented via drag-drop instead).
+      body = (
+        <div
+          className={`rounded-token border border-dashed border-line-strong bg-surface/25 p-2 ${edgeless ? 'flex h-full min-h-[70%] w-full flex-col' : 'my-2'}`}
+        >
+          {titleInput(edgeless ? 'mb-1 shrink-0' : 'mb-2')}
+          <div className={edgeless ? 'min-h-0 flex-1 space-y-1 overflow-hidden' : 'space-y-1'}>
+            {kids.map((c) => (
+              <BlockView key={c.id} block={c} session={session} selected={session.selection.includes(c.id)} />
+            ))}
+            {kids.length === 0 && (
+              <p className="text-[0.8em] text-ink-faint">
+                {edgeless ? 'Drop blocks onto this frame to group them.' : 'Drag blocks here (or insert inside) to group them.'}
+              </p>
+            )}
           </div>
-        )
-      } else {
-        const kids = session.blocks
-          .filter((b) => b.parentId === block.id)
-          .sort((a, b) => a.order - b.order)
-        body = (
-          <div className="my-2 rounded-token-lg border border-line p-3">
-            {titleInput('mb-2')}
-            <div className="space-y-1">
-              {kids.map((c) => (
-                <BlockView key={c.id} block={c} session={session} selected={session.selection.includes(c.id)} />
-              ))}
-              {kids.length === 0 && (
-                <p className="text-[0.8em] text-ink-faint">Drag blocks here (or insert inside) to group them.</p>
-              )}
-            </div>
-          </div>
-        )
-      }
+        </div>
+      )
       break
     }
     case 'duel': {

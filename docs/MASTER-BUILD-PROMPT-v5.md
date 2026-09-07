@@ -278,6 +278,11 @@ zoom-to-selection, 100% reset (§15.7), Ctrl+scroll zoom, drag-pan.
 One document, two views, same blocks: Page (linear) and Edgeless (infinite canvas,
 blocks free-positioned with `pos`, bottom toolbar tools: select, frame, connect
 (edge, §15.4), arrow, pen, text, eraser). Reading order shared across both.
+**Content must never be lost across the toggle:** blocks created in Page mode
+carry no `pos`; on entering Edgeless the canvas auto-arranges any top-level
+unplaced block (except edges) onto the canvas below existing content as a
+single history entry ("Arranged N blocks on canvas"). Frames render their
+children in *both* modes (stacked inside the frame chrome in Edgeless).
 
 ### 9.3 Item model, six views, query depth
 ```ts
@@ -293,7 +298,13 @@ interface WorkspaceItem {
 }
 ```
 - **Six views over one dataset:** Table, Board, Calendar, Timeline, Gallery, List —
-  one dataset-level filter/sort respected by all.
+  one dataset-level filter/sort respected by all. View interactions are fixed:
+  Table cells are inline-editable, **including status** (dropdown of the
+  database's statuses) and custom select fields (options from the property
+  definition); List rows have a **visible grip drag handle** (Lucide
+  `GripVertical`) and reorder via drag; Board cards **open the item editor on
+  single click** (guarded with `e.defaultPrevented` so a finished drag does not
+  open it) and drag between columns with WIP refusal toasts.
 - **Custom properties:** select, multi-select, number, date, checkbox, person, URL,
   **relation** (→ records in another database), **rollup** (aggregate a related field:
   sum/count/avg/min/max).
@@ -700,7 +711,13 @@ docs/                          this prompt + refs/ (user-provided reference scre
   BlockView wrapper), `useEditorSession.ts` (`duplicate`), `ui.tsx` (MenuItem
   `active`).
 - §15.3 → `EditorPage.tsx` (floating transform bar over a single selected
-  text block; type select + align + clear).
+  text block; type select + align + clear; re-measures on canvas scroll).
+- §9.2 content-preservation → `EdgelessCanvas.tsx` (auto-arrange effect for
+  unplaced top-level blocks, single history entry); `blocks.tsx` (frame
+  renders children in both modes).
+- View interaction fixes → `views.tsx` (Table inline status/custom-select
+  editing, visible ListRow grip, BoardCard single-click open with
+  `defaultPrevented` drag guard, no-emoji calendar chips).
 - §15.4–15.7 → `EdgelessCanvas.tsx` (connect tool, edge bezier overlay with
   arrowheads + double-click labels, frame tool, drop-onto-frame re-parenting,
   minimap, zoom presets), `blockEngine.ts` (edge cascade-delete in

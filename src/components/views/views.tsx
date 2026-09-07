@@ -10,7 +10,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  Plus, CalendarDays, ChevronLeft, ChevronRight, Flag, Tag, Clock3, ImagePlus
+  Plus, CalendarDays, ChevronLeft, ChevronRight, Flag, Tag, Clock3, ImagePlus, GripVertical
 } from 'lucide-react'
 import type { CalEvent, WorkspaceDatabase, WorkspaceItem } from '../../lib/types'
 import { fieldsFor, OPS_BY_KIND, type FieldDef } from '../../lib/filterEngine'
@@ -147,11 +147,10 @@ function CellEditor({
 }) {
   const value = propertyValue(item, db, field.key)
   const [open, setOpen] = useState(false)
-  if (field.kind === 'select' && field.key === 'status') {
-    return (
-      <StatusPill small color={statusColor(db, String(value ?? ''))} label={String(db?.statuses.find((s) => s.id === value)?.name ?? value ?? '—')} />
-    )
-  }
+  const isStatus = field.kind === 'select' && field.key === 'status'
+  const selectOptions = isStatus
+    ? (db?.statuses ?? []).map((s) => s.id)
+    : db?.properties.filter((p) => `cf:${p.id}` === field.key).flatMap((p) => p.options ?? []) ?? []
   return (
     <span className="relative inline-block">
       <button
@@ -160,7 +159,13 @@ function CellEditor({
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         aria-label={`Edit ${field.label}`}
       >
-        {field.kind === 'bool' ? (
+        {isStatus ? (
+          <StatusPill
+            small
+            color={statusColor(db, String(value ?? ''))}
+            label={String(db?.statuses.find((s) => s.id === value)?.name ?? value ?? '—')}
+          />
+        ) : field.kind === 'bool' ? (
           <span>{value ? '✓' : '○'}</span>
         ) : (
           <CellText value={value} />
@@ -179,14 +184,11 @@ function CellEditor({
               autoFocus
             >
               <option value="">—</option>
-              {db?.properties
-                .filter((p) => `cf:${p.id}` === field.key)
-                .flatMap((p) => p.options ?? [])
-                .map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
+              {selectOptions.map((o) => (
+                <option key={o} value={o}>
+                  {isStatus ? db?.statuses.find((s) => s.id === o)?.name ?? o : o}
+                </option>
+              ))}
             </select>
           ) : field.kind === 'date' ? (
             <input
@@ -308,7 +310,6 @@ export function BoardView({
                 <span className="flex items-center gap-1.5 text-[0.85em] font-semibold">
                   <span className="h-2 w-2 rounded-full" style={{ background: st.color }} />
                   {st.name}
-                  {db && db.id === 'none' && null}
                 </span>
                 <span className={`text-[0.75em] tabular-nums ${over ? 'font-bold' : 'text-ink-faint'}`}>
                   {colItems.length}
@@ -427,7 +428,14 @@ export function BoardCard({ item, onEdit }: { item: WorkspaceItem; onEdit: (i: W
       {...attributes}
       {...listeners}
     >
-      <button className="focus-ring w-full text-left" onClick={(e) => e.stopPropagation()} onDoubleClick={() => onEdit(item)}>
+      <button
+        className="focus-ring w-full text-left"
+        onClick={(e) => {
+          if (e.defaultPrevented) return // a drag just finished
+          onEdit(item)
+        }}
+        title={item.title}
+      >
         <span className="block text-[0.9em] font-medium leading-snug">{item.title}</span>
       </button>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -513,8 +521,13 @@ function ListRow({ item, onEdit }: { item: WorkspaceItem; onEdit: (i: WorkspaceI
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className="flex items-center gap-2 rounded-token-sm px-2 py-1.5 hover:bg-surface/50"
     >
-      <span {...attributes} {...listeners} className="cursor-grab text-ink-faint hover:text-ink" aria-label="Drag to reorder">
-        
+      <span
+        {...attributes}
+        {...listeners}
+        className="flex h-5 w-5 cursor-grab items-center justify-center rounded text-ink-faint hover:text-ink active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={13} />
       </span>
       <button className="focus-ring min-w-0 flex-1 truncate rounded text-left text-[0.92em]" onClick={() => onEdit(item)}>
         {item.title}
@@ -644,7 +657,7 @@ export function CalendarView({
                     <span className="rounded-sm bg-ok/20 px-1 text-[0.62em] text-ok">{nHabits} habits</span>
                   )}
                   {nAlarms > 0 && (
-                    <span className="rounded-sm bg-warn/20 px-1 text-[0.62em] text-warn">⏰ {nAlarms}</span>
+                    <span className="rounded-sm bg-warn/20 px-1 text-[0.62em] text-warn">{nAlarms} alarms</span>
                   )}
                   {nEvents > 0 && (
                     <span className="rounded-sm bg-info/20 px-1 text-[0.62em] text-info">{nEvents}</span>

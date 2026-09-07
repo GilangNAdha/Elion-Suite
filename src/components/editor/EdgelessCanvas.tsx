@@ -157,6 +157,38 @@ export function EdgelessCanvas({
   const edgeHitRef = useRef<string | null>(null)
   edgeHitRef.current = edgeHit
 
+  // ---- one document, two views: page-mode pages have unplaced blocks.
+  // Arrange any top-level block without a pos onto the canvas (below existing
+  // content) once, so Page ↔ Edgeless never loses content (§9.2). ----
+  useEffect(() => {
+    const unplaced = session.blocks.filter((b) => !b.pos && b.parentId === null && b.type !== 'edge')
+    if (unplaced.length === 0) return
+    const placed = session.blocks.filter((b) => b.pos)
+    const baseY = placed.length
+      ? Math.max(...placed.map((b) => b.pos!.y + (b.pos!.h ?? 80))) + 80
+      : 80
+    session.commit(
+      `Arranged ${unplaced.length} block${unplaced.length > 1 ? 's' : ''} on canvas`,
+      (cur) => {
+        const COLS = 3
+        const GAP = 48
+        return cur.map((b) => {
+          if (b.pos || b.parentId !== null || b.type === 'edge') return b
+          const i = unplaced.findIndex((u) => u.id === b.id)
+          return {
+            ...b,
+            pos: {
+              x: 80 + (i % COLS) * (DEFAULT_W + GAP),
+              y: baseY + Math.floor(i / COLS) * 130,
+              w: DEFAULT_W,
+              h: 96
+            }
+          }
+        })
+      }
+    )
+  }, [session.blocks, session])
+
   // ---- wheel: pan / ctrl+wheel: zoom at cursor ----
   useEffect(() => {
     const el = canvasRef.current

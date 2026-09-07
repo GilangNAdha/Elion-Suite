@@ -322,6 +322,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
   const selectedOne = session.selection.length === 1 ? session.blocks.find((b) => b.id === session.selection[0]) : undefined
 
   // §15.3 transform bar — measure the selected block for the floating bar
+  // (re-measured on selection change AND on canvas scroll)
   const [selRect, setSelRect] = useState<{ top: number; left: number; width: number } | null>(null)
   useEffect(() => {
     if (!selectedOne || layout.mode !== 'page') {
@@ -329,12 +330,18 @@ function EditorChrome({ pageId }: { pageId: string }) {
       return
     }
     const canvas = canvasRef.current
-    if (!canvas) return
-    const el = canvas.querySelector<HTMLElement>(`[data-block="${selectedOne.id}"]`)
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    const cr = canvas.getBoundingClientRect()
-    setSelRect({ top: r.top - cr.top + canvas.scrollTop, left: r.left - cr.left + canvas.scrollLeft, width: r.width })
+    const measure = () => {
+      const c = canvasRef.current
+      if (!c) return
+      const el = c.querySelector<HTMLElement>(`[data-block="${selectedOne.id}"]`)
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const cr = c.getBoundingClientRect()
+      setSelRect({ top: r.top - cr.top + c.scrollTop, left: r.left - cr.left + c.scrollLeft, width: r.width })
+    }
+    measure()
+    canvas?.addEventListener('scroll', measure, { passive: true })
+    return () => canvas?.removeEventListener('scroll', measure)
   }, [session.selection, session.blocks, layout.mode, selectedOne])
 
   // ---- page-mode tree render (columns blocks render their own children) ----
