@@ -6,6 +6,12 @@ One item model, one page/block model. Every surface is a *merged view* over the 
 
 > Working name in the build spec: *Aurora Suite*; shipped in this repository as **Elion Suite**.
 
+> **Build specification:** the full, self-contained spec (including the v5
+> AFFiNE-merge, UI-pattern, and Pixel Duel pet sections, and the
+> DO-NOT-CHANGE invariants) lives in
+> [`docs/MASTER-BUILD-PROMPT-v5.md`](docs/MASTER-BUILD-PROMPT-v5.md). It is the
+> single source of truth for any future AI-assisted build on this repository.
+
 ---
 
 ## Modules
@@ -13,15 +19,16 @@ One item model, one page/block model. Every surface is a *merged view* over the 
 | Module | What it is |
 |---|---|
 | **Workspace** (flagship) | Block pages + Jira-style project databases. Six views over one dataset: Table, Board (kanban + WIP limits, swimlanes), Calendar, Timeline (Gantt), Gallery, List. Custom properties (select / multi-select / number / date / checkbox / person / URL / **relation** / **rollup**), templates, saved filters with a visual AND/OR query builder (+ optional raw mode), sprints, per-status automations, burndown / velocity / cumulative-flow reports, `[[page]]` links + backlinks, per-block comments with @mentions. |
-| **Immersive editor** (`/workspace/:pageId/edit`) | Full-screen editing mode that bypasses the app shell: auto-hiding toolbar, dockable/floatable **left panel** (outline + draggable block library) and **right inspector**, visible **history stack** (plain-language actions, jump to any point), local **Time Machine** version snapshots, **command palette** (Ctrl/Cmd+K), **Page ↔ Edgeless** toggle with pan/zoom (zoom-to-fit, zoom-to-selection), shape/pen/arrow tools, marquee multi-select, and the three drag mechanics: **drag-to-insert**, **drag-to-replace-in-place** (content preserved across compatible type conversions), **drag-to-layout** (edge-drop composes two-column blocks). Every drag has a keyboard-operable equivalent (block menu → *Convert to…*). |
+| **Immersive editor** (`/workspace/:pageId/edit`) | Full-screen editing mode that bypasses the app shell: auto-hiding toolbar, dockable/floatable **left panel** (outline + draggable block library + saved-template cards) and **right inspector**, visible **history stack** (plain-language actions, jump to any point), local **Time Machine** version snapshots, **command palette** (Ctrl/Cmd+K), **Page ↔ Edgeless** toggle with pan/zoom (zoom-to-fit, zoom-to-selection), shape/pen/arrow/**frame** tools, **block-to-block edges** (connect tool, curved connectors with labels), **minimap**, marquee multi-select, `/` slash-insert menu, floating **transform bar** (type/align/clear on selection), block `⋯` menu (convert / duplicate / background / border / comments / dictate), and the three drag mechanics: **drag-to-insert**, **drag-to-replace-in-place** (content preserved across compatible type conversions), **drag-to-layout** (edge-drop composes two-column blocks). Every drag has a keyboard-operable equivalent (block menu → *Convert to…*). |
 | **Lockdown Mode** (flagship, `/lockdown`) | Full-screen focus: three-tier wallpapers (static / looping video / 3D scenes via R3F with static reduced-motion fallbacks), **soundscape mixer** (rain, fire crackle, white noise, café hum, wind — generated on-device, mixed via Howler, saved per preset), **Pomodoro work/break cycles** with transition cues and cycle goals, widget dashboard (clock, timer, music, notes, pet, weather — draggable/resizable, layout saved per preset), **session analytics** (Focus history; mirrored to Profile), optional **multi-monitor fullscreen**, and a clearly-caveated **best-effort distraction guard** (soft nudge only). |
 | **Tasks** | Saved Board/List views over items that live *outside any project* — the same `WorkspaceItem` records. |
 | **Habits** | Recurring items (`type: 'habit'` + recurrence rules) with streaks, week strips, and 12-week heatmaps. |
 | **Calendar** | One calendar engine, four data sources: item due dates, habit recurrences, alarm times, manual events. |
 | **Notes** | The pinned “personal” branch of the Workspace page tree — same editor, same store, live-synced with the Lockdown notes widget. |
 | **Alarms** | One reminder pipeline: alarms (and due/overdue items, @mentions) all surface in the top-bar Notification Center. |
-| **Music** | Shared player core (local files + YouTube embeds, disc/minimal skins); the Lockdown widget mounts the same player state. |
-| **Pet** | One shared mood state (Dashboard + Lockdown), driven by real activity: focus sessions, completions, overdue items, time of day. |
+| **Music** | Shared player core (local files + YouTube embeds, disc / **turntable** / minimal skins — the turntable's record spins iff playing and its tonearm swings on/off); the Lockdown widget mounts the same player state. |
+| **Pet** | One shared mood state (Dashboard + Lockdown + Pet page), driven by real activity: focus sessions, completions, overdue items, time of day. Two styles in Settings: the classic companion, or the opt-in **Pixel Duel** — original 2D pixel art of a White Knight vs. a Black Knight in a dusk arena (mood-driven duel loop, dragon flyby, static frame under reduced motion); insertable anywhere via the `duel` block. |
+| **Dashboard** | Greeting + **Today timeline rail** (07:00–22:00 with time-positioned chips for due dates, alarms and events, and a live "now" marker), due-today list, focus chart, pet. |
 | **Theming engine** | Seed color → HSL harmony (complementary / analogous / triadic / split-complementary / monochromatic) → full semantic token set → **live WCAG contrast check with auto-correction**, density / radius / glass controls, named presets, JSON export/import. Propagates to every surface in one render cycle. |
 | **Speech-to-text** | Offline Whisper (WASM) dictation in the editor — see below. |
 

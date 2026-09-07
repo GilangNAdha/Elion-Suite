@@ -26,7 +26,20 @@ export default defineConfig({
   ],
   server: { host: '0.0.0.0', port: 5173, allowedHosts: true },
   preview: { host: '0.0.0.0', port: 4173, allowedHosts: true },
-  build: { target: 'es2020', chunkSizeWarningLimit: 1600 },
+  build: {
+    target: 'es2020',
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // heavy, lazily-needed vendors out of the main chunk (keeps it under
+          // Workbox's 2 MiB precache default and trims first-load cost)
+          whisper: ['@xenova/transformers', 'onnxruntime-web'],
+          charts: ['recharts']
+        }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     globals: true,

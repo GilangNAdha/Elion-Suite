@@ -98,4 +98,32 @@ describe('block engine (§9.1 mechanics)', () => {
     // the two originals are no longer top-level
     expect(topLevelBlocks(res.blocks).some((b) => b.id === para.id)).toBe(false)
   })
+
+  it('v5: converting a text block to a frame keeps its content as the title', () => {
+    const next = convertBlock(para, 'frame', [para])
+    expect(next.type).toBe('frame')
+    expect(next.props.title).toBe('Hello world')
+  })
+
+  it('v5: edge/frame/duel conversions drop content (structural blocks)', () => {
+    expect(convertBlock(para, 'duel', [para]).content).toBe('')
+    expect(convertBlock(makeBlock('edge', { props: { from: 'a', to: 'b' } }), 'paragraph', []).content).toBe('')
+  })
+
+  it('v5: deleting an edge endpoint deletes the edge too', () => {
+    const edge = makeBlock('edge', { props: { from: 'p1', to: 'i1' } })
+    const res = deleteBlocks([para, img, edge], ['i1'])
+    expect(res.blocks.find((b) => b.id === 'i1')).toBeUndefined()
+    expect(res.blocks.find((b) => b.type === 'edge')).toBeUndefined()
+    // deleting an unrelated block keeps the edge
+    const other = makeBlock('paragraph', { id: 'p9', content: '' })
+    const keep = deleteBlocks([para, img, other, edge], ['p9'])
+    expect(keep.blocks.find((b) => b.type === 'edge')).toBeTruthy()
+  })
+
+  it('v5: makeBlock defaults for the new block types', () => {
+    expect(makeBlock('frame').props.title).toBe('')
+    expect(makeBlock('edge').props).toEqual({ from: '', to: '' })
+    expect(makeBlock('duel').type).toBe('duel')
+  })
 })

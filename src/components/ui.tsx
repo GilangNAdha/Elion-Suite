@@ -8,7 +8,7 @@ import {
 import type { ReactNode, CSSProperties, ButtonHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { create } from 'zustand'
-import { X } from 'lucide-react'
+import { X, Check } from 'lucide-react'
 import { uid } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -175,20 +175,23 @@ export function MenuItem({
   label,
   shortcut,
   danger = false,
+  active = false,
   onClick
 }: {
   icon?: ReactNode
   label: string
   shortcut?: string
   danger?: boolean
+  active?: boolean
   onClick: () => void
 }) {
   const { close } = useContext(MenuCtx)
   return (
     <button
       role="menuitem"
+      aria-checked={active}
       className={`focus-ring flex w-full items-center gap-2 rounded-token-sm px-2 py-1.5 text-left text-[0.92em] transition-colors ${
-        danger ? 'text-bad hover:bg-bad/10' : 'text-ink hover:bg-surface'
+        danger ? 'text-bad hover:bg-bad/10' : active ? 'text-primary hover:bg-primary-soft' : 'text-ink hover:bg-surface'
       }`}
       onClick={() => {
         close()
@@ -197,6 +200,7 @@ export function MenuItem({
     >
       {icon && <span className="text-ink-muted [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
       <span className="flex-1 truncate">{label}</span>
+      {active && <Check size={13} className="shrink-0 text-primary" />}
       {shortcut && <span className="text-[0.78em] text-ink-faint">{shortcut}</span>}
     </button>
   )

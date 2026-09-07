@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered, ListTodo,
   Quote, Code, AlertTriangle, Minus, Image, Images, Columns2, Table2,
-  GripVertical, MessageSquare, Trash2, ChevronDown, Mic, Upload
+  GripVertical, MessageSquare, Trash2, ChevronDown, Mic, Upload,
+  Frame, GitBranch, Swords, Copy
 } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Block, BlockType } from '../../lib/types'
@@ -14,7 +15,7 @@ import { DatabaseBlock } from '../items/DatabaseBlock'
 import { useItemsStore } from '../../stores/itemsStore'
 import { useToasts } from '../ui'
 import { useSettingsStore } from '../../stores/settingsStore'
-import { sttSupported, transcribe, startRecording } from '../../lib/stt'
+import { DuelPet } from '../pet/DuelPet'
 
 export const BLOCK_ICON: Record<BlockType, ReactNode> = {
   paragraph: <Type size={14} />,
@@ -35,8 +36,17 @@ export const BLOCK_ICON: Record<BlockType, ReactNode> = {
   text: <Type size={14} />,
   shape: <Minus size={14} />,
   arrow: <Minus size={14} />,
-  pen: <Minus size={14} />
+  pen: <Minus size={14} />,
+  frame: <Frame size={14} />,
+  edge: <GitBranch size={14} />,
+  duel: <Swords size={14} />
 }
+
+/** Slash menu (§15.2) — content block types, in insertion order. */
+const SLASH_TYPES: BlockType[] = [
+  'paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo',
+  'quote', 'code', 'callout', 'divider', 'image', 'gallery', 'columns', 'frame', 'duel'
+]
 
 const TYPE_CLASS: Record<BlockType, string> = {
   paragraph: 'text-[1em] leading-relaxed',
@@ -57,8 +67,22 @@ const TYPE_CLASS: Record<BlockType, string> = {
   text: 'text-[1em] leading-relaxed',
   shape: '',
   arrow: '',
-  pen: ''
+  pen: '',
+  frame: 'text-[0.9em] font-semibold',
+  edge: '',
+  duel: ''
 }
+
+/** §15.8 block styling — theme tokens only. */
+const BG_CLASS: Record<string, string> = {
+  surface: 'bg-surface',
+  raised: 'bg-raised',
+  'primary-soft': 'bg-primary-soft',
+  'ok-soft': 'bg-ok/10',
+  'warn-soft': 'bg-warn/10',
+  'bad-soft': 'bg-bad/10'
+}
+const BG_OPTIONS = Object.keys(BG_CLASS)
 
 // ---------------------------------------------------------------------------
 // contenteditable text helper
@@ -83,6 +107,25 @@ interface EditableProps {
 
 export function Editable({ block, session, onEnter, readOnly = false }: EditableProps) {
   const ref = useRef<HTMLDivElement>(null)
+  // §15.2 slash menu: text starting with "/" becomes a block-type query
+  const [slashIndex, setSlashIndex] = useState(0)
+  const slashQuery = !readOnly && block.content.startsWith('/') ? block.content.slice(1) : null
+  const slashMatches = useMemo(
+    () =>
+      slashQuery === null
+        ? []
+        : SLASH_TYPES.filter((t) => BLOCK_LABEL[t].toLowerCase().startsWith(slashQuery.toLowerCase().slice(0, 12))),
+    [slashQuery]
+  )
+  const slashOpen = slashQuery !== null && slashMatches.length > 0
+
+  const applySlash = (t: BlockType) => {
+    const rest = block.content.slice(1)
+    session.setBlockContent(block.id, rest)
+    if (TEXT_BLOCK_TYPES.includes(block.type)) session.convert(block.id, t)
+    else session.insertNew(t, nullAfter(block, session))
+    requestAnimationFrame(() => ref.current?.focus())
+  }
 
   useEffect(() => {
     const el = ref.current
@@ -91,6 +134,8 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
       el.textContent = block.content
     }
   }, [block.content, block.id])
+
+  useEffect(() => setSlashIndex(0), [slashQuery])
 
   useEffect(() => {
     if (session.focusRequest?.id === block.id) {
@@ -111,39 +156,89 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
   }
 
   return (
-    <div
-      ref={ref}
-      role="textbox"
-      aria-label={BLOCK_LABEL[block.type]}
-      aria-multiline="true"
-      contentEditable
-      suppressContentEditableWarning
-      spellCheck={false}
-      data-block-id={block.id}
-      className={`block-text focus-ring min-w-0 flex-1 rounded-sm ${TYPE_CLASS[block.type]} ${
-        block.type === 'todo' && block.checked ? 'line-through opacity-60' : ''
-      }`}
-      style={{ whiteSpace: 'pre-wrap' }}
-      onInput={(e) => session.setBlockContent(block.id, e.currentTarget.textContent ?? '')}
-      onFocus={() => {
-        session.focusContent.current.set(block.id, block.content)
-      }}
-      onBlur={() => session.commitTextEdit(block.id)}
-      onKeyDown={(e: ReactKeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey && onEnter) {
+    <span className="relative min-w-0 flex-1">
+      <div
+        ref={ref}
+        role="textbox"
+        aria-label={BLOCK_LABEL[block.type]}
+        aria-multiline="true"
+        contentEditable
+        suppressContentEditableWarning
+        spellCheck={false}
+        data-block-id={block.id}
+        className={`block-text focus-ring min-w-0 rounded-sm ${TYPE_CLASS[block.type]} ${
+          block.type === 'todo' && block.checked ? 'line-through opacity-60' : ''
+        } ${slashOpen ? 'opacity-40' : ''}`}
+        style={{ whiteSpace: 'pre-wrap' }}
+        onInput={(e) => session.setBlockContent(block.id, e.currentTarget.textContent ?? '')}
+        onFocus={() => {
+          session.focusContent.current.set(block.id, block.content)
+        }}
+        onBlur={() => session.commitTextEdit(block.id)}
+        onKeyDown={(e: ReactKeyboardEvent<HTMLDivElement>) => {
+          if (slashOpen) {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setSlashIndex((i) => (i + 1) % slashMatches.length)
+              return
+            }
+            if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setSlashIndex((i) => (i - 1 + slashMatches.length) % slashMatches.length)
+              return
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+              e.preventDefault()
+              applySlash(slashMatches[slashIndex])
+              return
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              session.setBlockContent(block.id, block.content.slice(1))
+              return
+            }
+          }
+          if (e.key === 'Enter' && !e.shiftKey && onEnter) {
+            e.preventDefault()
+            onEnter()
+          } else if (e.key === 'Delete' && (e.currentTarget.textContent ?? '') === '') {
+            e.preventDefault()
+            session.remove([block.id])
+          }
+        }}
+        onPaste={(e) => {
           e.preventDefault()
-          onEnter()
-        } else if (e.key === 'Delete' && (e.currentTarget.textContent ?? '') === '') {
-          e.preventDefault()
-          session.remove([block.id])
-        }
-      }}
-      onPaste={(e) => {
-        e.preventDefault()
-        const t = e.clipboardData.getData('text/plain')
-        document.execCommand('insertText', false, t)
-      }}
-    />
+          const t = e.clipboardData.getData('text/plain')
+          document.execCommand('insertText', false, t)
+        }}
+      />
+      {slashOpen && (
+        <div
+          role="listbox"
+          aria-label="Insert block type"
+          className="elev-overlay absolute left-0 top-full z-40 mt-1 max-h-72 w-60 overflow-auto rounded-token border border-line bg-raised p-1 shadow-lg"
+        >
+          {slashMatches.map((t, i) => (
+            <button
+              key={t}
+              role="option"
+              aria-selected={i === slashIndex}
+              className={`focus-ring flex w-full items-center gap-2 rounded-token-sm px-2 py-1.5 text-left text-[0.85em] ${
+                i === slashIndex ? 'bg-primary-soft text-primary' : 'text-ink hover:bg-surface'
+              }`}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                applySlash(t)
+              }}
+              onMouseEnter={() => setSlashIndex(i)}
+            >
+              <span className="text-ink-muted">{BLOCK_ICON[t]}</span>
+              {BLOCK_LABEL[t]}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   )
 }
 
@@ -257,6 +352,61 @@ export function BlockView({
       body = <DatabaseBlock dbId={dbId} compact={edgeless} />
       break
     }
+    case 'frame': {
+      const titleInput = (extraClass = '') => (
+        <input
+          aria-label="Frame title"
+          className={`w-full bg-transparent text-[0.9em] font-semibold text-ink-muted outline-none placeholder:text-ink-faint ${extraClass}`}
+          placeholder="Frame title"
+          defaultValue={String(block.props.title ?? '')}
+          key={String(block.props.title ?? '')}
+          onBlur={(e) => {
+            if (e.target.value !== block.props.title)
+              session.patchBlock(block.id, { props: { ...block.props, title: e.target.value } })
+          }}
+        />
+      )
+      if (edgeless) {
+        // Edgeless: just the container chrome — children are free-positioned
+        body = (
+          <div className="flex h-full w-full flex-col rounded-token border border-dashed border-line-strong bg-surface/25 p-2">
+            {titleInput('mb-1 shrink-0')}
+          </div>
+        )
+      } else {
+        const kids = session.blocks
+          .filter((b) => b.parentId === block.id)
+          .sort((a, b) => a.order - b.order)
+        body = (
+          <div className="my-2 rounded-token-lg border border-line p-3">
+            {titleInput('mb-2')}
+            <div className="space-y-1">
+              {kids.map((c) => (
+                <BlockView key={c.id} block={c} session={session} selected={session.selection.includes(c.id)} />
+              ))}
+              {kids.length === 0 && (
+                <p className="text-[0.8em] text-ink-faint">Drag blocks here (or insert inside) to group them.</p>
+              )}
+            </div>
+          </div>
+        )
+      }
+      break
+    }
+    case 'duel': {
+      const moodProp = block.props.mood
+      body = (
+        <DuelPet
+          compact
+          mood={moodProp === 'idle' || moodProp === 'happy' || moodProp === 'worried' ? (moodProp as 'idle' | 'happy' | 'worried') : undefined}
+        />
+      )
+      break
+    }
+    case 'edge':
+      // edges render only in Edgeless mode (SVG overlay)
+      body = null
+      break
     case 'todo':
       body = (
         <div className="flex min-w-0 items-start gap-2">
@@ -345,11 +495,16 @@ export function BlockView({
       </span>
     ) : null
 
+  const bg = String(block.props.bg ?? '')
+  const hasBorder = !!block.props.border
+
   return (
     <div
       data-block={block.id}
       tabIndex={-1}
-      className={`group relative ${edgeless ? '' : 'px-1 py-0.5'} ${dimmed ? 'opacity-40' : ''} ${selected ? 'block-selected' : ''}`}
+      className={`group relative ${edgeless ? '' : 'px-1 py-0.5'} ${dimmed ? 'opacity-40' : ''} ${selected ? 'block-selected' : ''} ${
+        bg && BG_CLASS[bg] ? `${BG_CLASS[bg]} rounded-token` : ''
+      } ${hasBorder ? 'border border-line-strong' : ''}`}
       style={{
         textAlign: TEXT_BLOCK_TYPES.includes(block.type)
           ? align === 'center'
@@ -459,6 +614,11 @@ export function BlockToolbar({
           shortcut="Alt+↓"
           onClick={() => session.move([block.id], nullAfter(block, session), block.parentId)}
         />
+        <MenuItem
+          icon={<Copy size={14} />}
+          label={session.selection.length > 1 ? `Duplicate ${session.selection.length} blocks` : 'Duplicate'}
+          onClick={() => session.duplicate(session.selection.length > 1 ? session.selection : [block.id])}
+        />
         <MenuSep />
         <MenuLabel>Convert to…</MenuLabel>
         {(['heading1', 'heading2', 'heading3', 'paragraph', 'todo', 'bullet', 'numbered', 'quote', 'code', 'callout', 'text'] as BlockType[])
@@ -472,6 +632,21 @@ export function BlockToolbar({
         {block.type === 'gallery' && (
           <MenuItem icon={BLOCK_ICON.image} label="Single image" onClick={() => session.convert(block.id, 'image')} />
         )}
+        <MenuSep />
+        <MenuLabel>Background</MenuLabel>
+        {BG_OPTIONS.map((b) => (
+          <MenuItem
+            key={b}
+            label={b === 'surface' ? 'Surface' : b === 'raised' ? 'Raised' : b}
+            active={String(block.props.bg ?? '') === b}
+            onClick={() => session.patchBlock(block.id, { props: { ...block.props, bg: String(block.props.bg ?? '') === b ? '' : b } })}
+          />
+        ))}
+        <MenuItem
+          label="Border"
+          active={!!block.props.border}
+          onClick={() => session.patchBlock(block.id, { props: { ...block.props, border: !block.props.border ? true : undefined } })}
+        />
         <MenuSep />
         <MenuItem icon={<MessageSquare size={14} />} label="Comments" onClick={onOpenComments} />
         <MenuItem icon={<Mic size={14} />} label="Dictate (voice)" onClick={() => void dictation(block, session)} />
@@ -495,6 +670,8 @@ async function dictation(block: Block, session: EditorSession): Promise<void> {
     push('Speech-to-text is disabled in Settings', 'error')
     return
   }
+  // lazy: the Whisper WASM runtime (~0.8 MB chunk) only loads on first use
+  const { sttSupported, transcribe, startRecording } = await import('../../lib/stt')
   if (!sttSupported()) {
     push('Microphone not available in this browser', 'error')
     return

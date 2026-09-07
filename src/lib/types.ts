@@ -138,6 +138,9 @@ export type BlockType =
   | 'shape'
   | 'arrow'
   | 'pen'
+  | 'frame'
+  | 'edge'
+  | 'duel'
 
 export interface EdgelessPos {
   x: number

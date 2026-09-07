@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, Plus, CheckSquare, Flame, CalendarDays, Lock, ArrowRight } from 'lucide-react'
+import { LayoutGrid, Plus, CheckSquare, Flame, CalendarDays, Lock, ArrowRight, AlarmClock } from 'lucide-react'
+import { db } from '../lib/db'
+import type { Alarm, CalEvent, WorkspaceItem } from '../lib/types'
 import { useItemsStore } from '../stores/itemsStore'
 import { usePagesStore } from '../stores/pagesStore'
 import { useLockdownStore } from '../stores/lockdownStore'
@@ -10,6 +12,174 @@ import { StatusPill, Button, EmptyState } from '../components/ui'
 import { statusColor } from '../components/views/views'
 import { todayISO, toISODate, addDays, focusTotals, minutesLabel, streakFor } from '../lib/time'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+
+export // ---------------------------------------------------------------------------
+// §16.1 Today Timeline Rail — day strip 07:00–22:00 with time-positioned
+// chips (due dates, alarms, events) and a live "now" marker.
+// ---------------------------------------------------------------------------
+const RAIL_START = 7
+const RAIL_END = 22
+
+interface RailChip {
+  id: string
+  hour: number
+  label: string
+  tone: string
+  onClick: () => void
+}
+
+function TodayRail({ items, onOpenItem }: { items: WorkspaceItem[]; onOpenItem: (i: WorkspaceItem) => void }) {
+  const navigate = useNavigate()
+  const [events, setEvents] = useState<CalEvent[]>([])
+  const [alarms, setAlarms] = useState<Alarm[]>([])
+  const [now, setNow] = useState(() => new Date())
+  const [openHour, setOpenHour] = useState<number | null>(null)
+
+  useEffect(() => {
+    const load = () => {
+      void db.events.toArray().then(setEvents)
+      void db.alarms.toArray().then(setAlarms)
+      setNow(new Date())
+    }
+    load()
+    const t = window.setInterval(load, 60000)
+    return () => window.clearInterval(t)
+  }, [])
+
+  const span = RAIL_END - RAIL_START
+  const today = todayISO()
+  const pct = (h: number) => `${(Math.min(RAIL_END, Math.max(RAIL_START, h)) - RAIL_START) / span / 10}%`
+
+  const chips: RailChip[] = []
+  for (const i of items) {
+    if (i.dueDate === today) {
+      chips.push({ id: i.id, hour: 9, label: i.title, tone: 'var(--primary)', onClick: () => onOpenItem(i) })
+    }
+  }
+  for (const a of alarms) {
+    if (!a.enabled) continue
+    const d = new Date(a.at)
+    if (d.toISOString().slice(0, 10) === today || a.repeat === 'daily') {
+      chips.push({ id: a.id, hour: d.getHours(), label: a.title, tone: 'var(--warn)', onClick: () => navigate('/alarms') })
+    }
+  }
+  for (const ev of events) {
+    const d = new Date(ev.at)
+    if (d.toISOString().slice(0, 10) === today) {
+      chips.push({ id: ev.id, hour: d.getHours() + d.getMinutes() / 60, label: ev.title, tone: 'var(--info)', onClick: () => navigate('/calendar') })
+    }
+  }
+  // stack per hour slot (max 3 visible, +n popover for the rest)
+  const groups = new Map<number, RailChip[]>()
+  for (const c of chips) {
+    const h = Math.min(RAIL_END - 0.01, Math.max(RAIL_START, Math.floor(c.hour)))
+    groups.set(h, [...(groups.get(h) ?? []), c])
+  }
+
+  const nowH = now.getHours() + now.getMinutes() / 60
+  const nowVisible = nowH >= RAIL_START && nowH <= RAIL_END
+
+  return (
+    <section
+      className="elev-raised relative mb-4 rounded-token-lg border border-line bg-raised p-4 pt-6"
+      aria-label="Today timeline"
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-[0.95em] font-semibold">
+          <CalendarDays size={15} className="text-primary" />
+          Today
+        </h2>
+        <span className="font-mono text-[0.72em] text-ink-faint">
+          {RAIL_START}:00 – {RAIL_END}:00
+        </span>
+      </div>
+      <div className="relative h-14">
+        {Array.from({ length: span + 1 }, (_, i) => RAIL_START + i).map((h) => (
+          <div key={h} className="absolute inset-y-0" style={{ left: pct(h) }} aria-hidden>
+            <div className="h-full w-px bg-line" />
+            <span className="absolute -top-3.5 left-0 -translate-x-1/2 font-mono text-[0.62em] text-ink-faint">
+              {h}
+            </span>
+          </div>
+        ))}
+        {[...groups.entries()].map(([h, list]) => (
+          <div key={h} className="absolute inset-y-0" style={{ left: pct(h) }} aria-hidden={false}>
+            {list.slice(0, 3).map((c, idx) => (
+              <button
+                key={c.id}
+                className="focus-ring absolute left-1 max-w-28 truncate rounded-token-sm px-1.5 py-0.5 text-[0.7em] font-medium"
+                style={{
+                  top: 4 + idx * 17,
+                  background: c.tone,
+                  color: 'var(--bg)'
+                }}
+                title={c.label}
+                onClick={c.onClick}
+                aria-label={`${c.label} at ${h}:00`}
+              >
+                {c.label}
+              </button>
+            ))}
+            {list.length > 3 && (
+              <>
+                <button
+                  className="focus-ring absolute left-1 rounded-token-sm bg-surface px-1.5 py-0.5 text-[0.7em] text-ink-muted hover:text-ink"
+                  style={{ top: 4 + 3 * 17 }}
+                  onClick={() => setOpenHour(openHour === h ? null : h)}
+                  aria-label={`${list.length - 3} more at ${h}:00`}
+                >
+                  +{list.length - 3}
+                </button>
+                {openHour === h && (
+                  <div className="elev-overlay absolute left-1 z-20 mt-1 w-44 rounded-token border border-line bg-raised p-1" style={{ top: 4 + 3 * 17 }}>
+                    {list.slice(3).map((c) => (
+                      <button
+                        key={c.id}
+                        className="focus-ring block w-full truncate rounded-token-sm px-2 py-1 text-left text-[0.75em] hover:bg-surface"
+                        onClick={() => {
+                          setOpenHour(null)
+                          c.onClick()
+                        }}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+        {nowVisible && (
+          <div className="absolute inset-y-0 z-10 w-px bg-bad" style={{ left: pct(nowH) }} aria-hidden>
+            <span
+              className="absolute -top-3.5 left-0 -translate-x-1/2 rounded-token-sm px-1 py-0.5 font-mono text-[0.6em] font-semibold"
+              style={{ background: 'var(--bad)', color: 'var(--bg)' }}
+            >
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        )}
+        {chips.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-[0.8em] text-ink-faint">
+            Nothing scheduled today — add a due date, alarm, or event.
+          </p>
+        )}
+      </div>
+      <div className="mt-2 flex items-center gap-3 text-[0.68em] text-ink-faint">
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full" style={{ background: 'var(--primary)' }} /> due date
+        </span>
+        <span className="flex items-center gap-1">
+          <AlarmClock size={11} /> alarm
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full" style={{ background: 'var(--info)' }} /> event
+        </span>
+      </div>
+    </section>
+  )
+}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -68,6 +238,11 @@ export function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      <TodayRail
+        items={all}
+        onOpenItem={(i) => navigate(i.databaseId ? `/workspace/items/${i.databaseId}` : '/tasks')}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* today */}

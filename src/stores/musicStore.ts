@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { uid, type MusicTrack } from '../lib/types'
 
-export type PlayerSkin = 'minimal' | 'disc'
+export type PlayerSkin = 'minimal' | 'disc' | 'turntable'
 
 interface MusicState {
   tracks: MusicTrack[]

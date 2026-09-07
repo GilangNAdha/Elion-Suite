@@ -11,10 +11,10 @@ import {
 import type { DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core'
 import {
   ArrowLeft, Undo2, Redo2, PanelLeft, PanelRight, History, Camera,
-  Command, MousePointer2, X
+  Command, MousePointer2, X, AlignLeft, AlignCenter, AlignRight, Eraser
 } from 'lucide-react'
 import type { Block, BlockType } from '../../lib/types'
-import { computeDropIntent, makeBlock, topLevelBlocks, childrenOf, BLOCK_LABEL } from '../../lib/blockEngine'
+import { computeDropIntent, makeBlock, topLevelBlocks, childrenOf, BLOCK_LABEL, TEXT_BLOCK_TYPES } from '../../lib/blockEngine'
 import type { DropIntent } from '../../lib/blockEngine'
 import { useEditorSession } from './useEditorSession'
 import { BlockView, BlockToolbar, BLOCK_ICON } from './blocks'
@@ -321,6 +321,22 @@ function EditorChrome({ pageId }: { pageId: string }) {
 
   const selectedOne = session.selection.length === 1 ? session.blocks.find((b) => b.id === session.selection[0]) : undefined
 
+  // §15.3 transform bar — measure the selected block for the floating bar
+  const [selRect, setSelRect] = useState<{ top: number; left: number; width: number } | null>(null)
+  useEffect(() => {
+    if (!selectedOne || layout.mode !== 'page') {
+      setSelRect(null)
+      return
+    }
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const el = canvas.querySelector<HTMLElement>(`[data-block="${selectedOne.id}"]`)
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const cr = canvas.getBoundingClientRect()
+    setSelRect({ top: r.top - cr.top + canvas.scrollTop, left: r.left - cr.left + canvas.scrollLeft, width: r.width })
+  }, [session.selection, session.blocks, layout.mode, selectedOne])
+
   // ---- page-mode tree render (columns blocks render their own children) ----
   const renderBlocks = (parentId: string | null): ReactNode =>
     session.blocks
@@ -529,6 +545,51 @@ function EditorChrome({ pageId }: { pageId: string }) {
                 }}
                 aria-hidden
               />
+            )}
+
+            {/* §15.3 floating transform bar (single text-block selection) */}
+            {selectedOne && selRect && TEXT_BLOCK_TYPES.includes(selectedOne.type) && (
+              <div
+                className="elev-overlay absolute z-40 flex items-center gap-1 rounded-token-full border border-line bg-raised p-1 shadow-lg"
+                style={{ top: Math.max(8, selRect.top - 44), left: Math.max(8, selRect.left) }}
+                role="toolbar"
+                aria-label="Block formatting"
+              >
+                <select
+                  aria-label="Block type"
+                  className="focus-ring h-7 max-w-36 rounded-token-sm border border-line bg-surface px-1.5 text-[0.8em]"
+                  value={selectedOne.type}
+                  onChange={(e) => session.convert(selectedOne.id, e.target.value as BlockType)}
+                >
+                  {TEXT_BLOCK_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {BLOCK_LABEL[t]}
+                    </option>
+                  ))}
+                </select>
+                {(['left', 'center', 'right'] as const).map((a) => (
+                  <button
+                    key={a}
+                    className={`focus-ring flex h-7 w-7 items-center justify-center rounded-token-sm ${
+                      String(selectedOne.props.align ?? 'left') === a ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-surface hover:text-ink'
+                    }`}
+                    aria-label={`Align ${a}`}
+                    aria-pressed={String(selectedOne.props.align ?? 'left') === a}
+                    onClick={() => session.patchBlock(selectedOne.id, { props: { ...selectedOne.props, align: a } })}
+                  >
+                    {a === 'left' ? <AlignLeft size={13} /> : a === 'center' ? <AlignCenter size={13} /> : <AlignRight size={13} />}
+                  </button>
+                ))}
+                <span className="mx-0.5 h-4 w-px bg-line" />
+                <button
+                  className="focus-ring flex h-7 items-center gap-1 rounded-token-sm px-2 text-[0.78em] text-ink-muted hover:bg-surface hover:text-ink"
+                  onClick={() => session.convert(selectedOne.id, 'paragraph')}
+                  aria-label="Clear formatting"
+                >
+                  <Eraser size={13} />
+                  Clear
+                </button>
+              </div>
             )}
 
             {/* floating selection chip */}

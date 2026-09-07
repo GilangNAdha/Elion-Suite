@@ -205,6 +205,7 @@ export function PageView({ page, routePrefix = 'workspace' }: { page: PageRecord
         insertNew: () => 'x',
         convert: () => undefined,
         remove: () => undefined,
+        duplicate: () => undefined,
         move: () => undefined,
         composeColumns: () => undefined,
         setBlockContent: () => undefined,

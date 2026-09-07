@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useDraggable } from '@dnd-kit/core'
 import {
   FileText, Plus, FolderPlus, History as HistoryIcon, Camera, Trash2,
-  RotateCcw, X, AlignLeft, AlignCenter, AlignRight, Link2, Mic, CornerUpLeft
+  RotateCcw, X, AlignLeft, AlignCenter, AlignRight, Link2, Mic, CornerUpLeft, Table2
 } from 'lucide-react'
 import type { PageRecord, Block, BlockType } from '../../lib/types'
-import { BLOCK_CATEGORIES } from '../../lib/blockEngine'
+import { BLOCK_CATEGORIES, BLOCK_LABEL } from '../../lib/blockEngine'
 import { BLOCK_ICON } from './blocks'
 import type { EditorSession } from './useEditorSession'
-import { Button, IconBtn, Input, Select, Tabs, Toggle, MenuLabel, Menu, MenuItem, Kbd } from '../ui'
+import { Button, IconBtn, Input, Select, Tabs, Toggle, MenuLabel, Menu, MenuItem, Kbd, useToasts } from '../ui'
 import { usePagesStore } from '../../stores/pagesStore'
 import { useItemsStore } from '../../stores/itemsStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -193,6 +193,9 @@ function OutlineChildren({ pageId, depth, current }: { pageId: string; depth: nu
 }
 
 function BlockLibrary({ onInsertBlock }: { onInsertBlock: (t: BlockType) => void }) {
+  const templates = usePagesStore((s) => s.templates)
+  const applyTemplate = usePagesStore((s) => s.applyTemplate)
+  const push = useToasts.getState().push
   return (
     <div className="space-y-3">
       {BLOCK_CATEGORIES.map((cat) => (
@@ -207,6 +210,33 @@ function BlockLibrary({ onInsertBlock }: { onInsertBlock: (t: BlockType) => void
           </div>
         </div>
       ))}
+      {Object.keys(templates).length > 0 && (
+        <div>
+          <div className="mb-1 px-1 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
+            Templates
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {Object.values(templates).map((t) => (
+              <button
+                key={t.id}
+                className="focus-ring rounded-token-sm border border-line bg-surface/50 px-2 py-1.5 text-left text-[0.8em] text-ink-muted transition-colors hover:border-primary/50 hover:text-ink"
+                onClick={() => {
+                  void applyTemplate(t.id).then((p) => {
+                    if (p) push(`Applied template “${t.name}”`, 'success')
+                  })
+                }}
+                aria-label={`Apply ${t.kind} template ${t.name}`}
+              >
+                <span className="mb-0.5 flex items-center gap-1 text-ink-faint">
+                  {t.kind === 'page' ? <FileText size={12} /> : <Table2 size={12} />}
+                  <span className="truncate text-ink">{t.name}</span>
+                </span>
+                {t.kind} template
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <p className="px-1 text-[0.75em] leading-relaxed text-ink-faint">
         Drag a chip onto the page to insert — or drop it <em>on</em> a block to convert it in place, or onto a
         block’s edge to compose columns. Click to insert at the caret.
@@ -305,6 +335,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
+/** §16.5 parameter row — `[label | control]`, reused across inspectors. */
+function ParamRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-16 shrink-0 text-[0.78em] text-ink-muted">{label}</span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  )
+}
+
 function BlockInspector({
   block,
   session,
@@ -327,8 +367,8 @@ function BlockInspector({
           aria-label="Block type"
           onChange={(e) => session.convert(block.id, e.target.value as BlockType)}
         >
-          {(['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo', 'quote', 'code', 'callout', 'text', 'divider', 'image', 'gallery', 'columns'] as BlockType[]).map((t) => (
-            <option key={t} value={t}>{t}</option>
+          {(['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo', 'quote', 'code', 'callout', 'text', 'divider', 'image', 'gallery', 'columns', 'frame', 'duel'] as BlockType[]).map((t) => (
+            <option key={t} value={t}>{BLOCK_LABEL[t]}</option>
           ))}
         </Select>
       </Section>
@@ -407,6 +447,42 @@ function BlockInspector({
               />
             ))}
           </div>
+        </Section>
+      )}
+
+      {block.type === 'frame' && (
+        <Section title="Frame">
+          <ParamRow label="Title">
+            <Input
+              value={String(block.props.title ?? '')}
+              aria-label="Frame title"
+              placeholder="Frame title"
+              onChange={(e) => session.patchBlock(block.id, { props: { ...block.props, title: e.target.value } })}
+            />
+          </ParamRow>
+          <p className="mt-2 text-[0.75em] leading-relaxed text-ink-faint">
+            In Edgeless mode, drag blocks onto the frame to group them; in Page mode its children render inside.
+          </p>
+        </Section>
+      )}
+
+      {block.type === 'duel' && (
+        <Section title="Duel arena">
+          <ParamRow label="Mood">
+            <Select
+              value={String(block.props.mood ?? '')}
+              aria-label="Duel mood"
+              onChange={(e) => session.patchBlock(block.id, { props: { ...block.props, mood: e.target.value || undefined } })}
+            >
+              <option value="">Follow companion mood</option>
+              <option value="idle">Calm (standoff)</option>
+              <option value="happy">Full duel + dragon</option>
+              <option value="worried">Storm (desaturated)</option>
+            </Select>
+          </ParamRow>
+          <p className="mt-2 text-[0.75em] leading-relaxed text-ink-faint">
+            Original pixel art, bundled locally. Reduced-motion settings freeze it to a static clash frame.
+          </p>
         </Section>
       )}
 

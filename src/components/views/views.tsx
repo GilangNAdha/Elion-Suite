@@ -714,6 +714,7 @@ export function CalendarView({
 // ===========================================================================
 
 export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; items: WorkspaceItem[] }) {
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const withDates = items.filter((i) => i.dueDate)
   if (withDates.length === 0)
     return <EmptyState icon={<CalendarDays size={20} />} title="No dated items" hint="Give items a due date to see the timeline." />
@@ -721,36 +722,125 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
   const maxD = Math.max(...withDates.map((i) => new Date(i.dueDate!).getTime()))
   const span = Math.max(7, (maxD - minD) / 86400000)
   const start = new Date(minD - 3 * 86400000)
-  const pos = (d: string) => `${((new Date(d).getTime() - start.getTime()) / (span * 86400000 + 3 * 86400000)) * 100}%`
+  const end = new Date(start.getTime() + (span + 3) * 86400000)
+  const pct = (t: number) => `${((t - start.getTime()) / (end.getTime() - start.getTime())) * 100}%`
+  const pos = (d: string) => pct(new Date(d).getTime())
   const width = (a: string, b: string) =>
-    `${Math.max(1.5, ((new Date(b).getTime() - new Date(a).getTime()) / (span * 86400000 + 3 * 86400000)) * 100)}%`
+    `${Math.max(1.5, ((new Date(b).getTime() - new Date(a).getTime()) / (end.getTime() - start.getTime())) * 100)}%`
   const todayPct = pos(todayISO())
+
+  // §16.2 ruler — month bands, or week bands when the span is short
+  const useWeeks = span < 60
+  const bands: { label: string; left: string; right: string }[] = []
+  if (useWeeks) {
+    const d = new Date(start)
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // back to Monday
+    while (d.getTime() < end.getTime()) {
+      const wEnd = new Date(d.getTime() + 7 * 86400000)
+      const l = Math.max(start.getTime(), d.getTime())
+      const r = Math.min(end.getTime(), wEnd.getTime())
+      if (r > l)
+        bands.push({
+          label: d.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+          left: pct(l),
+          right: pct(r)
+        })
+      d.setTime(wEnd.getTime())
+    }
+  } else {
+    const d = new Date(start.getFullYear(), start.getMonth(), 1)
+    while (d.getTime() < end.getTime()) {
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime()
+      const l = Math.max(start.getTime(), d.getTime())
+      const r = Math.min(end.getTime(), mEnd)
+      if (r > l)
+        bands.push({
+          label: d.toLocaleDateString([], { month: 'short', year: '2-digit' }),
+          left: pct(l),
+          right: pct(r)
+        })
+      d.setMonth(d.getMonth() + 1)
+    }
+  }
+
+  // §16.2 filter chips (status) — dataset-level for this view
+  const visible = statusFilter ? withDates.filter((i) => i.status === statusFilter) : withDates
+  const statuses = db?.statuses ?? []
+  const countFor = (id: string) => withDates.filter((i) => i.status === id).length
+
   return (
     <div className="overflow-x-auto">
-      <div className="relative min-w-[560px]">
-        <div className="relative h-6 border-b border-line">
-          <div className="absolute bottom-0 top-0 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden />
-        </div>
-        <div className="space-y-1.5 py-2">
-          {withDates.map((i) => (
-            <div key={i.id} className="flex items-center gap-2">
-              <span className="w-44 shrink-0 truncate text-[0.85em]">{i.title}</span>
-              <div className="relative h-5 flex-1 rounded-sm bg-sunken">
-                <div
-                  className="absolute top-0.5 h-4 rounded-sm"
-                  style={{
-                    left: pos(i.startDate ?? i.dueDate!),
-                    width: width(i.startDate ?? i.dueDate!, i.dueDate!),
-                    background: statusColor(db, i.status),
-                    opacity: 0.85
-                  }}
-                  title={`${i.title}: ${i.startDate ?? i.dueDate} → ${i.dueDate}`}
-                />
-                <div className="absolute bottom-0 top-0 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden />
-              </div>
-              <span className="w-20 shrink-0 text-right text-[0.72em] tabular-nums text-ink-faint">{i.dueDate}</span>
-            </div>
+      <div className="min-w-[560px]">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <button
+            className={`focus-ring rounded-token-full border px-2.5 py-0.5 text-[0.75em] ${
+              statusFilter === null ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted hover:border-line-strong'
+            }`}
+            onClick={() => setStatusFilter(null)}
+            aria-pressed={statusFilter === null}
+          >
+            All ({withDates.length})
+          </button>
+          {statuses.map((s) => (
+            <button
+              key={s.id}
+              className={`focus-ring rounded-token-full border px-2.5 py-0.5 text-[0.75em] ${
+                statusFilter === s.id ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted hover:border-line-strong'
+              }`}
+              onClick={() => setStatusFilter(statusFilter === s.id ? null : s.id)}
+              aria-pressed={statusFilter === s.id}
+              disabled={countFor(s.id) === 0 && statusFilter !== s.id}
+            >
+              {s.name} ({countFor(s.id)})
+            </button>
           ))}
+        </div>
+        <div className="relative">
+          <div className="relative h-6 border-b border-line">
+            {bands.map((b, i) => (
+              <div
+                key={i}
+                className="absolute bottom-0 top-0 flex items-center overflow-hidden border-l border-line pl-1"
+                style={{ left: b.left, width: `calc(${b.right} - ${b.left})` }}
+                aria-hidden
+              >
+                <span className="truncate font-mono text-[0.62em] text-ink-faint">{b.label}</span>
+              </div>
+            ))}
+            <div className="absolute bottom-0 top-0 z-10 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden>
+              <span
+                className="absolute -top-0.5 left-1 font-mono text-[0.58em] font-semibold"
+                style={{ color: 'var(--bad)' }}
+              >
+                today
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1.5 py-2">
+            {visible.map((i) => (
+              <div key={i.id} className="flex items-center gap-2">
+                <span className="w-44 shrink-0 truncate text-[0.85em]">{i.title}</span>
+                <div className="relative h-5 flex-1 rounded-sm bg-sunken">
+                  <div
+                    className="absolute top-0.5 h-4 rounded-sm"
+                    style={{
+                      left: pos(i.startDate ?? i.dueDate!),
+                      width: width(i.startDate ?? i.dueDate!, i.dueDate!),
+                      background: statusColor(db, i.status),
+                      opacity: 0.85
+                    }}
+                    title={`${i.title}: ${i.startDate ?? i.dueDate} → ${i.dueDate}`}
+                  />
+                  <div className="absolute bottom-0 top-0 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden />
+                </div>
+                <span className="w-20 shrink-0 text-right text-[0.72em] tabular-nums text-ink-faint">{i.dueDate}</span>
+              </div>
+            ))}
+            {visible.length === 0 && (
+              <p className="py-3 text-center text-[0.85em] text-ink-faint">No dated items with this status.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

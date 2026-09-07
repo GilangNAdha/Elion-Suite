@@ -21,9 +21,9 @@ export const TEXT_BLOCK_TYPES: BlockType[] = [
 export const BLOCK_CATEGORIES: { name: string; types: BlockType[] }[] = [
   { name: 'Text', types: ['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo', 'quote', 'code'] },
   { name: 'Media', types: ['image', 'gallery'] },
-  { name: 'Layout', types: ['columns', 'divider'] },
+  { name: 'Layout', types: ['columns', 'divider', 'frame'] },
   { name: 'Database', types: ['database'] },
-  { name: 'Advanced', types: ['callout', 'text'] }
+  { name: 'Advanced', types: ['callout', 'text', 'duel'] }
 ]
 
 export const BLOCK_LABEL: Record<BlockType, string> = {
@@ -45,7 +45,10 @@ export const BLOCK_LABEL: Record<BlockType, string> = {
   text: 'Text note',
   shape: 'Shape',
   arrow: 'Arrow',
-  pen: 'Pen stroke'
+  pen: 'Pen stroke',
+  frame: 'Frame',
+  edge: 'Edge',
+  duel: 'Duel arena'
 }
 
 export function makeBlock(type: BlockType, partial?: Partial<Block>): Block {
@@ -60,6 +63,8 @@ export function makeBlock(type: BlockType, partial?: Partial<Block>): Block {
   if (type === 'columns') b.props = { cols: [[], []] }
   if (type === 'gallery') b.props = { items: [] }
   if (type === 'shape') b.props = { kind: 'rect', fill: 'var(--primary-soft)' }
+  if (type === 'frame') b.props = { title: '' }
+  if (type === 'edge') b.props = { from: '', to: '' }
   return { ...b, ...partial }
 }
 
@@ -77,6 +82,12 @@ export function convertBlock(block: Block, to: BlockType, allBlocks: Block[]): B
   if (to === 'columns') next.props = { cols: [[], []] }
   if (to === 'gallery') next.props = { items: [] }
   if (to === 'shape') next.props = { kind: 'rect', fill: 'var(--primary-soft)' }
+  if (to === 'frame') next.props = { title: block.content }
+  // structural blocks carry no portable content (frame keeps it as its title)
+  if (block.type === 'edge' || block.type === 'frame' || block.type === 'duel' || to === 'edge' || to === 'duel') {
+    next.content = ''
+    return next
+  }
 
   if (to === 'database') {
     // database blocks are created by the shell (needs a dbId); keep empty
@@ -164,6 +175,15 @@ export function deleteBlocks(blocks: Block[], ids: string[]): TreeResult {
       if (b.parentId && toDelete.has(b.parentId) && !toDelete.has(b.id)) {
         toDelete.add(b.id)
         grew = true
+      }
+      // edges referencing a deleted endpoint die with it
+      if (b.type === 'edge' && !toDelete.has(b.id)) {
+        const from = String(b.props.from ?? '')
+        const to = String(b.props.to ?? '')
+        if (toDelete.has(from) || toDelete.has(to)) {
+          toDelete.add(b.id)
+          grew = true
+        }
       }
     }
   }

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MousePointer2, Type, Square, Circle, Diamond, MoveUpRight, Pen,
-  ZoomIn, ZoomOut, Maximize, Crosshair, Grid3x3
+  ZoomIn, ZoomOut, Maximize, Crosshair, Grid3x3, GitBranch, Frame as FrameIcon
 } from 'lucide-react'
 import type { Block, BlockType } from '../../lib/types'
 import { uid } from '../../lib/types'
+import { makeBlock, BLOCK_LABEL } from '../../lib/blockEngine'
 import type { EditorSession } from './useEditorSession'
 import { BlockView, BlockToolbar } from './blocks'
 import { IconBtn } from '../ui'
 
-type Tool = 'select' | 'text' | 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'pen'
+type Tool = 'select' | 'text' | 'rect' | 'ellipse' | 'diamond' | 'arrow' | 'pen' | 'connect' | 'frame'
 
 interface View {
   x: number
@@ -45,6 +46,10 @@ export function EdgelessCanvas({
   const [draft, setDraft] = useState<{ start: { x: number; y: number }; end: { x: number; y: number }; points?: { x: number; y: number }[] } | null>(null)
   const [edgeHit, setEdgeHit] = useState<string | null>(null)
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null)
+  // §15.4 connect tool state
+  const [connectSource, setConnectSource] = useState<string | null>(null)
+  const [connectDraft, setConnectDraft] = useState<{ x: number; y: number } | null>(null)
+  const [labelEdit, setLabelEdit] = useState<{ id: string; x: number; y: number; value: string } | null>(null)
 
   const viewRef = useRef(view)
   viewRef.current = view
@@ -59,6 +64,24 @@ export function EdgelessCanvas({
       y: (p.y - r.top - v.y) / v.zoom
     }
   }, [])
+
+  // live preview line while connecting
+  useEffect(() => {
+    if (!connectSource) return
+    const onMove = (e: PointerEvent) => setConnectDraft(toCanvas({ x: e.clientX, y: e.clientY }))
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConnectSource(null)
+        setConnectDraft(null)
+      }
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [connectSource, toCanvas])
 
   // ---- DnD hooks (drives intent while dragging from the library or a block) ----
   useEffect(() => {
@@ -101,6 +124,14 @@ export function EdgelessCanvas({
         } else if (kind === 'block' && api.current.dragIds?.length) {
           const ids = api.current.dragIds
           if (hit && !ids.includes(hit)) {
+            // §15.5 drop onto a frame → re-parent (group into the frame)
+            const hitBlock = session.blocks.find((b) => b.id === hit)
+            if (hitBlock?.type === 'frame') {
+              session.commit('Moved block into frame', (cur) =>
+                cur.map((b) => (ids.includes(b.id) ? { ...b, parentId: hit } : b))
+              )
+              return
+            }
             // swap positions
             const a = session.blocks.find((b) => b.id === ids[0])
             const b2 = session.blocks.find((b) => b.id === hit)
@@ -194,6 +225,13 @@ export function EdgelessCanvas({
                 pos: { x, y, w, h },
                 props: { kind: tool, fill: 'var(--primary-soft)' }
               })
+            } else if (tool === 'frame') {
+              const x = Math.min(d.start.x, d.end.x)
+              const y = Math.min(d.start.y, d.end.y)
+              const w = Math.max(220, Math.abs(d.end.x - d.start.x))
+              const h = Math.max(140, Math.abs(d.end.y - d.start.y))
+              const id = session.insertNew('frame')
+              session.patchBlock(id, { pos: { x, y, w, h } })
             } else if (tool === 'arrow') {
               const id = session.insertNew('arrow')
               const x = Math.min(d.start.x, d.end.x)
@@ -317,6 +355,49 @@ export function EdgelessCanvas({
   const placed = useMemo(() => session.blocks.filter((b) => b.pos), [session.blocks])
   const pct = Math.round(view.zoom * 100)
 
+  // ---- §15.4 edges ----
+  const createEdge = useCallback(
+    (from: string, to: string) => {
+      const a = session.blocks.find((b) => b.id === from)
+      const b = session.blocks.find((b) => b.id === to)
+      if (!a || !b || from === to) return
+      const exists = session.blocks.some(
+        (e) =>
+          e.type === 'edge' &&
+          ((String(e.props.from) === from && String(e.props.to) === to) ||
+            (String(e.props.from) === to && String(e.props.to) === from))
+      )
+      if (exists) return
+      const e = makeBlock('edge', { props: { from, to } })
+      session.commit(`Connected ${BLOCK_LABEL[a.type].toLowerCase()} and ${BLOCK_LABEL[b.type].toLowerCase()}`, (cur) => [
+        ...cur,
+        e
+      ])
+    },
+    [session]
+  )
+
+  const handleConnectClick = (id: string) => {
+    if (!connectSource) {
+      setConnectSource(id)
+      return
+    }
+    if (connectSource !== id) createEdge(connectSource, id)
+    setConnectSource(null)
+    setConnectDraft(null)
+    setTool('select')
+  }
+
+  const edges = session.blocks.filter((b) => b.type === 'edge')
+  const anchor = (id: string) => {
+    const b = session.blocks.find((x) => x.id === id)
+    if (!b?.pos) return null
+    const w = b.pos.w ?? DEFAULT_W
+    const h = b.pos.h ?? 80
+    return { cx: b.pos.x + w / 2, top: b.pos.y, bottom: b.pos.y + h }
+  }
+  const connectAnchor = anchor(connectSource ?? '')
+
   return (
     <div
       ref={canvasRef}
@@ -334,21 +415,129 @@ export function EdgelessCanvas({
         className="absolute left-0 top-0"
         style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, transformOrigin: '0 0' }}
       >
-        {placed.map((b) => (
-          <EdgelessBlock
-            key={b.id}
-            block={b}
-            session={session}
-            selected={session.selection.includes(b.id)}
-            hit={edgeHit === b.id}
-            onOpenComments={onOpenComments ? () => onOpenComments(b.id) : undefined}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (e.shiftKey) session.toggleSelection(b.id)
-              else if (!session.selection.includes(b.id)) session.setSelection([b.id])
+        {placed
+          .filter((b) => b.type !== 'edge')
+          .map((b) => (
+            <EdgelessBlock
+              key={b.id}
+              block={b}
+              session={session}
+              selected={session.selection.includes(b.id)}
+              hit={edgeHit === b.id}
+              connecting={tool === 'connect' && (connectSource === b.id || !connectSource)}
+              onOpenComments={onOpenComments ? () => onOpenComments(b.id) : undefined}
+              onConnect={tool === 'connect' ? () => handleConnectClick(b.id) : undefined}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (tool === 'connect') {
+                  handleConnectClick(b.id)
+                  return
+                }
+                if (e.shiftKey) session.toggleSelection(b.id)
+                else if (!session.selection.includes(b.id)) session.setSelection([b.id])
+              }}
+            />
+          ))}
+
+        {/* §15.4 edges — bezier connectors in canvas space */}
+        <svg className="pointer-events-none absolute overflow-visible" style={{ left: 0, top: 0 }} width="1" height="1" aria-hidden>
+          {edges.map((e) => {
+            const from = anchor(String(e.props.from ?? ''))
+            const to = anchor(String(e.props.to ?? ''))
+            if (!from || !to) return null
+            const start = from.bottom <= to.top ? { x: from.cx, y: from.bottom } : { x: from.cx, y: from.top }
+            const end = from.bottom <= to.top ? { x: to.cx, y: to.top } : { x: to.cx, y: to.bottom }
+            const dy = end.y - start.y
+            const c1 = { x: start.x, y: start.y + dy * 0.5 }
+            const c2 = { x: end.x, y: end.y - dy * 0.5 }
+            const mid = {
+              x: (start.x + 3 * c1.x + 3 * c2.x + end.x) / 8,
+              y: (start.y + 3 * c1.y + 3 * c2.y + end.y) / 8
+            }
+            const selectedEdge = session.selection.includes(e.id)
+            const label = String(e.props.label ?? '')
+            return (
+              <g key={e.id}>
+                <path
+                  d={`M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}`}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={14 / view.zoom}
+                  style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    session.setSelection([e.id])
+                  }}
+                  onDoubleClick={(ev) => {
+                    ev.stopPropagation()
+                    setLabelEdit({ id: e.id, x: mid.x, y: mid.y, value: label })
+                  }}
+                />
+                <path
+                  d={`M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}`}
+                  fill="none"
+                  stroke={selectedEdge ? 'var(--accent)' : 'var(--primary)'}
+                  strokeWidth={(selectedEdge ? 2.5 : 1.8) / Math.sqrt(view.zoom)}
+                  markerEnd=""
+                />
+                <polygon
+                  points={arrowPoints(end, c2)}
+                  fill={selectedEdge ? 'var(--accent)' : 'var(--primary)'}
+                />
+                {label && (
+                  <text
+                    x={mid.x}
+                    y={mid.y - 6 / view.zoom}
+                    textAnchor="middle"
+                    fontSize={12 / Math.sqrt(view.zoom)}
+                    fill="var(--ink-muted)"
+                    stroke="var(--bg)"
+                    strokeWidth={3 / view.zoom}
+                    paintOrder="stroke"
+                  >
+                    {label}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+          {connectSource && connectAnchor && (
+            <line
+              x1={connectAnchor.cx}
+              y1={connectAnchor.bottom}
+              x2={connectDraft?.x ?? connectAnchor.cx}
+              y2={connectDraft?.y ?? connectAnchor.bottom}
+              stroke="var(--primary)"
+              strokeWidth={2 / view.zoom}
+              strokeDasharray="6 4"
+            />
+          )}
+        </svg>
+
+        {/* §15.4 edge label editor */}
+        {labelEdit && (
+          <input
+            autoFocus
+            aria-label="Edge label"
+            className="absolute z-40 w-36 rounded-token-sm border border-primary bg-raised px-2 py-1 text-[0.85em] text-ink shadow-lg"
+            style={{ left: labelEdit.x - 72, top: labelEdit.y - 14 }}
+            value={labelEdit.value}
+            placeholder="Label…"
+            onChange={(e) => setLabelEdit((le) => (le ? { ...le, value: e.target.value } : le))}
+            onBlur={() => {
+              const v = labelEdit.value.trim()
+              const le = labelEdit
+              setLabelEdit(null)
+              const cur = session.blocks.find((b) => b.id === le.id)
+              if (cur && String(cur.props.label ?? '') !== v) {
+                session.patchBlock(le.id, { props: { ...cur.props, label: v || undefined } })
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur()
             }}
           />
-        ))}
+        )}
 
         {/* draft preview */}
         {draft && (
@@ -417,6 +606,19 @@ export function EdgelessCanvas({
         />
       )}
 
+      {/* §15.6 minimap (top-right) */}
+      <Minimap
+        blocks={session.blocks}
+        view={view}
+        containerRef={canvasRef}
+        onNavigate={(cx, cy) => {
+          const el = canvasRef.current
+          if (!el) return
+          const cr = el.getBoundingClientRect()
+          setView((v) => ({ ...v, x: cr.width / 2 - cx * v.zoom, y: cr.height / 2 - cy * v.zoom }))
+        }}
+      />
+
       {/* bottom-center tools */}
       <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2">
         <div className="glass-panel elev-overlay flex items-center gap-0.5 rounded-token border border-line p-1" role="toolbar" aria-label="Canvas tools">
@@ -428,7 +630,9 @@ export function EdgelessCanvas({
               ['ellipse', Circle, 'Ellipse'],
               ['diamond', Diamond, 'Diamond'],
               ['arrow', MoveUpRight, 'Arrow'],
-              ['pen', Pen, 'Pen']
+              ['pen', Pen, 'Pen'],
+              ['frame', FrameIcon, 'Frame (drag to size)'],
+              ['connect', GitBranch, 'Connect blocks (click source, then target)']
             ] as [Tool, typeof Square, string][]
           ).map(([t, Icon, label]) => (
             <IconBtn key={t} label={label} active={tool === t} onClick={() => setTool(t)} className="h-8 w-8">
@@ -475,11 +679,100 @@ export function EdgelessCanvas({
   )
 }
 
+/** §15.6 minimap — content bounds scaled to a small panel; viewport rect
+ *  tracks pan/zoom live; click or drag to reposition the viewport. */
+function Minimap({
+  blocks,
+  view,
+  containerRef,
+  onNavigate
+}: {
+  blocks: Block[]
+  view: View
+  containerRef: React.RefObject<HTMLDivElement>
+  onNavigate: (cx: number, cy: number) => void
+}) {
+  const W = 160
+  const H = 100
+  const placed = blocks.filter((b) => b.pos && b.type !== 'edge')
+  if (placed.length === 0) return null
+  const pad = 40
+  const minX = Math.min(...placed.map((b) => b.pos!.x)) - pad
+  const minY = Math.min(...placed.map((b) => b.pos!.y)) - pad
+  const maxX = Math.max(...placed.map((b) => b.pos!.x + (b.pos!.w ?? DEFAULT_W))) + pad
+  const maxY = Math.max(...placed.map((b) => b.pos!.y + (b.pos!.h ?? 80))) + pad
+  const s = Math.min(W / (maxX - minX), H / (maxY - minY))
+  const offX = (W - (maxX - minX) * s) / 2
+  const offY = (H - (maxY - minY) * s) / 2
+  const nav = (e: React.PointerEvent) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    onNavigate((e.clientX - r.left - offX) / s + minX, (e.clientY - r.top - offY) / s + minY)
+  }
+  const el = containerRef.current
+  let vp: { x: number; y: number; w: number; h: number } | null = null
+  if (el) {
+    const cr = el.getBoundingClientRect()
+    vp = { x: -view.x / view.zoom, y: -view.y / view.zoom, w: cr.width / view.zoom, h: cr.height / view.zoom }
+  }
+  return (
+    <div
+      role="application"
+      aria-label="Minimap — click or drag to move the viewport"
+      className="glass-panel elev-overlay absolute right-4 top-4 z-30 cursor-pointer overflow-hidden rounded-token border border-line bg-raised/90"
+      style={{ width: W, height: H }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        nav(e)
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons === 1) nav(e)
+      }}
+    >
+      {placed.map((b) => (
+        <div
+          key={b.id}
+          aria-hidden
+          className="absolute rounded-[1px] bg-primary/70"
+          style={{
+            left: (b.pos!.x - minX) * s + offX,
+            top: (b.pos!.y - minY) * s + offY,
+            width: Math.max(2, (b.pos!.w ?? DEFAULT_W) * s),
+            height: Math.max(2, (b.pos!.h ?? 80) * s)
+          }}
+        />
+      ))}
+      {vp && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute border border-ink/60"
+          style={{
+            left: (vp.x - minX) * s + offX,
+            top: (vp.y - minY) * s + offY,
+            width: vp.w * s,
+            height: vp.h * s
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function arrowPoints(end: { x: number; y: number }, c: { x: number; y: number }): string {
+  const ang = Math.atan2(end.y - c.y, end.x - c.x)
+  const len = 10
+  const spread = Math.PI / 7
+  return `${end.x},${end.y} ${end.x - len * Math.cos(ang - spread)},${end.y - len * Math.sin(ang - spread)} ${
+    end.x - len * Math.cos(ang + spread)
+  },${end.y - len * Math.sin(ang + spread)}`
+}
+
 function EdgelessBlock({
   block,
   session,
   selected,
   hit,
+  connecting = false,
+  onConnect,
   onClick,
   onOpenComments
 }: {
@@ -487,23 +780,31 @@ function EdgelessBlock({
   session: EditorSession
   selected: boolean
   hit: boolean
+  connecting?: boolean
+  onConnect?: () => void
   onClick: (e: React.MouseEvent) => void
   onOpenComments?: () => void
 }) {
   const pos = block.pos!
+  const isFrame = block.type === 'frame'
   return (
     <div
       data-block={block.id}
-      className={`elev-raised absolute rounded-token border bg-raised ${
-        hit ? 'border-primary ring-2 ring-primary' : selected ? 'border-primary' : 'border-line'
-      }`}
+      className={`absolute rounded-token border ${
+        isFrame
+          ? 'border-transparent bg-transparent'
+          : `elev-raised bg-raised ${hit ? 'border-primary ring-2 ring-primary' : selected ? 'border-primary' : 'border-line'}`
+      } ${connecting ? 'cursor-crosshair ring-2 ring-primary/50' : ''}`}
       style={{ left: pos.x, top: pos.y, width: pos.w ?? DEFAULT_W, minHeight: pos.h ?? 60 }}
-      onClick={onClick}
+      onClick={onConnect ? (e) => { e.stopPropagation(); onConnect() } : onClick}
+      title={isFrame ? 'Frame — drag blocks onto it to group' : undefined}
     >
-      <div className="p-2">
+      <div className={isFrame ? 'h-full' : 'p-2'}>
         <BlockView block={block} session={session} edgeless selected={selected} />
       </div>
-      <BlockToolbar block={block} session={session} onOpenComments={onOpenComments ?? (() => undefined)} />
+      {!isFrame && (
+        <BlockToolbar block={block} session={session} onOpenComments={onOpenComments ?? (() => undefined)} />
+      )}
     </div>
   )
 }

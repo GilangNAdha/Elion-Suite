@@ -1,5 +1,7 @@
 import { usePetStore } from '../../stores/petStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 import type { PetMoodState } from '../../lib/types'
+import { DuelPet } from './DuelPet'
 
 const MOOD_FACE: Record<PetMoodState['mood'], { eyes: string; mouth: string; blush: boolean }> = {
   idle: { eyes: '•', mouth: '‿', blush: false },
@@ -19,9 +21,22 @@ const MOOD_TINT: Record<PetMoodState['mood'], string> = {
 
 /**
  * Pet companion — one shared component & mood state, mounted on the
- * Dashboard and inside Lockdown (§7).
+ * Dashboard, Pet page, and inside Lockdown (§7). v5: `petStyle` selects
+ * between the classic companion and the opt-in Pixel Duel arena (§17).
  */
 export function Pet({ mood, size = 120 }: { mood?: PetMoodState['mood']; size?: number }) {
+  const petStyle = useSettingsStore((s) => s.petStyle)
+  if (petStyle === 'duel') {
+    return (
+      <div style={{ width: Math.max(size, 160) * 1.6 }}>
+        <DuelPet mood={mood} />
+      </div>
+    )
+  }
+  return <ClassicPet mood={mood} size={size} />
+}
+
+export function ClassicPet({ mood, size = 120 }: { mood?: PetMoodState['mood']; size?: number }) {
   const storeMood = usePetStore((s) => s.mood)
   const m = mood ?? storeMood
   const f = MOOD_FACE[m]

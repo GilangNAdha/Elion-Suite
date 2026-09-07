@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import {
   Palette, Download, Upload, Trash2, Moon, Sun, SlidersHorizontal,
-  Mic, ShieldAlert, MapPin, Info, Check, X
+  Mic, ShieldAlert, MapPin, Info, Check, X, Swords
 } from 'lucide-react'
+import { DuelPet } from '../components/pet/DuelPet'
+import { ClassicPet } from '../components/pet/Pet'
 import type { AuroraTheme, Harmony } from '../lib/types'
 import { uid } from '../lib/types'
 import { useThemeStore } from '../stores/themeStore'
@@ -31,6 +33,7 @@ export function SettingsPage() {
   const reducedMotion = useThemeStore((s) => s.reducedMotion)
   const setReducedMotion = useThemeStore((s) => s.setReducedMotion)
   const settings = useSettingsStore()
+  const { petStyle, setPetStyle } = settings
   const importRef = useRef<HTMLInputElement>(null)
   const [saveName, setSaveName] = useState('')
 
@@ -200,6 +203,45 @@ export function SettingsPage() {
       </Section>
 
       {/* ---------------- speech-to-text ---------------- */}
+      <Section title="Pet companion" icon={<Swords size={15} />}>
+        <p className="mb-3 text-[0.85em] text-ink-muted">
+          Applies everywhere the pet is mounted — Dashboard, Lockdown, the Pet page, and any
+          page containing a <strong>duel block</strong>. The Pixel Duel (White Knight vs.
+          Black Knight) is an opt-in cosmetic with original bundled art.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            className={`focus-ring relative overflow-hidden rounded-token-lg border p-3 text-left transition-colors ${
+              petStyle === 'classic' ? 'border-primary bg-primary-soft' : 'border-line bg-surface hover:border-line-strong'
+            }`}
+            onClick={() => setPetStyle('classic')}
+            aria-pressed={petStyle === 'classic'}
+          >
+            {petStyle === 'classic' && <Check size={14} className="absolute right-2 top-2 text-primary" />}
+            <div className="mb-2 flex h-24 items-center justify-center">
+              <ClassicPet size={72} mood="happy" />
+            </div>
+            <div className="text-[0.9em] font-semibold">Classic</div>
+            <div className="text-[0.75em] text-ink-muted">The soft mood companion</div>
+          </button>
+          <button
+            className={`focus-ring relative overflow-hidden rounded-token-lg border p-3 text-left transition-colors ${
+              petStyle === 'duel' ? 'border-primary bg-primary-soft' : 'border-line bg-surface hover:border-line-strong'
+            }`}
+            onClick={() => setPetStyle('duel')}
+            aria-pressed={petStyle === 'duel'}
+          >
+            {petStyle === 'duel' && <Check size={14} className="absolute right-2 top-2 text-primary" />}
+            <div className="mb-2 flex h-24 items-center justify-center">
+              <div style={{ width: '100%' }}>
+                <DuelPet mood="happy" />
+              </div>
+            </div>
+            <div className="text-[0.9em] font-semibold">Pixel Duel</div>
+            <div className="text-[0.75em] text-ink-muted">Griffith vs. Guts — 2D pixel arena</div>
+          </button>
+        </div>
+      </Section>
       <Section title="Speech-to-text" icon={<Mic size={15} />}>
         <Toggle
           label="Enable dictation"

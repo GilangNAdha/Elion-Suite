@@ -44,6 +44,7 @@ export interface EditorSession {
   insertNew: (type: BlockType, beforeId?: string | null, parentId?: string | null) => string
   convert: (id: string, to: BlockType) => void
   remove: (ids: string[]) => void
+  duplicate: (ids: string[]) => void
   move: (ids: string[], beforeId: string | null, parentId: string | null) => void
   composeColumns: (dragged: string[], targetId: string, side: 'left' | 'right') => void
   setBlockContent: (id: string, content: string) => void
@@ -169,6 +170,65 @@ export function useEditorSession(page: PageRecord): EditorSession {
       setSelection([])
     },
     [commit]
+  )
+
+  /** Duplicate blocks (with descendants) directly below the originals,
+   *  remapping children, columns and edge endpoints to the new ids. */
+  const duplicate = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return
+      const cur = blocksRef.current
+      const idSet = new Set(ids)
+      // top-level originals: not a descendant of another selected block
+      const tops = ids.filter((id) => {
+        const b = cur.find((x) => x.id === id)
+        return !!b && !(b.parentId && idSet.has(b.parentId))
+      })
+      if (tops.length === 0) return
+      // old id → new id for the originals and all their descendants
+      const map = new Map<string, string>()
+      const queue = [...tops]
+      while (queue.length) {
+        const id = queue.pop()!
+        if (map.has(id)) continue
+        map.set(id, uid())
+        for (const b of cur) if (b.parentId === id) queue.push(b.id)
+      }
+      commit(`Duplicated ${tops.length} block${tops.length > 1 ? 's' : ''}`, (blocks) => {
+        const remapId = (v: string) => map.get(v) ?? v
+        const copies = blocks
+          .filter((b) => map.has(b.id))
+          .map((b) => {
+            const props: Record<string, unknown> = { ...b.props }
+            if (Array.isArray(props.cols)) {
+              props.cols = (props.cols as string[][]).map((col) => col.map(remapId))
+            }
+            return {
+              ...b,
+              id: map.get(b.id)!,
+              parentId: b.parentId && map.has(b.parentId) ? map.get(b.parentId)! : b.parentId,
+              props
+            }
+          })
+        // place each top-level copy just below its original
+        const withOrder = copies.map((c) => {
+          if (c.parentId && map.has(c.parentId)) return c
+          const original = blocks.find((b) => b.id === [...map.entries()].find(([, n]) => n === c.id)?.[0])
+          const sibs = blocks.filter((b) => b.parentId === c.parentId).sort((a, b) => a.order - b.order)
+          const oi = sibs.findIndex((b) => b.id === original?.id)
+          const after = sibs.slice(oi + 1).find((b) => !map.has(b.id))
+          return { ...c, order: after ? (sibs[oi].order + after.order) / 2 : sibs[oi].order + 1000 }
+        })
+        // copies of edges point at the remapped endpoints
+        const fixed = withOrder.map((c) =>
+          c.type === 'edge'
+            ? { ...c, props: { ...c.props, from: remapId(String(c.props.from ?? '')), to: remapId(String(c.props.to ?? '')) } }
+            : c
+        )
+        return [...blocks, ...fixed]
+      })
+    },
+    [commit, blocksRef]
   )
 
   const move = useCallback(
@@ -318,6 +378,7 @@ export function useEditorSession(page: PageRecord): EditorSession {
       insertNew,
       convert,
       remove,
+      duplicate,
       move,
       composeColumns,
       setBlockContent,
@@ -329,7 +390,7 @@ export function useEditorSession(page: PageRecord): EditorSession {
     }),
     [
       page, blocks, history, historyIndex, undo, redo, jumpTo, selection,
-      focusRequest, requestFocus, commit, insertNew, convert, remove, move,
+      focusRequest, requestFocus, commit, insertNew, convert, remove, duplicate, move,
       composeColumns, setBlockContent, commitTextEdit, patchBlock, takeSnapshot,
       restoreSnapshot, createDatabaseBlock
     ]
