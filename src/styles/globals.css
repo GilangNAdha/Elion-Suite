@@ -1,0 +1,260 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Pre-hydration defaults (dark baseline; ThemeProvider overwrites) */
+  --bg: hsl(228 16% 7%);
+  --surface: hsl(228 14% 11%);
+  --surface-alpha: hsl(228 14% 11% / 0.88);
+  --raised: hsl(228 13% 15%);
+  --sunken: hsl(228 18% 4.5%);
+  --overlay: hsl(228 16% 18% / 0.96);
+  --ink: hsl(228 15% 92%);
+  --ink-muted: hsl(228 10% 66%);
+  --ink-faint: hsl(228 8% 54%);
+  --line: hsl(228 20% 100% / 0.13);
+  --line-strong: hsl(228 20% 100% / 0.22);
+  --primary: hsl(228 68% 64%);
+  --on-primary: hsl(0 0% 0%);
+  --primary-soft: hsl(228 68% 64% / 0.16);
+  --accent: hsl(48 68% 68%);
+  --on-accent: hsl(0 0% 0%);
+  --ok: hsl(152 62% 46%);
+  --warn: hsl(42 92% 56%);
+  --bad: hsl(4 76% 60%);
+  --info: hsl(214 86% 64%);
+  --c1: hsl(228 70% 62%);
+  --c2: hsl(48 70% 62%);
+  --c3: hsl(348 70% 60%);
+  --c4: hsl(108 70% 60%);
+  --c5: hsl(288 67% 58%);
+  --c6: hsl(168 67% 56%);
+  --radius: 12px;
+  --radius-sm: 6px;
+  --radius-lg: 20px;
+  --glass-blur: 8px;
+  --shadow-sunken: inset 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-ink antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overscroll-behavior: none;
+}
+
+/* ---------------- elevation (4-layer model, §4) ---------------- */
+.elev-sunken {
+  box-shadow: var(--shadow-sunken);
+}
+.elev-raised {
+  box-shadow: var(--shadow-raised);
+}
+.elev-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+
+/* ---------------- glass panels ---------------- */
+.glass-panel {
+  background: var(--surface-alpha);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+}
+
+/* ---------------- status pill (§4) ---------------- */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pill) 35%, transparent);
+  background: color-mix(in srgb, var(--pill) 16%, transparent);
+  color: var(--pill);
+  padding: 0.15em 0.6em;
+  font-size: 0.78em;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.status-pill-sm {
+  padding: 0.08em 0.5em;
+  font-size: 0.72em;
+}
+
+/* ---------------- focus ring (WCAG 2.4.7) ---------------- */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ---------------- contenteditable placeholders ---------------- */
+.block-text:empty::before {
+  content: 'Type here…';
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.block-selected {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* ---------------- slider ---------------- */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  outline: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--raised);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--raised);
+  cursor: pointer;
+}
+
+/* ---------------- scrollbars ---------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------- page transitions & motion ---------------- */
+.shell-page {
+  padding-bottom: 56px; /* room for the bottom dock */
+  animation: page-in 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.dock-in {
+  animation: dock-in 400ms cubic-bezier(0, 0, 0.2, 1) 150ms backwards;
+}
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.toast-in {
+  animation: toast-in 220ms cubic-bezier(0, 0, 0.2, 1);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pet-bob {
+  animation: pet-bob 3.2s ease-in-out infinite;
+}
+@keyframes pet-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.spin-slow {
+  animation: spin 3s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pulse-rec {
+  animation: pulse-rec 1.4s ease-in-out infinite;
+}
+@keyframes pulse-rec {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------------- reduced motion (system OR in-app toggle) ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+html[data-reduced='1'] *,
+html[data-reduced='1'] *::before,
+html[data-reduced='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* selection */
+::selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
