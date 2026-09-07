@@ -9,6 +9,7 @@ import { usePagesStore } from '../stores/pagesStore'
 import { useItemsStore } from '../stores/itemsStore'
 import { BlockView } from '../components/editor/blocks'
 import { DatabaseBlock } from '../components/items/DatabaseBlock'
+import { pageIconFor } from '../components/pageIcons'
 import { Button, IconBtn, Menu, MenuItem, MenuSep, EmptyState, StatusPill } from '../components/ui'
 import { timeAgo } from '../lib/time'
 import type { EditorSession } from '../components/editor/useEditorSession'
@@ -109,6 +110,7 @@ function TreeNode({ page, current, depth }: { page: PageRecord; current?: string
   const children = Object.values(pages)
     .filter((p) => p.parentId === page.id && p.branch === 'workspace')
     .sort((a, b) => a.title.localeCompare(b.title))
+  const PageIcon = pageIconFor(page.icon)
   return (
     <li>
       <div
@@ -118,11 +120,12 @@ function TreeNode({ page, current, depth }: { page: PageRecord; current?: string
         style={{ paddingLeft: 6 + depth * 14 }}
       >
         <button
-          className="focus-ring min-w-0 flex-1 truncate rounded px-1.5 py-1.5 text-left text-[0.88em]"
+          className="focus-ring flex min-w-0 flex-1 items-center gap-1.5 rounded px-1.5 py-1.5 text-left text-[0.88em]"
           style={{ color: current === page.id ? 'var(--primary)' : undefined }}
           onClick={() => navigate(`/workspace/${page.id}`)}
         >
-          {page.title}
+          <PageIcon size={13} className="shrink-0" />
+          <span className="truncate">{page.title}</span>
         </button>
         <Menu
           width={170}
@@ -219,11 +222,15 @@ export function PageView({ page, routePrefix = 'workspace' }: { page: PageRecord
   )
 
   const tops = page.blocks.filter((b) => b.parentId === null).sort((a, b) => a.order - b.order)
+  const HeadIcon = pageIconFor(page.icon)
 
   return (
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-4 flex items-center gap-2">
-        <h1 className="min-w-0 flex-1 truncate text-[1.8em] font-bold tracking-tight">{page.title}</h1>
+        <h1 className="flex min-w-0 flex-1 items-center gap-2.5 text-[1.8em] font-bold tracking-tight">
+          <HeadIcon size={28} className="shrink-0 text-primary" />
+          <span className="truncate">{page.title}</span>
+        </h1>
         <Button variant="ghost" size="sm" icon={<History size={14} />} onClick={() => navigate(`/${routePrefix}/${page.id}/edit`)}>
           History
         </Button>
@@ -379,7 +386,9 @@ export function DatabaseRoutePage() {
   const { dbId = '' } = useParams()
   const navigate = useNavigate()
   const db = useItemsStore((s) => s.databases[dbId])
-  const page = useItemsStore((s) => s.databases[dbId]) ? usePagesStore((s) => s.pages[db.pageId]) : undefined
+  // hooks must be called unconditionally — derive the page lookup input first
+  const pageId = db?.pageId
+  const page = usePagesStore((s) => (pageId ? s.pages[pageId] : undefined))
   if (!db) {
     return (
       <div className="p-8">

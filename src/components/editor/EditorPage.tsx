@@ -17,7 +17,7 @@ import type { Block, BlockType } from '../../lib/types'
 import { computeDropIntent, makeBlock, topLevelBlocks, childrenOf, BLOCK_LABEL, TEXT_BLOCK_TYPES } from '../../lib/blockEngine'
 import type { DropIntent } from '../../lib/blockEngine'
 import { useEditorSession } from './useEditorSession'
-import { BlockView, BlockToolbar, BLOCK_ICON } from './blocks'
+import { BlockView, BlockToolbar, BLOCK_ICON, nullAfter } from './blocks'
 import { LeftPanel, RightPanel, HistoryDrawer, SnapshotsDrawer, CommentsDrawer } from './panels'
 import { EdgelessCanvas } from './EdgelessCanvas'
 import { Button, IconBtn, Kbd, Tabs, EmptyState } from '../ui'
@@ -179,7 +179,14 @@ function EditorChrome({ pageId }: { pageId: string }) {
     const rects = Object.fromEntries(
       Object.entries(intentRects).filter(([id]) => !('blockIds' in dragInfo && dragInfo.blockIds.includes(id)))
     )
-    setIntent(computeDropIntent(rects, { x: p.x - canvasRect.left, y: p.y - canvasRect.top }))
+    // rects are measured in CONTENT coordinates (scroll included) — the
+    // pointer must be offset the same way or drop intent drifts while scrolled
+    setIntent(
+      computeDropIntent(rects, {
+        x: p.x - canvasRect.left + canvas.scrollLeft,
+        y: p.y - canvasRect.top + canvas.scrollTop
+      })
+    )
   }
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -198,11 +205,20 @@ function EditorChrome({ pageId }: { pageId: string }) {
 
     if (info.kind === 'chip') {
       const t = info.blockType
+      if (t === 'database') {
+        // a database chip creates the database record too — never a bare block
+        session.createDatabaseBlock(targetId)
+        return
+      }
       if (it.kind === 'replace' && targetId) {
         session.convert(targetId, t)
         pushToast(`Converted block to ${BLOCK_LABEL[t]}`)
-      } else if ((it.kind === 'insert-before' || it.kind === 'insert-after') && targetId) {
+      } else if (it.kind === 'insert-before' && targetId) {
         session.insertNew(t, targetId)
+      } else if (it.kind === 'insert-after' && targetId) {
+        // insertNew takes a "before" anchor — resolve the target's next sibling
+        const blk = session.blocks.find((b) => b.id === targetId)
+        session.insertNew(t, blk ? nullAfter(blk, session) : null)
       } else if (it.kind === 'layout-left' || it.kind === 'layout-right') {
         session.insertNew(t, targetId)
       } else {
@@ -214,7 +230,10 @@ function EditorChrome({ pageId }: { pageId: string }) {
     // moving existing block(s)
     const ids = info.blockIds
     if (it.kind === 'insert-before' && targetId) session.move(ids, targetId, null)
-    else if ((it.kind === 'insert-after' || it.kind === 'replace') && targetId) session.move(ids, targetId, null)
+    else if (it.kind === 'insert-after' && targetId) {
+      const blk = session.blocks.find((b) => b.id === targetId)
+      session.move(ids, blk ? nullAfter(blk, session) : null, null)
+    } else if (it.kind === 'replace' && targetId) session.move(ids, targetId, null)
     else if (it.kind === 'layout-left' && targetId) session.composeColumns(ids, targetId, 'left')
     else if (it.kind === 'layout-right' && targetId) session.composeColumns(ids, targetId, 'right')
     else if (it.kind === 'append') {
@@ -231,6 +250,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
     if (!canvas) return
     const r = canvas.getBoundingClientRect()
     marqueeStart.current = { x: e.clientX - r.left + canvas.scrollLeft, y: e.clientY - r.top + canvas.scrollTop }
+    const added = new Set<string>()
     const onMove = (ev: PointerEvent) => {
       const c = canvasRef.current
       if (!c || !marqueeStart.current) return
@@ -246,11 +266,14 @@ function EditorChrome({ pageId }: { pageId: string }) {
       const maxY = Math.max(marqueeStart.current.y, y)
       const hit = Object.entries(rects)
         .filter(([id, r2]) =>
-          !session.selection.includes(id) &&
+          !added.has(id) &&
           r2.left < maxX && r2.left + r2.width > minX && r2.top < maxY && r2.top + r2.height > minY
         )
         .map(([id]) => id)
-      if (hit.length) session.setSelection(session.selection.concat(hit))
+      if (hit.length) {
+        for (const id of hit) added.add(id)
+        session.setSelection([...added])
+      }
     }
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
@@ -277,16 +300,25 @@ function EditorChrome({ pageId }: { pageId: string }) {
         el instanceof HTMLTextAreaElement ||
         (el as HTMLElement | null)?.isContentEditable
       const mod = e.metaKey || e.ctrlKey
+      const isCE = !!(el && (el as HTMLElement).isContentEditable)
       if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen((o) => !o)
       } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        // inside a block being edited, Ctrl+Z must undo TEXT (native), not the
+        // block history
+        if (isCE) return
         e.preventDefault()
         session.undo()
       } else if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        if (isCE) return
         e.preventDefault()
         session.redo()
       } else if (e.key === 'Escape') {
+        if (isCE) {
+          ;(el as HTMLElement).blur()
+          return
+        }
         if (session.selection.length) session.clearSelection()
         else if (overlay) setOverlay(null)
       } else if (!editing && (e.key === 'Delete' || e.key === 'Backspace') && session.selection.length) {
@@ -340,9 +372,13 @@ function EditorChrome({ pageId }: { pageId: string }) {
       setSelRect({ top: r.top - cr.top + c.scrollTop, left: r.left - cr.left + c.scrollLeft, width: r.width })
     }
     measure()
-    canvas?.addEventListener('scroll', measure, { passive: true })
-    return () => canvas?.removeEventListener('scroll', measure)
-  }, [session.selection, session.blocks, layout.mode, selectedOne])
+    const c = canvasRef.current
+    c?.addEventListener('scroll', measure, { passive: true })
+    return () => c?.removeEventListener('scroll', measure)
+    // keyed by the selected block id — the `selectedOne` object has a new
+    // identity every render and must not re-arm the listener each render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.blocks, layout.mode, selectedOne?.id])
 
   // ---- page-mode tree render (columns blocks render their own children) ----
   const renderBlocks = (parentId: string | null): ReactNode =>
@@ -509,7 +545,11 @@ function EditorChrome({ pageId }: { pageId: string }) {
               onTab={(t) => patchLayout({ leftTab: t })}
               width={layout.leftW}
               onResize={(w) => patchLayout({ leftW: w })}
-              onInsertBlock={(t) => session.insertNew(t, session.selection[0] ?? null)}
+              onInsertBlock={(t) =>
+                t === 'database'
+                  ? session.createDatabaseBlock(session.selection[0] ?? null)
+                  : session.insertNew(t, session.selection[0] ?? null)
+              }
             />
           )}
 

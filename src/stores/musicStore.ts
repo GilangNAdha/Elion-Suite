@@ -42,13 +42,13 @@ export const useMusicStore = create<MusicState>()(
           currentId: s.currentId ?? t[0]?.id ?? null
         })),
       addYoutube: (url, name) =>
-        set((s) => ({
-          tracks: [
-            ...s.tracks,
-            { id: uid(), name: name || 'YouTube track', src: url, kind: 'youtube' }
-          ],
-          currentId: s.currentId ?? undefined
-        })),
+        set((s) => {
+          const id = uid()
+          return {
+            tracks: [...s.tracks, { id, name: name || 'YouTube track', src: url, kind: 'youtube' }],
+            currentId: s.currentId ?? id
+          }
+        }),
       removeTrack: (id) =>
         set((s) => {
           const tracks = s.tracks.filter((t) => t.id !== id)

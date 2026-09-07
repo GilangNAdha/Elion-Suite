@@ -73,9 +73,7 @@ function lowpass(buf: Float32Array, cutoff: number): Float32Array {
   const dt = 1 / SR
   const alpha = dt / (rc + dt)
   let y = 0
-  for (let i = 0; i < buf.length; i++) y += alpha * (buf[i] - y)
-  out[0] = y
-  for (let i = 1; i < buf.length; i++) {
+  for (let i = 0; i < buf.length; i++) {
     y += alpha * (buf[i] - y)
     out[i] = y
   }

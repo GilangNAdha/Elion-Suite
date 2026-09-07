@@ -3,6 +3,7 @@
 
 const { app, BrowserWindow, ipcMain, screen } = require('electron')
 const path = require('node:path')
+const fs = require('node:fs')
 
 let win = null
 let nudgeThresholdMs = 8000
@@ -27,11 +28,33 @@ function createWindow() {
     }
   })
 
+  // Never leave a silent blank window: surface load failures on-screen.
+  const fail = (msg) => {
+    console.error('[elion]', msg)
+    const html =
+      '<!doctype html><html><body style="background:#0b0e14;color:#e6e9f2;font:14px system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">' +
+      '<div style="max-width:440px;text-align:center"><h2 style="margin:0 0 10px">Elion Suite failed to start</h2>' +
+      '<p style="color:#9aa3b5;margin:0 0 6px">' + msg + '</p>' +
+      '<p style="color:#6b7280;margin:0">Run "npm run build" (or "npm run electron:dev") and relaunch.</p></div></body></html>'
+    if (win) win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+  }
+  win.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    fail(`Could not load ${url} (code ${code}: ${desc}).`)
+  })
+  win.webContents.on('console-message', (_e, _level, message) => {
+    if (process.env.ELION_DEBUG) console.log('[renderer]', message)
+  })
+
   const devUrl = process.env.VITE_DEV_SERVER_URL
   if (devUrl) {
     win.loadURL(devUrl)
   } else {
-    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+    const distFile = path.join(__dirname, '..', 'dist', 'index.html')
+    if (!fs.existsSync(distFile)) {
+      fail('dist/index.html is missing — the app was not built.')
+    } else {
+      win.loadFile(distFile)
+    }
   }
 
   win.on('focus', () => {

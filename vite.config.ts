@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Relative asset paths so the built app also loads from file:// inside
+  // Electron (absolute /assets/… paths 404 there → blank window).
+  base: './',
   plugins: [
     react(),
     VitePWA({

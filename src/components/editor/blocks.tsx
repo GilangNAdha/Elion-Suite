@@ -199,7 +199,7 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
           if (e.key === 'Enter' && !e.shiftKey && onEnter) {
             e.preventDefault()
             onEnter()
-          } else if (e.key === 'Delete' && (e.currentTarget.textContent ?? '') === '') {
+          } else if ((e.key === 'Delete' || e.key === 'Backspace') && (e.currentTarget.textContent ?? '') === '') {
             e.preventDefault()
             session.remove([block.id])
           }
@@ -575,16 +575,16 @@ export function BlockToolbar({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       className={`absolute -top-3 right-2 z-20 flex items-center gap-0.5 rounded-token-sm border border-line bg-raised p-0.5 shadow-sm transition-opacity ${
         isDragging ? 'opacity-30' : session.selection.includes(block.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}
     >
       <span
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
         className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-ink-faint hover:text-ink active:cursor-grabbing"
-        aria-hidden
+        aria-label="Drag to move block"
       >
         <GripVertical size={13} />
       </span>

@@ -113,7 +113,11 @@ export function EdgelessCanvas({
         setGhost(null)
         setEdgeHit(null)
         if (kind === 'chip' && api.current.dragType) {
-          if (hit) {
+          if (api.current.dragType === 'database') {
+            // a database chip must create the database record too — never a
+            // bare block without a dbId
+            session.createDatabaseBlock(hit)
+          } else if (hit) {
             session.convert(hit, api.current.dragType)
           } else {
             const id = session.insertNew(api.current.dragType)
@@ -220,30 +224,29 @@ export function EdgelessCanvas({
     const cp = toCanvas({ x: e.clientX, y: e.clientY })
     const start = { x: e.clientX, y: e.clientY }
 
-    const panMode = tool !== 'select' ? false : e.button === 1 || e.button === 0
     const toolMode = tool !== 'select'
 
     if (toolMode) {
-      // click / drag drawing
+      // click / drag drawing — the draft is tracked in a local so the block
+      // commit happens exactly once on pointer-up (never inside a state
+      // updater, which React may invoke more than once)
       const startCanvas = toCanvas({ x: e.clientX, y: e.clientY })
-      setDraft({ start: startCanvas, end: startCanvas, points: tool === 'pen' ? [startCanvas] : undefined })
+      let d: { start: { x: number; y: number }; end: { x: number; y: number }; points?: { x: number; y: number }[] } = {
+        start: startCanvas,
+        end: startCanvas,
+        points: tool === 'pen' ? [startCanvas] : undefined
+      }
+      setDraft(d)
       const onMove = (ev: PointerEvent) => {
         const cpv = toCanvas({ x: ev.clientX, y: ev.clientY })
-        setDraft((d) =>
-          d
-            ? {
-                ...d,
-                end: cpv,
-                points: d.points ? [...d.points, cpv] : d.points
-              }
-            : d
-        )
+        d = { ...d, end: cpv, points: d.points ? [...d.points, cpv] : d.points }
+        setDraft(d)
       }
       const onUp = () => {
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
-        setDraft((d) => {
-          if (d) {
+        setDraft(null)
+        if (d) {
             if (tool === 'text') {
               const id = session.insertNew('text')
               session.patchBlock(id, { pos: { x: cp.x - DEFAULT_W / 2, y: cp.y - 24, w: DEFAULT_W, h: 48 } })
@@ -288,32 +291,36 @@ export function EdgelessCanvas({
               })
             }
           }
-          return null
-        })
       }
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
       return
     }
 
-    // select tool: pan + marquee
-    if (e.button === 0) {
+    // select tool: left-drag = marquee multi-select (a plain click on empty
+    // canvas clears the selection); middle-drag = pan. Wheel already pans.
+    if (e.button === 1) {
+      e.preventDefault()
       const v0 = { ...viewRef.current }
+      const onMove = (ev: PointerEvent) => {
+        setView({ ...v0, x: v0.x + (ev.clientX - start.x), y: v0.y + (ev.clientY - start.y) })
+      }
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      return
+    }
+    if (e.button === 0) {
+      let moved = false
       const onMove = (ev: PointerEvent) => {
         const dx = ev.clientX - start.x
         const dy = ev.clientY - start.y
-        const isPan = Math.hypot(dx, dy) < 4 || ev.buttons === 1
-        if (isPan) {
-          setView({ ...v0, x: v0.x + dx, y: v0.y + dy })
-          return
-        }
-        setMarquee({
-          x1: start.x,
-          y1: start.y,
-          x2: ev.clientX,
-          y2: ev.clientY
-        })
-        // live selection
+        if (!moved && Math.hypot(dx, dy) < 4) return
+        moved = true
+        setMarquee({ x1: start.x, y1: start.y, x2: ev.clientX, y2: ev.clientY })
         const minX = Math.min(start.x, ev.clientX)
         const maxX = Math.max(start.x, ev.clientX)
         const minY = Math.min(start.y, ev.clientY)
@@ -325,8 +332,7 @@ export function EdgelessCanvas({
             hits.push(b.dataset.block!)
           }
         })
-        const merged = Array.from(new Set([...session.selection, ...hits]))
-        session.setSelection(merged)
+        if (hits.length) session.setSelection(hits)
       }
       const onUp = () => {
         window.removeEventListener('pointermove', onMove)
@@ -574,7 +580,7 @@ export function EdgelessCanvas({
         {/* draft preview */}
         {draft && (
           <svg className="pointer-events-none absolute overflow-visible" style={{ left: 0, top: 0 }} width="1" height="1" aria-hidden>
-            {(draft.start.x < draft.end.x || draft.start.y < draft.end.y) && (
+            {(Math.abs(draft.end.x - draft.start.x) > 1 || Math.abs(draft.end.y - draft.start.y) > 1) && (
               <>
                 {(tool === 'rect' || tool === 'diamond') && (
                   <rect

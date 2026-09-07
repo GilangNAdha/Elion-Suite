@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDraggable } from '@dnd-kit/core'
 import {
   FileText, Plus, FolderPlus, History as HistoryIcon, Camera, Trash2,
-  RotateCcw, X, AlignLeft, AlignCenter, AlignRight, Link2, Mic, CornerUpLeft, Table2
+  RotateCcw, X, AlignLeft, AlignCenter, AlignRight, Link2, Mic, CornerUpLeft, Table2, MessageSquare
 } from 'lucide-react'
 import type { PageRecord, Block, BlockType } from '../../lib/types'
 import { BLOCK_CATEGORIES, BLOCK_LABEL } from '../../lib/blockEngine'
@@ -14,6 +14,7 @@ import { usePagesStore } from '../../stores/pagesStore'
 import { useItemsStore } from '../../stores/itemsStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { timeAgo } from '../../lib/time'
+import { PAGE_ICONS, PAGE_ICON_MAP } from '../pageIcons'
 
 // ---------------------------------------------------------------------------
 // Drawer shell
@@ -270,8 +271,6 @@ function LibraryChip({ type, onInsert }: { type: BlockType; onInsert: () => void
 // ---------------------------------------------------------------------------
 // Right panel: contextual inspector
 // ---------------------------------------------------------------------------
-
-const PAGE_ICONS = ['file-text', 'star', 'book-open', 'compass', 'target', 'zap', 'heart', 'rocket']
 
 export function RightPanel({
   page,
@@ -552,6 +551,7 @@ function BulkInspector({ session }: { session: EditorSession }) {
 
 function PageInspector({ page, session }: { page: PageRecord; session: EditorSession }) {
   const renamePage = usePagesStore((s) => s.renamePage)
+  const setIcon = usePagesStore((s) => s.setIcon)
   const saveTemplate = usePagesStore((s) => s.saveTemplate)
   const pages = usePagesStore((s) => s.pages)
   const profileName = useSettingsStore((s) => s.profileName)
@@ -573,11 +573,25 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
           onChange={(e) => void renamePage(page.id, e.target.value || page.title)}
         />
         <div className="mt-2 flex flex-wrap gap-1">
-          {PAGE_ICONS.map((ic) => (
-            <span key={ic} className="rounded-token-sm border border-line px-1.5 py-0.5 text-[0.7em] text-ink-faint">
-              {ic}
-            </span>
-          ))}
+          {PAGE_ICONS.map((ic) => {
+            const Icon = PAGE_ICON_MAP[ic] ?? FileText
+            const active = page.icon === ic
+            return (
+              <button
+                key={ic}
+                type="button"
+                title={ic}
+                aria-label={`Set page icon to ${ic}`}
+                aria-pressed={active}
+                className={`focus-ring rounded-token-sm border p-1.5 ${
+                  active ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-faint hover:text-ink'
+                }`}
+                onClick={() => void setIcon(page.id, ic)}
+              >
+                <Icon size={13} />
+              </button>
+            )
+          })}
         </div>
       </Section>
 
@@ -766,7 +780,7 @@ export function CommentsDrawer({
   const mine = comments.filter((c) => c.blockId === blockId)
 
   return (
-    <Drawer title="Comments" icon={<HistoryIcon size={15} />} onClose={onClose}>
+    <Drawer title="Comments" icon={<MessageSquare size={15} />} onClose={onClose}>
       {!blockId ? (
         <p className="px-2 py-6 text-center text-[0.85em] text-ink-faint">Select a block first, then use its “Comments” action.</p>
       ) : (

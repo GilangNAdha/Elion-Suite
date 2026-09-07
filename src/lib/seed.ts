@@ -13,7 +13,6 @@ export async function seedIfEmpty(): Promise<void> {
     localStorage.setItem('elion-seeded-v1', '1')
     return
   }
-  localStorage.setItem('elion-seeded-v1', '1')
 
   const now = new Date().toISOString()
   const b = (type: string, content: string, order: number, extra?: Partial<import('./types').Block>) => ({
@@ -245,4 +244,8 @@ export async function seedIfEmpty(): Promise<void> {
     title: 'Team sync (sample event)',
     at: new Date(Date.now() + 2 * 86400000).toISOString()
   })
+
+  // mark seeded only after every write succeeded (a failed partial seed can
+  // retry on next launch instead of being silently skipped forever)
+  localStorage.setItem('elion-seeded-v1', '1')
 }

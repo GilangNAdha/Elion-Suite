@@ -23,6 +23,7 @@ interface PagesState {
 
   createPage: (p: Partial<PageRecord> & { title: string }) => Promise<PageRecord>
   renamePage: (id: string, title: string) => Promise<void>
+  setIcon: (id: string, icon: string) => Promise<void>
   deletePage: (id: string) => Promise<void>
   movePage: (id: string, parentId: string | null) => Promise<void>
   setBlocks: (pageId: string, blocks: Block[]) => Promise<void>
@@ -103,6 +104,14 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
     const page = get().pages[id]
     if (!page) return
     const next = { ...page, title, updatedAt: new Date().toISOString() }
+    await db.pages.put(next)
+    set({ pages: { ...get().pages, [id]: next } })
+  },
+
+  setIcon: async (id, icon) => {
+    const page = get().pages[id]
+    if (!page) return
+    const next = { ...page, icon, updatedAt: new Date().toISOString() }
     await db.pages.put(next)
     set({ pages: { ...get().pages, [id]: next } })
   },
@@ -195,12 +204,29 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
     const t = get().templates[id]
     if (!t) return null
     if (t.kind === 'page') {
-      return get().createPage({
-        title: t.payload.title ?? t.name,
-        blocks: t.payload.blocks
-          ? JSON.parse(JSON.stringify(t.payload.blocks)).map((b: Block) => ({ ...b, id: uid() }))
-          : undefined
+      const raw = JSON.parse(JSON.stringify(t.payload.blocks ?? [])) as Block[]
+      // Every block gets a fresh id — and every REFERENCE to a template block
+      // (parentId, column ids, edge endpoints) is rewritten to the new id, so
+      // nested structures (columns, frames, edges) survive intact.
+      const remap = new Map<string, string>()
+      for (const b of raw) if (!remap.has(b.id)) remap.set(b.id, uid())
+      const blocks = raw.map((b) => {
+        const next: Block = { ...b, id: remap.get(b.id)! }
+        next.parentId = b.parentId ? (remap.get(b.parentId) ?? b.parentId) : null
+        const props: Record<string, unknown> = { ...b.props }
+        if (Array.isArray(props.cols)) {
+          props.cols = (props.cols as string[][]).map((col) => col.map((x) => remap.get(x) ?? x))
+        }
+        if (b.type === 'edge') {
+          const f = String(props.from ?? '')
+          const to = String(props.to ?? '')
+          props.from = remap.get(f) ?? f
+          props.to = remap.get(to) ?? to
+        }
+        next.props = props
+        return next
       })
+      return get().createPage({ title: t.payload.title ?? t.name, blocks: blocks.length ? blocks : undefined })
     }
     return null
   },

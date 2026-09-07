@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Block, BlockType, PageRecord } from '../../lib/types'
+import type { Block, BlockType, PageRecord, WorkspaceDatabase } from '../../lib/types'
 import { uid } from '../../lib/types'
 import {
   convertBlock,
@@ -11,6 +11,7 @@ import {
   BLOCK_LABEL
 } from '../../lib/blockEngine'
 import { usePagesStore } from '../../stores/pagesStore'
+import { useItemsStore } from '../../stores/itemsStore'
 import { useToasts } from '../ui'
 
 const HISTORY_CAP = 120
@@ -71,6 +72,10 @@ export function useEditorSession(page: PageRecord): EditorSession {
 
   const blocksRef = useRef(blocks)
   blocksRef.current = blocks
+  const historyRef = useRef(history)
+  historyRef.current = history
+  const historyIndexRef = useRef(historyIndex)
+  historyIndexRef.current = historyIndex
   const focusContentRef = useRef<Map<string, string>>(new Map())
   const persistTimer = useRef<number | null>(null)
 
@@ -84,50 +89,37 @@ export function useEditorSession(page: PageRecord): EditorSession {
     [page.id, setBlocksPersist]
   )
 
+  /** Record a new history entry + persist. No-op when `fn` returns the same
+   *  array reference (no change). */
   const commit = useCallback(
     (label: string, fn: (b: Block[]) => Block[]) => {
       const cur = blocksRef.current
       const next = fn(cur)
       if (next === cur) return
-      setHistory((h) => {
-        const trimmed = h.slice(0, historyIndexRef.current + 1)
-        const entry: HistoryEntry = { label, blocks: JSON.parse(JSON.stringify(next)) }
-        const arr = [...trimmed, entry]
-        if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP)
-        setHistoryIndex(arr.length - 1)
-        return arr
-      })
+      const trimmed = historyRef.current.slice(0, historyIndexRef.current + 1)
+      const arr: HistoryEntry[] = [...trimmed, { label, blocks: JSON.parse(JSON.stringify(next)) }]
+      if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP)
+      setHistory(arr)
+      setHistoryIndex(arr.length - 1)
       setBlocks(next)
       schedulePersist(next)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [schedulePersist]
   )
 
-  const historyIndexRef = useRef(historyIndex)
-  historyIndexRef.current = historyIndex
-
+  /** Jump the history pointer to entry `i` and apply its blocks. */
   const jumpTo = useCallback(
     (i: number) => {
-      setHistory((h) => {
-        const clamped = Math.max(0, Math.min(h.length - 1, i))
-        setHistoryIndex(clamped)
-        return h
-      })
-      // apply after state settles
-      requestAnimationFrame(() => {
-        const entry = historyRef.current[historyIndexRef.current]
-        if (entry) {
-          const next = JSON.parse(JSON.stringify(entry.blocks)) as Block[]
-          setBlocks(next)
-          schedulePersist(next)
-        }
-      })
+      const clamped = Math.max(0, Math.min(historyRef.current.length - 1, i))
+      const entry = historyRef.current[clamped]
+      if (!entry) return
+      setHistoryIndex(clamped)
+      const next = JSON.parse(JSON.stringify(entry.blocks)) as Block[]
+      setBlocks(next)
+      schedulePersist(next)
     },
     [schedulePersist]
   )
-  const historyRef = useRef(history)
-  historyRef.current = history
 
   const requestFocus = useCallback((id: string) => {
     setFocusRequest({ id, key: Date.now() })
@@ -249,21 +241,32 @@ export function useEditorSession(page: PageRecord): EditorSession {
     [commit]
   )
 
-  const setBlockContent = useCallback((id: string, content: string) => {
-    // live text — no history entry per keystroke
-    setBlocks((cur) => cur.map((b) => (b.id === id ? { ...b, content } : b)))
-    schedulePersist(blocksRef.current)
-  }, [schedulePersist])
+  /** Live text update (no history entry per keystroke). The ref is updated
+   *  immediately so rapid keystrokes and the debounced persist never lag a
+   *  render behind (the last character must never be lost on reload). */
+  const setBlockContent = useCallback(
+    (id: string, content: string) => {
+      const cur = blocksRef.current
+      const next = cur.map((b) => (b.id === id ? { ...b, content } : b))
+      blocksRef.current = next
+      setBlocks(next)
+      schedulePersist(next)
+    },
+    [schedulePersist]
+  )
 
+  /** On blur: if the text actually changed, record ONE undoable "Edited …"
+   *  entry for the current content (and persist it). */
   const commitTextEdit = useCallback(
     (id: string) => {
       const started = focusContentRef.current.get(id)
-      const cur = blocksRef.current.find((b) => b.id === id)
-      if (!cur || started === undefined) return
-      if (started !== cur.content) {
-        commit(`Edited ${BLOCK_LABEL[cur.type].toLowerCase()} text`, (b) => b)
-      }
+      const cur = blocksRef.current
+      const block = cur.find((b) => b.id === id)
       focusContentRef.current.delete(id)
+      if (!block || started === undefined) return
+      if (started !== block.content) {
+        commit(`Edited ${BLOCK_LABEL[block.type].toLowerCase()} text`, () => [...cur])
+      }
     },
     [commit]
   )
@@ -287,21 +290,21 @@ export function useEditorSession(page: PageRecord): EditorSession {
     (snapshotId: string) => {
       void restoreSnapshotStore(page.id, snapshotId).then((snap) => {
         if (!snap) return
-        setBlocks(JSON.parse(JSON.stringify(snap.blocks)))
-        setHistory((h) => {
-          const entry: HistoryEntry = {
-            label: `Restored snapshot “${snap.label}”`,
-            blocks: JSON.parse(JSON.stringify(snap.blocks))
-          }
-          const arr = [...h.slice(0, historyIndexRef.current + 1), entry]
-          if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP)
-          setHistoryIndex(arr.length - 1)
-          return arr
-        })
+        const trimmed = historyRef.current.slice(0, historyIndexRef.current + 1)
+        const arr: HistoryEntry[] = [
+          ...trimmed,
+          { label: `Restored snapshot “${snap.label}”`, blocks: JSON.parse(JSON.stringify(snap.blocks)) }
+        ]
+        if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP)
+        setHistory(arr)
+        setHistoryIndex(arr.length - 1)
+        const next = JSON.parse(JSON.stringify(snap.blocks)) as Block[]
+        setBlocks(next)
+        schedulePersist(next)
         pushToast(`Restored “${snap.label}”`, 'success')
       })
     },
-    [page.id, restoreSnapshotStore, pushToast]
+    [page.id, restoreSnapshotStore, pushToast, schedulePersist]
   )
 
   const createDatabaseBlock = useCallback(
@@ -311,8 +314,7 @@ export function useEditorSession(page: PageRecord): EditorSession {
         const b = makeBlock('database', { props: { dbId } })
         return insertBlock(cur, b, beforeId, null).blocks
       })
-      // create the database record + host page linkage
-      const dbStore = {
+      const dbStore: WorkspaceDatabase = {
         id: dbId,
         pageId: page.id,
         name: 'New database',
@@ -330,18 +332,12 @@ export function useEditorSession(page: PageRecord): EditorSession {
         automations: [],
         defaultType: 'task'
       }
+      // persist the block immediately (do not wait for the debounce) so the
+      // block and its database record can never diverge, then create the db
       void usePagesStore
         .getState()
         .setBlocks(page.id, blocksRef.current)
-        .then(() =>
-          import('../../stores/itemsStore').then((m) =>
-            m.useItemsStore.getState().upsertDatabase(dbStore as never).then(() => {
-              usePagesStore
-                .getState()
-                .setBlocks(page.id, blocksRef.current)
-            })
-          )
-        )
+        .then(() => useItemsStore.getState().upsertDatabase(dbStore))
     },
     [commit, page.id]
   )

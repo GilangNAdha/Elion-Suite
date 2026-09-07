@@ -147,16 +147,21 @@ function CellEditor({
 }) {
   const value = propertyValue(item, db, field.key)
   const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLSpanElement>(null)
   const isStatus = field.kind === 'select' && field.key === 'status'
   const selectOptions = isStatus
     ? (db?.statuses ?? []).map((s) => s.id)
     : db?.properties.filter((p) => `cf:${p.id}` === field.key).flatMap((p) => p.options ?? []) ?? []
   return (
-    <span className="relative inline-block">
+    <span ref={wrapRef} className="relative inline-block">
       <button
         className="focus-ring max-w-44 truncate rounded px-1 py-0.5 text-left hover:bg-surface"
         onClick={() => setOpen((o) => !o)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={(e) => {
+          // close only when focus left the whole editor (not when it moved to
+          // the select/input rendered inside this popup)
+          if (!wrapRef.current?.contains(e.relatedTarget as Node | null)) setOpen(false)
+        }}
         aria-label={`Edit ${field.label}`}
       >
         {isStatus ? (
@@ -270,7 +275,11 @@ export function BoardView({
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
     if (!over) return
-    const overCol = String(over.id)
+    // a drop can land on a card (sortable) as well as the column — resolve to
+    // the status of whichever was targeted
+    let overCol = String(over.id)
+    const overItem = items.find((i) => i.id === overCol)
+    if (overItem) overCol = overItem.status
     const me = items.find((i) => i.id === String(active.id))
     if (!me || me.status === overCol) return
     const targetCol = statuses.find((s) => s.id === overCol)
@@ -581,8 +590,10 @@ export function CalendarView({
 
   const dayItems = (iso: string) => (sources.items ?? []).filter((i) => i.dueDate === iso)
   const dayHabits = (d: Date) => (sources.habits ?? []).filter((h) => occursOn(h.recurrence, d))
-  const dayAlarms = (iso: string) => (sources.alarms ?? []).filter((a) => a.at.startsWith(iso))
-  const dayEvents = (iso: string) => (sources.events ?? []).filter((e) => e.at.startsWith(iso))
+  // compare on the LOCAL calendar day — the stored ISO is UTC, so a raw
+  // string prefix is off by a day for early-morning times (e.g. UTC+7)
+  const dayAlarms = (iso: string) => (sources.alarms ?? []).filter((a) => toISODate(new Date(a.at)) === iso)
+  const dayEvents = (iso: string) => (sources.events ?? []).filter((e) => toISODate(new Date(e.at)) === iso)
 
 
   return (

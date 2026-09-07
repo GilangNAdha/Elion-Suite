@@ -41,7 +41,8 @@ export function DatabaseBlock({ dbId, compact = false }: { dbId: string; compact
   const upsertDatabase = useItemsStore((s) => s.upsertDatabase)
   const items = useDbItems(db ?? null)
   const fields = useDbFields(db ?? null)
-  const savedFilters = usePagesStore((s) => s.savedFilters.filter((f) => f.databaseId === dbId))
+  const savedFiltersAll = usePagesStore((s) => s.savedFilters)
+  const savedFilters = useMemo(() => savedFiltersAll.filter((f) => f.databaseId === dbId), [savedFiltersAll, dbId])
   const push = useToasts((s) => s.push)
 
   const [viewId, setViewId] = useState<string>(() => activeViewId(db ?? null))
@@ -61,9 +62,35 @@ export function DatabaseBlock({ dbId, compact = false }: { dbId: string; compact
   }, [items, activeFilter, fields])
 
   if (!db) {
+    // never a dead end: recreate the database record under the SAME id so the
+    // block pointing at it works again (previous contents are already gone)
+    const recreate = () => {
+      void upsertDatabase({
+        id: dbId,
+        pageId: '',
+        name: 'Recreated database',
+        properties: [],
+        statuses: [
+          { id: 'backlog', name: 'Backlog', color: 'var(--ink-faint)', isBacklog: true },
+          { id: 'todo', name: 'To do', color: 'var(--info)' },
+          { id: 'doing', name: 'In progress', color: 'var(--warn)' },
+          { id: 'done', name: 'Done', color: 'var(--ok)', isDone: true }
+        ],
+        views: [
+          { id: uid(), name: 'Board', kind: 'board', visibleProperties: ['title', 'status', 'priority'], swimlane: 'none' },
+          { id: uid(), name: 'Table', kind: 'table', visibleProperties: ['title', 'status', 'priority', 'dueDate'] }
+        ],
+        automations: [],
+        defaultType: 'task'
+      })
+      push('Database recreated — add your items back', 'success')
+    }
     return (
       <div className="rounded-token border border-dashed border-line p-4 text-center text-[0.85em] text-ink-faint">
-        Database missing — recreate it via the block menu.
+        <p>This database record is missing (it was deleted).</p>
+        <Button size="sm" variant="soft" className="mt-2" onClick={recreate}>
+          Recreate database
+        </Button>
       </div>
     )
   }
