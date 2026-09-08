@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './tokens/ThemeProvider'
 import { AppShell } from './components/shell/AppShell'
@@ -24,10 +24,20 @@ import { useSettingsStore } from './stores/settingsStore'
 import { seedIfEmpty } from './lib/seed'
 import { MusicPlayerCore } from './components/music/MusicPlayerCore'
 
+/**
+ * Renders the global command palette. It must live INSIDE <BrowserRouter>:
+ * the palette's actions call useNavigate(), which throws when there is no
+ * <Router> ancestor. <App> itself sits ABOVE the router, so computing the
+ * actions there used to crash the very first render (blank screen on boot).
+ */
+function GlobalPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const actions = usePaletteActions(null)
+  return <CommandPalette open={open} onClose={onClose} actions={actions} />
+}
+
 export default function App() {
   const [ready, setReady] = useState(false)
   const [palette, setPalette] = useState(false)
-  const actions = usePaletteActions(null)
 
   useEffect(() => {
     let cancelled = false
@@ -103,7 +113,7 @@ export default function App() {
           </Route>
         </Routes>
         <MusicPlayerCore />
-        <CommandPalette open={palette} onClose={() => setPalette(false)} actions={actions} />
+        <GlobalPalette open={palette} onClose={() => setPalette(false)} />
       </BrowserRouter>
     </ThemeProvider>
   )

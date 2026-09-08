@@ -6,11 +6,16 @@ One item model, one page/block model. Every surface is a *merged view* over the 
 
 > Working name in the build spec: *Aurora Suite*; shipped in this repository as **Elion Suite**.
 
-> **Build specification:** the full, self-contained spec (including the v5
-> AFFiNE-merge, UI-pattern, and Pixel Duel pet sections, and the
-> DO-NOT-CHANGE invariants) lives in
-> [`docs/MASTER-BUILD-PROMPT-v5.md`](docs/MASTER-BUILD-PROMPT-v5.md). It is the
-> single source of truth for any future AI-assisted build on this repository.
+> **Build specification (current — v6):**
+> [`docs/MASTER-BUILD-PROMPT-v6.md`](docs/MASTER-BUILD-PROMPT-v6.md) supersedes v5. It
+> is a hardening/regression-fix release on top of the unchanged v5 spec
+> (whose full reproduced detail — AFFiNE-merge, UI-pattern, and Pixel Duel pet
+> sections, and the DO-NOT-CHANGE invariants — is kept at
+> [`docs/MASTER-BUILD-PROMPT-v5.md`](docs/MASTER-BUILD-PROMPT-v5.md)). v6 fixes a
+> boot blank-screen bug (a Router hook called above `<BrowserRouter>`), fixes
+> invalid nested-button HTML on the Habits page, and adds a boot regression
+> test (`tests/app-boot.test.tsx`). v6 is the single source of truth for any
+> future AI-assisted build on this repository.
 
 ---
 
@@ -125,4 +130,5 @@ Elion Suite is React/Electron with no native sidecar, so the architecture is ada
 ## Testing
 
 - `npm test` — Vitest + jsdom unit tests: theming (harmony, WCAG contrast, auto-correction), block engine (convert/drag-to-replace content preservation, drop-intent geometry, drag-to-layout), recurrence/streak math, focus analytics, filter engine + raw query parser.
+- **App-boot regression** (`tests/app-boot.test.tsx`) mounts the real `<App>` and asserts it renders with zero console errors — this is the v6 guard that a Router hook is never called outside a `<Router>`, so the app can never blank-screen on boot again.
 - E2E for the editor's drag-to-replace and undo/redo is specified via Playwright (drag simulation, not manual spot-checks) — see `tests/e2e/` when adding a browser to the environment.

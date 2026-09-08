@@ -63,19 +63,36 @@ export function HabitsPage() {
               return { iso, due: occursOn(h.recurrence, d), done: doneOn(h.completions, iso), isToday: iso === today }
             })
             return (
-              <button
+              // Card is a <div>, NOT a <button>: it contains real <button>
+              // children (title-select, done-toggle, edit, delete). A <button>
+              // cannot nest other interactive elements (invalid HTML + React
+              // validateDOMNesting warnings). Body click still selects.
+              <div
                 key={h.id}
-                className={`focus-ring elev-raised group rounded-token-lg border p-4 text-left transition-colors ${
+                onClick={() => setSelected(h.id)}
+                className={`elev-raised group cursor-pointer rounded-token-lg border p-4 transition-colors ${
                   selected === h.id ? 'border-primary bg-primary/5' : 'border-line bg-raised hover:border-line-strong'
                 }`}
-                onClick={() => setSelected(h.id)}
               >
                 <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[1em] font-semibold">{h.title}</span>
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    aria-pressed={selected === h.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelected(h.id)
+                    }}
+                    className={`focus-ring min-w-0 flex-1 truncate rounded-token-sm text-left text-[1em] font-semibold ${
+                      selected === h.id ? 'text-primary' : 'text-ink'
+                    }`}
+                    title={selected === h.id ? 'Hide details' : 'Show 12-week details'}
+                  >
+                    {h.title}
+                  </button>
+                  <button
+                    type="button"
                     aria-label={`Mark ${h.title} ${doneToday ? 'not done' : 'done'} today`}
+                    aria-pressed={doneToday}
                     className={`focus-ring flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors ${
                       doneToday ? 'border-ok bg-ok text-white' : 'border-line-strong text-transparent hover:border-ok'
                     }`}
@@ -84,15 +101,9 @@ export function HabitsPage() {
                       void useItemsStore.getState().toggleHabitCompletion(h.id, today)
                       if (!doneToday) bumpHappy()
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.stopPropagation()
-                        void useItemsStore.getState().toggleHabitCompletion(h.id, today)
-                      }
-                    }}
                   >
                     ✓
-                  </span>
+                  </button>
                 </div>
                 <div className="mt-1 flex items-center gap-2 text-[0.78em] text-ink-muted">
                   <Repeat size={12} />
@@ -141,7 +152,7 @@ export function HabitsPage() {
                     <Trash2 size={12} />
                   </IconBtn>
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
