@@ -29,10 +29,7 @@ export function ProfilePage() {
       i.updatedAt.slice(0, 10) >= weekAgo &&
       databases[i.databaseId ?? '']?.statuses.find((s) => s.id === i.status)?.isDone
   ).length
-  const habitsDoneWeek = all.reduce(
-    (a, i) => a + (i.completions ?? []).filter((d) => d >= weekAgo).length,
-    0
-  )
+  const habitsDoneWeek = all.reduce((a, i) => a + (i.completions ?? []).filter((d) => d >= weekAgo).length, 0)
 
   const initials = profileName
     .split(/\s+/)
@@ -56,7 +53,12 @@ export function ProfilePage() {
           <p className="text-[0.82em] text-ink-muted">Local profile — nothing leaves this device.</p>
         </div>
         <div className="flex gap-1.5">
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 w-36" aria-label="Display name" />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-9 w-36"
+            aria-label="Display name"
+          />
           <Button size="sm" variant="soft" onClick={() => setProfileName(name.trim() || 'You')}>
             Save
           </Button>
@@ -64,10 +66,30 @@ export function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card icon={<Lock size={15} />} label="Total focus" value={minutesLabel(totals.totalMs)} sub={`${totals.sessionCount} sessions`} />
-        <Card icon={<Flame size={15} />} label="Focus streak" value={`${totals.currentStreak}d`} sub={`longest ${totals.longestStreak}d`} />
-        <Card icon={<CheckCircle2 size={15} />} label="Done (7 days)" value={String(doneThisWeek + habitsDoneWeek)} sub="tasks + habit checks" />
-        <Card icon={<FileText size={15} />} label="Pages" value={String(Object.keys(pages).length)} sub={`${Object.keys(pages).filter((id) => pages[id].branch === 'personal').length} notes`} />
+        <Card
+          icon={<Lock size={15} />}
+          label="Total focus"
+          value={minutesLabel(totals.totalMs)}
+          sub={`${totals.sessionCount} sessions`}
+        />
+        <Card
+          icon={<Flame size={15} />}
+          label="Focus streak"
+          value={`${totals.currentStreak}d`}
+          sub={`longest ${totals.longestStreak}d`}
+        />
+        <Card
+          icon={<CheckCircle2 size={15} />}
+          label="Done (7 days)"
+          value={String(doneThisWeek + habitsDoneWeek)}
+          sub="tasks + habit checks"
+        />
+        <Card
+          icon={<FileText size={15} />}
+          label="Pages"
+          value={String(Object.keys(pages).length)}
+          sub={`${Object.keys(pages).filter((id) => pages[id].branch === 'personal').length} notes`}
+        />
       </div>
 
       <div className="mt-4 rounded-token border border-line bg-surface/40 p-4">
@@ -77,18 +99,28 @@ export function ProfilePage() {
         </div>
         <div className="text-[1.1em] font-semibold">{totals.topPreset ?? '—'}</div>
         <p className="mt-1 text-[0.78em] text-ink-faint">
-          These numbers are mirrored from the same session records the Lockdown Focus history reads — one source of
-          truth.
+          These numbers are mirrored from the same session records the Lockdown Focus history reads — one
+          source of truth.
         </p>
       </div>
     </div>
   )
 }
 
-function Card({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub: string }) {
+function Card({
+  icon,
+  label,
+  value,
+  sub
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  sub: string
+}) {
   return (
     <div className="rounded-token border border-line bg-raised p-4">
-      <div className="flex items-center gap-1.5 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
+      <div className="flex items-center gap-1.5 text-[0.72em] font-semibold  text-ink-faint">
         <span className="text-primary">{icon}</span>
         {label}
       </div>

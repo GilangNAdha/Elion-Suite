@@ -21,7 +21,10 @@ export function HabitsPage() {
   const [creating, setCreating] = useState<Partial<WorkspaceItem> | null>(null)
 
   const habits = useMemo(
-    () => Object.values(items).filter((i) => i.type === 'habit').sort((a, b) => a.title.localeCompare(b.title)),
+    () =>
+      Object.values(items)
+        .filter((i) => i.type === 'habit')
+        .sort((a, b) => a.title.localeCompare(b.title)),
     [items]
   )
   const today = todayISO()
@@ -60,7 +63,12 @@ export function HabitsPage() {
             const week = Array.from({ length: 7 }, (_, i) => {
               const d = addDays(new Date(), i - 6)
               const iso = toISODate(d)
-              return { iso, due: occursOn(h.recurrence, d), done: doneOn(h.completions, iso), isToday: iso === today }
+              return {
+                iso,
+                due: occursOn(h.recurrence, d),
+                done: doneOn(h.completions, iso),
+                isToday: iso === today
+              }
             })
             return (
               // Card is a <div>, NOT a <button>: it contains real <button>
@@ -71,7 +79,9 @@ export function HabitsPage() {
                 key={h.id}
                 onClick={() => setSelected(h.id)}
                 className={`elev-raised group cursor-pointer rounded-token-lg border p-4 transition-colors ${
-                  selected === h.id ? 'border-primary bg-primary/5' : 'border-line bg-raised hover:border-line-strong'
+                  selected === h.id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-line bg-raised hover:border-line-strong'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -94,7 +104,9 @@ export function HabitsPage() {
                     aria-label={`Mark ${h.title} ${doneToday ? 'not done' : 'done'} today`}
                     aria-pressed={doneToday}
                     className={`focus-ring flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors ${
-                      doneToday ? 'border-ok bg-ok text-white' : 'border-line-strong text-transparent hover:border-ok'
+                      doneToday
+                        ? 'border-ok bg-ok text-[var(--on-ok)]'
+                        : 'border-line-strong text-transparent hover:border-ok'
                     }`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -117,7 +129,7 @@ export function HabitsPage() {
                   {week.map((d) => (
                     <span
                       key={d.iso}
-                      title={`${d.iso}${d.due ? (d.done ? ' · done' : ' · due') : ' · off'}`}
+                      title={`${d.iso}${d.due ? (d.done ? ' / done' : ' / due') : ' / off'}`}
                       className={`h-6 flex-1 rounded-sm border transition-colors ${
                         !d.due
                           ? 'border-transparent bg-sunken/60'
@@ -166,7 +178,16 @@ export function HabitsPage() {
       )}
 
       {(editing || creating) && (
-        <ItemModal db={null} databaseId={null} editing={editing} creating={creating} onClose={() => { setEditing(null); setCreating(null) }} />
+        <ItemModal
+          db={null}
+          databaseId={null}
+          editing={editing}
+          creating={creating}
+          onClose={() => {
+            setEditing(null)
+            setCreating(null)
+          }}
+        />
       )}
     </div>
   )
@@ -189,10 +210,8 @@ function Heatmap({ habit }: { habit: WorkspaceItem }) {
           {cells.slice(w * 7, w * 7 + 7).map((c) => (
             <span
               key={c.iso}
-              title={`${c.iso}${c.due ? (c.done ? ' · done' : ' · missed') : ' · off'}`}
-              className={`h-3 w-3 rounded-sm ${
-                !c.due ? 'bg-sunken' : c.done ? 'bg-ok' : 'bg-bad/50'
-              }`}
+              title={`${c.iso}${c.due ? (c.done ? ' / done' : ' / missed') : ' / off'}`}
+              className={`h-3 w-3 rounded-sm ${!c.due ? 'bg-sunken' : c.done ? 'bg-ok' : 'bg-bad/50'}`}
             />
           ))}
         </div>

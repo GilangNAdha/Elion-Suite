@@ -48,7 +48,7 @@ export const useNotifyStore = create<NotifyState>()((set, get) => ({
     set({ items: get().items.map((x) => (x.id === id ? { ...x, read: true } : x)) })
   },
   markAllRead: async () => {
-    await db.notifications.where({ read: false }).modify({ read: true })
+    await db.notifications.filter((notification) => !notification.read).modify({ read: true })
     set({ items: get().items.map((x) => ({ ...x, read: true })) })
   },
   remove: async (id) => {
@@ -56,7 +56,7 @@ export const useNotifyStore = create<NotifyState>()((set, get) => ({
     set({ items: get().items.filter((x) => x.id !== id) })
   },
   clear: async () => {
-    await db.notifications.where({ read: true }).delete()
+    await db.notifications.filter((notification) => notification.read).delete()
     set({ items: get().items.filter((x) => !x.read) })
   }
 }))

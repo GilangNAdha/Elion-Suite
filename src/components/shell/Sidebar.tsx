@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { assetUrl } from '../../lib/assets'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Blocks,
@@ -8,80 +9,125 @@ import {
   NotebookPen,
   BellRing,
   Music2,
-  Sparkles,
   Lock,
-  User,
   Settings,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  ChevronDown,
+  HardDrive
 } from 'lucide-react'
+import { useSettingsStore } from '../../stores/settingsStore'
+import { usePagesStore } from '../../stores/pagesStore'
 
-const NAV = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/workspace', label: 'Workspace', icon: Blocks },
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/habits', label: 'Habits', icon: Repeat },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { to: '/notes', label: 'Notes', icon: NotebookPen },
-  { to: '/alarms', label: 'Alarms', icon: BellRing },
-  { to: '/music', label: 'Music', icon: Music2 },
-  { to: '/pet', label: 'Pet', icon: Sparkles },
-  { to: '/lockdown', label: 'Lockdown', icon: Lock, external: true },
-  { to: '/profile', label: 'Profile', icon: User },
-  { to: '/settings', label: 'Settings', icon: Settings }
+const GROUPS = [
+  {
+    label: 'Your space',
+    links: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/workspace', label: 'Workspace', icon: Blocks },
+      { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+      { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+      { to: '/notes', label: 'Notes', icon: NotebookPen }
+    ]
+  },
+  {
+    label: 'Your rhythm',
+    links: [
+      { to: '/habits', label: 'Habits', icon: Repeat },
+      { to: '/alarms', label: 'Alarms', icon: BellRing },
+      { to: '/music', label: 'Music', icon: Music2 }
+    ]
+  }
 ]
 
-export function Sidebar({
-  collapsed,
-  onToggle
-}: {
-  collapsed: boolean
-  onToggle: (v: boolean) => void
-}) {
+export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: (v: boolean) => void }) {
+  const studio = useLocation().pathname.startsWith('/workspace')
+  const name = useSettingsStore((s) => s.profileName)
+  const pages = usePagesStore((s) => s.pages)
+  const projects = Object.values(pages)
+    .filter((p) => p.branch === 'workspace' && p.blocks.some((b) => b.type === 'database'))
+    .slice(0, 2)
   return (
     <nav
       aria-label="Primary"
-      className={`glass-panel flex h-full flex-col border-r border-line transition-[width] duration-200 ${
-        collapsed ? 'w-14' : 'w-56'
-      }`}
+      className={`app-sidebar ${collapsed ? 'is-collapsed' : ''} ${studio ? 'studio-app-rail' : ''}`}
     >
-      <div className={`flex h-14 items-center gap-2 ${collapsed ? 'justify-center px-0' : 'px-4'}`}>
-        <img src="/favicon.svg" alt="" className="h-7 w-7" />
-        {!collapsed && (
-          <span className="bg-gradient-to-r from-[var(--c1)] to-[var(--c2)] bg-clip-text text-[1.05em] font-semibold tracking-tight text-transparent">
-            Elion Suite
-          </span>
-        )}
-      </div>
-      <div className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
-        {NAV.map((n) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            title={collapsed ? n.label : undefined}
-            className={({ isActive }) =>
-              `focus-ring group flex items-center gap-2.5 rounded-token-sm px-2.5 py-2 text-[0.92em] transition-colors ${
-                collapsed ? 'justify-center' : ''
-              } ${
-                isActive
-                  ? 'bg-primary-soft font-medium text-primary'
-                  : 'text-ink-muted hover:bg-raised hover:text-ink'
-              }`
-            }
-          >
-            <n.icon size={17} className="shrink-0" />
-            {!collapsed && <span className="truncate">{n.label}</span>}
-          </NavLink>
+      <NavLink to="/" className="brand-lockup" aria-label="Elion Suite dashboard">
+        <img src={assetUrl('favicon.svg')} alt="" />
+        <span className="sidebar-label">
+          Elion <span className="brand-light">Suite</span>
+        </span>
+      </NavLink>
+      <div className="sidebar-scroll">
+        {GROUPS.map((group) => (
+          <div className="nav-group" key={group.label}>
+            <div className="nav-group-label sidebar-label">{group.label}</div>
+            {group.links.map((link) => (
+              <NavLink
+                key={link.to}
+                end={link.to === '/'}
+                to={link.to}
+                title={link.label}
+                className={({ isActive }) => `nav-item ${isActive ? 'is-active' : ''}`}
+              >
+                <link.icon size={18} strokeWidth={1.6} />
+                <span className="sidebar-label">{link.label}</span>
+              </NavLink>
+            ))}
+          </div>
         ))}
+        {projects.length > 0 && (
+          <div className="nav-group project-nav sidebar-label">
+            <div className="nav-group-label">Pinned projects</div>
+            {projects.map((project) => (
+              <NavLink className="project-link" to={`/workspace/${project.id}`} key={project.id}>
+                <span className="project-mark" aria-hidden />
+                {project.title}
+              </NavLink>
+            ))}
+          </div>
+        )}
+        <NavLink to="/lockdown" className="sidebar-focus" title="Enter Lockdown">
+          <Lock size={18} strokeWidth={1.6} />
+          <div className="sidebar-label">
+            <strong>Enter Lockdown</strong>
+            <span>A little less noise.</span>
+          </div>
+        </NavLink>
       </div>
-      <div className={`border-t border-line p-2 ${collapsed ? 'flex justify-center' : ''}`}>
-        <button
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="focus-ring flex h-8 w-full items-center justify-center rounded-token-sm text-ink-muted hover:bg-raised hover:text-ink"
-          onClick={() => onToggle(!collapsed)}
+      <div className="sidebar-footer">
+        <NavLink
+          to="/settings"
+          title="Settings"
+          className={({ isActive }) => `nav-item ${isActive ? 'is-active' : ''}`}
         >
-          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-        </button>
+          <Settings size={18} strokeWidth={1.6} />
+          <span className="sidebar-label">Settings</span>
+        </NavLink>
+        <div className="device-note sidebar-label">
+          <HardDrive size={13} /> Stored on this device
+        </div>
+        <div className="sidebar-person">
+          <NavLink
+            to="/profile"
+            className={({ isActive }) => `profile-link ${isActive ? 'is-active' : ''}`}
+            aria-label="Profile and statistics"
+          >
+            <span className="person-avatar">{name === 'You' ? 'Y' : name.slice(0, 2)}</span>
+            <span className="sidebar-label">
+              <strong>{name === 'You' ? 'Personal space' : name}</strong>
+              <span>Just for you</span>
+            </span>
+          </NavLink>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => onToggle(!collapsed)}
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
+        </div>
       </div>
     </nav>
   )

@@ -1,5 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Line, LineChart, Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  Area,
+  AreaChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts'
 import { Plus, Trash2, TrendingDown } from 'lucide-react'
 import type { Sprint, WorkspaceDatabase, WorkspaceItem } from '../../lib/types'
 import { uid } from '../../lib/types'
@@ -35,7 +48,10 @@ export function SprintPanel({
   const [goal, setGoal] = useState('')
 
   const dbSprints = useMemo(
-    () => Object.values(sprints).filter((s) => s.databaseId === db.id).sort((a, b) => a.start.localeCompare(b.start)),
+    () =>
+      Object.values(sprints)
+        .filter((s) => s.databaseId === db.id)
+        .sort((a, b) => a.start.localeCompare(b.start)),
     [sprints, db.id]
   )
   const active = dbSprints.find((s) => s.start <= todayISO() && s.end >= todayISO()) ?? null
@@ -64,9 +80,7 @@ export function SprintPanel({
         if (pts === 0) continue
         // done = currently done (no history) or last history event to a done status <= day
         const doneStatuses = db.statuses.filter((s) => s.isDone).map((s) => s.id)
-        const events = history
-          .filter((h) => h.itemId === it.id)
-          .sort((a, b) => a.at.localeCompare(b.at))
+        const events = history.filter((h) => h.itemId === it.id).sort((a, b) => a.at.localeCompare(b.at))
         const stateAt = events.find((e) => e.at.slice(0, 10) <= day)
         const done =
           doneStatuses.includes(it.status) &&
@@ -84,10 +98,7 @@ export function SprintPanel({
     const doneIds = new Set(db.statuses.filter((s) => s.isDone).map((s) => s.id))
     return dbSprints.map((sp) => {
       const moved = history.filter(
-        (h) =>
-          h.to &&
-          doneIds.has(h.to) &&
-          items.some((i) => i.id === h.itemId && i.sprintId === sp.id)
+        (h) => h.to && doneIds.has(h.to) && items.some((i) => i.id === h.itemId && i.sprintId === sp.id)
       )
       const pts = moved.reduce((a, h) => {
         const it = items.find((i) => i.id === h.itemId)
@@ -111,9 +122,7 @@ export function SprintPanel({
       const row: Record<string, number | string> = { day: day.slice(5) }
       for (const st of db.statuses) {
         row[st.name] = sIds.filter((it) => {
-          const events = history
-            .filter((h) => h.itemId === it.id)
-            .sort((a, b) => a.at.localeCompare(b.at))
+          const events = history.filter((h) => h.itemId === it.id).sort((a, b) => a.at.localeCompare(b.at))
           const e = events.find((x) => x.at.slice(0, 10) <= day)
           const statusAt = e ? e.to : it.status
           return statusAt === st.id
@@ -146,21 +155,30 @@ export function SprintPanel({
               .filter((i) => db.statuses.find((s) => s.id === i.status)?.isDone)
               .reduce((a, i) => a + (i.storyPoints ?? 0), 0)
             return (
-              <div key={sp.id} className={`rounded-token border p-3 ${active?.id === sp.id ? 'border-primary bg-primary/5' : 'border-line bg-surface/40'}`}>
+              <div
+                key={sp.id}
+                className={`rounded-token border p-3 ${active?.id === sp.id ? 'border-primary bg-primary/5' : 'border-line bg-surface/40'}`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-[0.95em] font-semibold">{sp.name}</span>
                   <div className="flex items-center gap-2">
                     {active?.id === sp.id && (
-                      <span className="rounded-sm bg-primary-soft px-1.5 py-0.5 text-[0.68em] font-bold text-primary">ACTIVE</span>
+                      <span className="rounded-sm bg-primary-soft px-1.5 py-0.5 text-[0.68em] font-bold text-primary">
+                        ACTIVE
+                      </span>
                     )}
-                    <button className="focus-ring rounded p-1 text-ink-faint hover:text-bad" aria-label={`Delete ${sp.name}`} onClick={() => void deleteSprint(sp.id)}>
+                    <button
+                      className="focus-ring rounded p-1 text-ink-faint hover:text-bad"
+                      aria-label={`Delete ${sp.name}`}
+                      onClick={() => void deleteSprint(sp.id)}
+                    >
                       <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
                 <div className="mt-1 text-[0.78em] text-ink-muted">
-                  {sp.start} → {sp.end} · {its.length} items · {donePts}/{pts} pts
-                  {sp.goal ? ` · goal: ${sp.goal}` : ''}
+                  {sp.start} to {sp.end} / {its.length} items / {donePts}/{pts} pts
+                  {sp.goal ? ` / goal: ${sp.goal}` : ''}
                 </div>
               </div>
             )
@@ -168,12 +186,32 @@ export function SprintPanel({
           <div className="rounded-token border border-dashed border-line p-3">
             <div className="mb-2 text-[0.8em] font-semibold text-ink-muted">New sprint</div>
             <div className="space-y-1.5">
-              <Input placeholder="Sprint name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Sprint name" />
+              <Input
+                placeholder="Sprint name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-label="Sprint name"
+              />
               <div className="flex gap-1.5">
-                <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} aria-label="Sprint start" />
-                <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="Sprint end" />
+                <Input
+                  type="date"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                  aria-label="Sprint start"
+                />
+                <Input
+                  type="date"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                  aria-label="Sprint end"
+                />
               </div>
-              <Input placeholder="Goal (optional)" value={goal} onChange={(e) => setGoal(e.target.value)} aria-label="Sprint goal" />
+              <Input
+                placeholder="Goal (optional)"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                aria-label="Sprint goal"
+              />
               <Button
                 size="sm"
                 variant="primary"
@@ -181,7 +219,14 @@ export function SprintPanel({
                 icon={<Plus size={13} />}
                 disabled={!name.trim()}
                 onClick={async () => {
-                  const s: Sprint = { id: uid(), databaseId: db.id, name: name.trim(), start, end, goal: goal.trim() || undefined }
+                  const s: Sprint = {
+                    id: uid(),
+                    databaseId: db.id,
+                    name: name.trim(),
+                    start,
+                    end,
+                    goal: goal.trim() || undefined
+                  }
                   await upsertSprint(s)
                   setName('')
                   setGoal('')
@@ -193,14 +238,17 @@ export function SprintPanel({
             </div>
           </div>
           <p className="text-[0.72em] leading-relaxed text-ink-faint">
-            Assign items to sprints from the item editor. The “Sprint only” board view shows the active sprint.
+            Assign items to sprints from the item editor. The “Sprint only” board view shows the active
+            sprint.
           </p>
         </div>
       )}
 
       {tab === 'backlog' && (
         <div className="mt-3">
-          <div className="mb-2 text-[0.8em] text-ink-muted">{backlog.length} items ranked (highest first)</div>
+          <div className="mb-2 text-[0.8em] text-ink-muted">
+            {backlog.length} items ranked (highest first)
+          </div>
           <div className="space-y-1">
             {backlog.map((i, idx) => (
               <div key={i.id} className="flex items-center gap-2 rounded-token-sm bg-surface/40 px-2 py-1.5">
@@ -209,7 +257,9 @@ export function SprintPanel({
                 <span className="text-[0.7em] text-ink-faint">{i.storyPoints ?? 0} pts</span>
               </div>
             ))}
-            {backlog.length === 0 && <div className="py-6 text-center text-[0.82em] text-ink-faint">Backlog is empty</div>}
+            {backlog.length === 0 && (
+              <div className="py-6 text-center text-[0.82em] text-ink-faint">Backlog is empty</div>
+            )}
           </div>
         </div>
       )}
@@ -226,22 +276,51 @@ export function SprintPanel({
                   <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} />
                   <YAxis tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }} />
-                  <Line type="monotone" dataKey="ideal" stroke="var(--ink-faint)" strokeDasharray="4 4" dot={false} name="Ideal" />
-                  <Line type="monotone" dataKey="remaining" stroke="var(--primary)" dot={false} name="Remaining" />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--raised)',
+                      border: '1px solid var(--line)',
+                      borderRadius: 8,
+                      fontSize: 12
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ideal"
+                    stroke="var(--ink-faint)"
+                    strokeDasharray="4 4"
+                    dot={false}
+                    name="Ideal"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="remaining"
+                    stroke="var(--primary)"
+                    dot={false}
+                    name="Remaining"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
           <div>
-            <div className="mb-1 text-[0.82em] font-semibold text-ink-muted">Velocity (points completed per sprint)</div>
+            <div className="mb-1 text-[0.82em] font-semibold text-ink-muted">
+              Velocity (points completed per sprint)
+            </div>
             <div className="h-40 rounded-token border border-line bg-surface/30 p-2">
               <ResponsiveContainer>
                 <BarChart data={velocityData}>
                   <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} />
                   <YAxis tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--raised)',
+                      border: '1px solid var(--line)',
+                      borderRadius: 8,
+                      fontSize: 12
+                    }}
+                  />
                   <Bar dataKey="points" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -255,7 +334,14 @@ export function SprintPanel({
                   <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} />
                   <YAxis tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--raised)',
+                      border: '1px solid var(--line)',
+                      borderRadius: 8,
+                      fontSize: 12
+                    }}
+                  />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {db.statuses.slice(0, 5).map((s, i) => (
                     <Area
@@ -280,4 +366,3 @@ export function SprintPanel({
     </Drawer>
   )
 }
-

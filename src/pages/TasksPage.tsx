@@ -49,7 +49,8 @@ export function TasksPage() {
         <div>
           <h1 className="text-[1.7em] font-bold tracking-tight">Tasks</h1>
           <p className="text-[0.88em] text-ink-muted">
-            Personal tasks outside any Workspace project — the same item model powers boards, habits, and the calendar.
+            Personal tasks outside any Workspace project — the same item model powers boards, habits, and the
+            calendar.
           </p>
         </div>
         <span className="flex-1" />
@@ -74,9 +75,13 @@ export function TasksPage() {
         <div className="mb-3 flex items-center gap-2 rounded-token border border-primary/40 bg-primary/5 px-3 py-1.5 text-[0.85em]">
           <Filter size={13} className="text-primary" />
           <span>
-            Filter <strong>{activeFilter.name}</strong> · {visible.length} of {unassigned.length}
+            Filter <strong>{activeFilter.name}</strong> / {visible.length} of {unassigned.length}
           </span>
-          <button className="focus-ring ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-surface" onClick={() => setParams({})} aria-label="Clear filter">
+          <button
+            className="focus-ring ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-surface"
+            onClick={() => setParams({})}
+            aria-label="Clear filter"
+          >
             <X size={12} />
           </button>
         </div>
@@ -105,13 +110,22 @@ export function TasksPage() {
           }
         />
       ) : view === 'board' ? (
-        <BoardView db={null} items={visible} onEdit={(i) => setEditing(i)} onAdd={() => onAdd()} />
+        <BoardView db={null} items={visible} onEdit={(i) => setEditing(i)} onAdd={onAdd} />
       ) : (
-        <ListView db={null} items={visible} onEdit={(i) => setEditing(i)} onAdd={() => onAdd()} />
+        <ListView db={null} items={visible} onEdit={(i) => setEditing(i)} onAdd={onAdd} />
       )}
 
       {(editing || creating) && (
-        <ItemModal db={null} databaseId={null} editing={editing} creating={creating} onClose={() => { setEditing(null); setCreating(null) }} />
+        <ItemModal
+          db={null}
+          databaseId={null}
+          editing={editing}
+          creating={creating}
+          onClose={() => {
+            setEditing(null)
+            setCreating(null)
+          }}
+        />
       )}
       {builderOpen && (
         <FilterBuilder
@@ -139,4 +153,3 @@ export function TasksPage() {
     </div>
   )
 }
-

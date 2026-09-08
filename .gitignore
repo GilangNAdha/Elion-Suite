@@ -8,3 +8,7 @@ npm-debug.log*
 coverage
 .turbo
 .vite
+
+.arena/
+playwright-report/
+test-results/

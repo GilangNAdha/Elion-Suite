@@ -24,7 +24,7 @@ export function FocusHistory({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-[var(--backdrop)]" onClick={onClose} aria-hidden />
       <div className="elev-overlay relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-token-lg border border-line bg-raised p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[1.2em] font-bold">Focus history</h2>
@@ -47,7 +47,12 @@ export function FocusHistory({ onClose }: { onClose: () => void }) {
               <XAxis dataKey="day" tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'var(--ink-faint)', fontSize: 10 }} />
               <Tooltip
-                contentStyle={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }}
+                contentStyle={{
+                  background: 'var(--raised)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 8,
+                  fontSize: 12
+                }}
                 formatter={(v) => [`${v} min`, 'focus']}
               />
               <Bar dataKey="min" fill="var(--primary)" radius={[4, 4, 0, 0]} />
@@ -56,11 +61,17 @@ export function FocusHistory({ onClose }: { onClose: () => void }) {
         </div>
 
         {sessions.length === 0 ? (
-          <EmptyState title="No sessions yet" hint="Your Lockdown sessions (length, preset, interruptions) will be logged here and on your Profile." />
+          <EmptyState
+            title="No sessions yet"
+            hint="Your Lockdown sessions (length, preset, interruptions) will be logged here and on your Profile."
+          />
         ) : (
           <ul className="space-y-1.5">
             {sessions.slice(0, 12).map((s) => (
-              <li key={s.id} className="flex items-center gap-3 rounded-token-sm bg-surface/40 px-3 py-2 text-[0.88em]">
+              <li
+                key={s.id}
+                className="flex items-center gap-3 rounded-token-sm bg-surface/40 px-3 py-2 text-[0.88em]"
+              >
                 <span className="w-24 shrink-0 font-mono text-[0.8em] text-ink-faint">
                   {new Date(s.start).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 </span>
@@ -84,7 +95,7 @@ export function FocusHistory({ onClose }: { onClose: () => void }) {
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-token border border-line bg-surface/40 p-3">
-      <div className="flex items-center gap-1.5 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
+      <div className="flex items-center gap-1.5 text-[0.72em] font-semibold  text-ink-faint">
         <span className="text-primary">{icon}</span>
         {label}
       </div>

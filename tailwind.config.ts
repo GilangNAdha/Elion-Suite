@@ -1,40 +1,60 @@
 import type { Config } from 'tailwindcss'
+import defaultTheme from 'tailwindcss/defaultTheme'
+
+// Explicit alpha placeholder lets Tailwind generate bg-surface/60, etc.
+// A bare var(--surface) makes v3 silently omit those utilities.
+const paint = (token: string) => `color-mix(in srgb, var(--${token}) calc(<alpha-value> * 100%), transparent)`
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
+    borderRadius: {
+      none: '0',
+      sm: 'var(--radius-sm)',
+      DEFAULT: 'var(--radius-sm)',
+      md: 'var(--radius-sm)',
+      lg: 'var(--radius)',
+      xl: 'var(--radius)',
+      '2xl': 'var(--radius-lg)',
+      '3xl': 'var(--radius-lg)',
+      full: 'var(--radius-pill)'
+    },
+    spacing: Object.fromEntries(
+      Object.entries(defaultTheme.spacing).map(([k, v]) => [k, `var(--space-${k.replace('.', '_')}, ${v})`])
+    ),
     extend: {
       colors: {
-        bg: 'var(--bg)',
-        surface: 'var(--surface)',
-        raised: 'var(--raised)',
-        sunken: 'var(--sunken)',
-        overlay: 'var(--overlay)',
+        bg: paint('bg'),
+        surface: paint('surface'),
+        raised: paint('raised'),
+        sunken: paint('sunken'),
+        overlay: paint('overlay'),
         ink: {
-          DEFAULT: 'var(--ink)',
-          muted: 'var(--ink-muted)',
-          faint: 'var(--ink-faint)'
+          DEFAULT: paint('ink'),
+          muted: paint('ink-muted'),
+          faint: paint('ink-faint')
         },
-        line: 'var(--line)',
+        line: { DEFAULT: paint('line'), strong: paint('line-strong') },
+        ember: paint('ember'),
         primary: {
-          DEFAULT: 'var(--primary)',
-          on: 'var(--on-primary)',
-          soft: 'var(--primary-soft)'
+          DEFAULT: paint('primary'),
+          on: paint('on-primary'),
+          soft: paint('primary-soft')
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          on: 'var(--on-accent)'
+          DEFAULT: paint('accent'),
+          on: paint('on-accent')
         },
-        ok: 'var(--ok)',
-        warn: 'var(--warn)',
-        bad: 'var(--bad)',
-        info: 'var(--info)',
-        c1: 'var(--c1)',
-        c2: 'var(--c2)',
-        c3: 'var(--c3)',
-        c4: 'var(--c4)',
-        c5: 'var(--c5)',
-        c6: 'var(--c6)'
+        ok: paint('ok'),
+        warn: paint('warn'),
+        bad: paint('bad'),
+        info: paint('info'),
+        c1: paint('c1'),
+        c2: paint('c2'),
+        c3: paint('c3'),
+        c4: paint('c4'),
+        c5: paint('c5'),
+        c6: paint('c6')
       },
       borderRadius: {
         token: 'var(--radius)',
@@ -46,19 +66,14 @@ export default {
         raised: 'var(--shadow-raised)',
         overlay: 'var(--shadow-overlay)'
       },
-      fontFamily: {
-        sans: [
-          'ui-sans-serif',
-          'system-ui',
-          '-apple-system',
-          'Segoe UI',
-          'Roboto',
-          'Helvetica Neue',
-          'Arial',
-          'sans-serif'
-        ],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Cascadia Code', 'Consolas', 'monospace']
-      }
+      fontFamily: { sans: ['var(--font-sans)'], mono: ['var(--font-mono)'] },
+      transitionDuration: {
+        DEFAULT: 'var(--duration-micro)',
+        '150': 'var(--duration-micro)',
+        '200': 'var(--duration-micro)',
+        '400': 'var(--duration-page)'
+      },
+      transitionTimingFunction: { DEFAULT: 'var(--ease)' }
     }
   },
   plugins: []

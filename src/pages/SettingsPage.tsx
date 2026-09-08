@@ -1,10 +1,23 @@
+import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
+import { assetUrl } from '../lib/assets'
+import { VoiceSettings } from '../components/VoiceSettings'
 import { useMemo, useRef, useState } from 'react'
 import {
-  Palette, Download, Upload, Trash2, Moon, Sun, SlidersHorizontal,
-  Mic, ShieldAlert, MapPin, Info, Check, X, Swords
+  Palette,
+  Download,
+  Upload,
+  Trash2,
+  Moon,
+  Sun,
+  SlidersHorizontal,
+  Mic,
+  ShieldAlert,
+  MapPin,
+  Info,
+  Check,
+  X,
+  Swords
 } from 'lucide-react'
-import { DuelPet } from '../components/pet/DuelPet'
-import { ClassicPet } from '../components/pet/Pet'
 import type { AuroraTheme, Harmony } from '../lib/types'
 import { uid } from '../lib/types'
 import { useThemeStore } from '../stores/themeStore'
@@ -33,7 +46,6 @@ export function SettingsPage() {
   const reducedMotion = useThemeStore((s) => s.reducedMotion)
   const setReducedMotion = useThemeStore((s) => s.setReducedMotion)
   const settings = useSettingsStore()
-  const { petStyle, setPetStyle } = settings
   const importRef = useRef<HTMLInputElement>(null)
   const [saveName, setSaveName] = useState('')
 
@@ -42,17 +54,40 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl p-6 pb-24">
       <h1 className="mb-5 text-[1.7em] font-bold tracking-tight">Settings</h1>
+      <FloatingPetSettings />
 
       {/* ---------------- theme editor ---------------- */}
       <Section title="Theme" icon={<Palette size={15} />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-3">
-            <Slider label="Seed hue" value={theme.seed.h} min={0} max={359} onChange={(v) => patch({ seed: { ...theme.seed, h: v } })} />
-            <Slider label="Seed saturation" value={theme.seed.s} min={0} max={100} onChange={(v) => patch({ seed: { ...theme.seed, s: v } })} />
-            <Slider label="Seed lightness" value={theme.seed.l} min={20} max={80} onChange={(v) => patch({ seed: { ...theme.seed, l: v } })} />
+            <Slider
+              label="Seed hue"
+              value={theme.seed.h}
+              min={0}
+              max={359}
+              onChange={(v) => patch({ seed: { ...theme.seed, h: v } })}
+            />
+            <Slider
+              label="Seed saturation"
+              value={theme.seed.s}
+              min={0}
+              max={100}
+              onChange={(v) => patch({ seed: { ...theme.seed, s: v } })}
+            />
+            <Slider
+              label="Seed lightness"
+              value={theme.seed.l}
+              min={20}
+              max={80}
+              onChange={(v) => patch({ seed: { ...theme.seed, l: v } })}
+            />
             <label className="block">
               <span className="mb-1 block text-[0.82em] text-ink-muted">Harmony</span>
-              <Select value={theme.harmony} onChange={(e) => patch({ harmony: e.target.value as Harmony })} aria-label="Harmony">
+              <Select
+                value={theme.harmony}
+                onChange={(e) => patch({ harmony: e.target.value as Harmony })}
+                aria-label="Harmony"
+              >
                 {HARMONIES.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.label}
@@ -86,19 +121,46 @@ export function SettingsPage() {
                 <option value="spacious">Spacious</option>
               </Select>
             </div>
-            <Slider label="Corner radius" value={theme.radius} min={0} max={24} suffix="px" onChange={(v) => patch({ radius: v })} />
-            <Slider label="Glass" value={theme.glass} min={0} max={100} suffix="%" onChange={(v) => patch({ glass: v })} />
+            <Slider
+              label="Corner radius"
+              value={theme.radius}
+              min={0}
+              max={24}
+              suffix="px"
+              onChange={(v) => patch({ radius: v })}
+            />
+            <Slider
+              label="Glass"
+              value={theme.glass}
+              min={0}
+              max={100}
+              suffix="%"
+              onChange={(v) => patch({ glass: v })}
+            />
           </div>
 
           <div>
-            <div className="mb-1.5 text-[0.82em] font-semibold text-ink-muted">Live WCAG contrast (auto-corrected)</div>
+            <div className="mb-1.5 text-[0.82em] font-semibold text-ink-muted">
+              Live WCAG contrast (auto-corrected)
+            </div>
             <div className="space-y-1.5">
               {resolved.pairs.map((p) => (
-                <div key={p.label} className="flex items-center gap-2 rounded-token-sm border border-line bg-surface/40 px-2.5 py-1.5">
-                  <span className="h-4 w-4 shrink-0 rounded-sm border border-line" style={{ background: p.bg }} aria-hidden />
+                <div
+                  key={p.label}
+                  className="flex items-center gap-2 rounded-token-sm border border-line bg-surface/40 px-2.5 py-1.5"
+                >
+                  <span
+                    className="h-4 w-4 shrink-0 rounded-sm border border-line"
+                    style={{ background: p.bg }}
+                    aria-hidden
+                  />
                   <span className="min-w-0 flex-1 truncate text-[0.8em]">{p.label}</span>
-                  <span className="font-mono text-[0.75em] tabular-nums text-ink-muted">{p.ratio.toFixed(2)}</span>
-                  <span className={`flex items-center gap-0.5 text-[0.7em] font-bold ${p.pass ? 'text-ok' : 'text-bad'}`}>
+                  <span className="font-mono text-[0.75em] tabular-nums text-ink-muted">
+                    {p.ratio.toFixed(2)}
+                  </span>
+                  <span
+                    className={`flex items-center gap-0.5 text-[0.7em] font-bold ${p.pass ? 'text-ok' : 'text-bad'}`}
+                  >
                     {p.pass ? <Check size={12} /> : <X size={12} />}
                     {p.required.toFixed(1)}
                   </span>
@@ -116,7 +178,10 @@ export function SettingsPage() {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-[0.82em] text-ink-muted">Presets:</span>
           {presets.map((p) => (
-            <span key={p.id} className="inline-flex items-center overflow-hidden rounded-full border border-line">
+            <span
+              key={p.id}
+              className="inline-flex items-center overflow-hidden rounded-full border border-line"
+            >
               <button
                 className={`focus-ring h-7 px-2.5 text-[0.8em] ${p.id === theme.id ? 'bg-primary text-primary-on' : 'text-ink-muted hover:bg-surface hover:text-ink'}`}
                 onClick={() => applyPreset(p.id)}
@@ -168,7 +233,12 @@ export function SettingsPage() {
             >
               Export
             </Button>
-            <Button size="sm" variant="outline" icon={<Upload size={13} />} onClick={() => importRef.current?.click()}>
+            <Button
+              size="sm"
+              variant="outline"
+              icon={<Upload size={13} />}
+              onClick={() => importRef.current?.click()}
+            >
               Import
             </Button>
             <input
@@ -187,8 +257,8 @@ export function SettingsPage() {
           </span>
         </div>
         <p className="mt-2 text-[0.72em] text-ink-faint">
-          A theme change propagates to every page — including Page & Edgeless modes and this editor’s chrome — within
-          one render cycle. Only Lockdown presets may override per-session.
+          A theme change propagates to every page — including Page & Edgeless modes and this editor’s chrome —
+          within one render cycle. Only Lockdown presets may override per-session.
         </p>
       </Section>
 
@@ -196,75 +266,26 @@ export function SettingsPage() {
       <Section title="Motion" icon={<SlidersHorizontal size={15} />}>
         <Toggle
           label="Reduce motion"
-          hint="Disables ambient animation and 3D wallpaper motion (static fallbacks). Also honors your system setting."
+          hint="Simplifies glow, interface motion, vinyl and companion animation. Also honors your system setting."
           checked={reducedMotion}
           onChange={setReducedMotion}
         />
       </Section>
 
       {/* ---------------- speech-to-text ---------------- */}
-      <Section title="Pet companion" icon={<Swords size={15} />}>
-        <p className="mb-3 text-[0.85em] text-ink-muted">
-          Applies everywhere the pet is mounted — Dashboard, Lockdown, the Pet page, and any
-          page containing a <strong>duel block</strong>. The Pixel Duel (White Knight vs.
-          Black Knight) is an opt-in cosmetic with original bundled art.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            className={`focus-ring relative overflow-hidden rounded-token-lg border p-3 text-left transition-colors ${
-              petStyle === 'classic' ? 'border-primary bg-primary-soft' : 'border-line bg-surface hover:border-line-strong'
-            }`}
-            onClick={() => setPetStyle('classic')}
-            aria-pressed={petStyle === 'classic'}
-          >
-            {petStyle === 'classic' && <Check size={14} className="absolute right-2 top-2 text-primary" />}
-            <div className="mb-2 flex h-24 items-center justify-center">
-              <ClassicPet size={72} mood="happy" />
-            </div>
-            <div className="text-[0.9em] font-semibold">Classic</div>
-            <div className="text-[0.75em] text-ink-muted">The soft mood companion</div>
-          </button>
-          <button
-            className={`focus-ring relative overflow-hidden rounded-token-lg border p-3 text-left transition-colors ${
-              petStyle === 'duel' ? 'border-primary bg-primary-soft' : 'border-line bg-surface hover:border-line-strong'
-            }`}
-            onClick={() => setPetStyle('duel')}
-            aria-pressed={petStyle === 'duel'}
-          >
-            {petStyle === 'duel' && <Check size={14} className="absolute right-2 top-2 text-primary" />}
-            <div className="mb-2 flex h-24 items-center justify-center">
-              <div style={{ width: '100%' }}>
-                <DuelPet mood="happy" />
-              </div>
-            </div>
-            <div className="text-[0.9em] font-semibold">Pixel Duel</div>
-            <div className="text-[0.75em] text-ink-muted">Griffith vs. Guts — 2D pixel arena</div>
-          </button>
-        </div>
-      </Section>
-      <Section title="Speech-to-text" icon={<Mic size={15} />}>
-        <Toggle
-          label="Enable dictation"
-          hint="Offline Whisper (WASM) — adapted from the Handy architecture. Audio never leaves this device."
-          checked={settings.stt.enabled}
-          onChange={(v) => settings.setStt({ enabled: v })}
-        />
-        <label className="mt-2 block">
-          <span className="mb-1 block text-[0.82em] text-ink-muted">Model (downloaded once, then cached)</span>
-          <Select
-            value={settings.stt.model}
-            className="w-64"
-            onChange={(e) => settings.setStt({ model: e.target.value as 'Xenova/whisper-tiny' | 'Xenova/whisper-base' })}
-            aria-label="STT model"
-          >
-            <option value="Xenova/whisper-tiny">Whisper tiny (~40 MB, fast)</option>
-            <option value="Xenova/whisper-base">Whisper base (~75 MB, better)</option>
-          </Select>
-        </label>
-        <p className="mt-2 text-[0.75em] leading-relaxed text-ink-faint">
-          The model downloads from Hugging Face on first use and is cached for offline use afterwards. Dictation is
-          available in the editor (block menu), and transcription inserts at the focused block.
-        </p>
+
+      <p className="mb-5 text-xs text-ink-muted">
+        <a
+          className="focus-ring underline"
+          href={assetUrl('legal/notices.txt')}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Third-party licences and source notices
+        </a>
+      </p>
+      <Section title="Voice dictation" icon={<Mic size={15} />}>
+        <VoiceSettings />
       </Section>
 
       {/* ---------------- distraction guard ---------------- */}
@@ -298,15 +319,34 @@ export function SettingsPage() {
         <div className="flex flex-wrap items-end gap-2">
           <label>
             <span className="mb-1 block text-[0.82em] text-ink-muted">City label</span>
-            <Input value={settings.weather.city} className="w-40" onChange={(e) => settings.setWeather({ city: e.target.value })} aria-label="City" />
+            <Input
+              value={settings.weather.city}
+              className="w-40"
+              onChange={(e) => settings.setWeather({ city: e.target.value })}
+              aria-label="City"
+            />
           </label>
           <label>
             <span className="mb-1 block text-[0.82em] text-ink-muted">Latitude</span>
-            <Input type="number" step="0.01" value={settings.weather.lat} className="w-28" onChange={(e) => settings.setWeather({ lat: Number(e.target.value) })} aria-label="Latitude" />
+            <Input
+              type="number"
+              step="0.01"
+              value={settings.weather.lat}
+              className="w-28"
+              onChange={(e) => settings.setWeather({ lat: Number(e.target.value) })}
+              aria-label="Latitude"
+            />
           </label>
           <label>
             <span className="mb-1 block text-[0.82em] text-ink-muted">Longitude</span>
-            <Input type="number" step="0.01" value={settings.weather.lon} className="w-28" onChange={(e) => settings.setWeather({ lon: Number(e.target.value) })} aria-label="Longitude" />
+            <Input
+              type="number"
+              step="0.01"
+              value={settings.weather.lon}
+              className="w-28"
+              onChange={(e) => settings.setWeather({ lon: Number(e.target.value) })}
+              aria-label="Longitude"
+            />
           </label>
           <Button
             size="sm"
@@ -321,20 +361,27 @@ export function SettingsPage() {
             Use my location
           </Button>
         </div>
-        <p className="mt-2 text-[0.75em] text-ink-faint">Source: Open-Meteo (no API key). Offline → the widget shows a clear unavailable state.</p>
+        <p className="mt-2 text-[0.75em] text-ink-faint">
+          Source: Open-Meteo (no API key). Offline: the widget shows a clear unavailable state.
+        </p>
       </Section>
 
       {/* ---------------- data ---------------- */}
       <Section title="Data" icon={<Info size={15} />}>
         <p className="mb-3 text-[0.82em] text-ink-muted">
-          Everything (items, pages, snapshots, presets, sessions, blobs) lives in this browser’s IndexedDB. There is
-          no cloud sync in this build.
+          Everything (items, pages, snapshots, presets, sessions, blobs) lives in this browser’s IndexedDB.
+          There is no cloud sync in this build.
         </p>
         <Button
           variant="danger"
           icon={<Trash2 size={14} />}
           onClick={async () => {
-            if (!window.confirm('Delete ALL local data (items, pages, presets, sessions)? This cannot be undone.')) return
+            if (
+              !window.confirm(
+                'Delete ALL local data (items, pages, presets, sessions)? This cannot be undone.'
+              )
+            )
+              return
             await db.delete()
             window.location.reload()
           }}
@@ -347,16 +394,24 @@ export function SettingsPage() {
         <strong className="text-ink">Elion Suite v0.4</strong> — local-first personal productivity suite.
         <br />
         <span className="text-ink-faint">
-          Known limitations: unsigned Windows build triggers SmartScreen; no cloud sync (local snapshots only); the
-          distraction guard is a soft nudge, not OS-level enforcement; imported 3D scenes use built-in scenes only (no
-          in-app .glb editor yet); automations are simple transition-triggered rules.
+          Known limitations: unsigned Windows build triggers SmartScreen; no cloud sync (local snapshots
+          only); the distraction guard is a soft nudge, not OS-level enforcement; imported 3D scenes use
+          built-in scenes only (no in-app .glb editor yet); automations are simple transition-triggered rules.
         </span>
       </div>
     </div>
   )
 }
 
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  children
+}: {
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <section className="mb-5 rounded-token-lg border border-line bg-raised p-4">
       <h2 className="mb-3 flex items-center gap-1.5 text-[0.95em] font-semibold">

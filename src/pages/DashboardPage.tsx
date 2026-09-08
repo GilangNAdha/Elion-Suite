@@ -1,184 +1,59 @@
-import { useEffect, useState } from 'react'
+import { SpotlightCard } from '../components/motion/SpotlightCard'
+import { StarBorder } from '../components/motion/StarBorder'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, Plus, CheckSquare, Flame, CalendarDays, Lock, ArrowRight, AlarmClock } from 'lucide-react'
+import {
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Clock3,
+  Flame,
+  Hand,
+  Lock,
+  Music2,
+  Plus,
+  Swords,
+  Sun,
+  FileText,
+  HardDrive
+} from 'lucide-react'
 import { db } from '../lib/db'
 import type { Alarm, CalEvent, WorkspaceItem } from '../lib/types'
 import { useItemsStore } from '../stores/itemsStore'
 import { usePagesStore } from '../stores/pagesStore'
 import { useLockdownStore } from '../stores/lockdownStore'
 import { usePetStore } from '../stores/petStore'
-import { Pet } from '../components/pet/Pet'
-import { StatusPill, Button, EmptyState } from '../components/ui'
-import { statusColor } from '../components/views/views'
-import { todayISO, toISODate, addDays, focusTotals, minutesLabel, streakFor } from '../lib/time'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSettingsStore } from '../stores/settingsStore'
+import { Button, IconBtn, StatusPill, useToasts } from '../components/ui'
+import { ItemModal } from '../components/items/ItemModal'
+import { MusicCard } from '../components/music/Turntable'
+import { WeatherWidget } from '../components/lockdown/WeatherWidget'
+import { DEFAULT_STATUSES } from '../components/views/views'
+import {
+  todayISO,
+  toISODate,
+  addDays,
+  focusTotals,
+  minutesLabel,
+  streakFor,
+  occursOn,
+  timeAgo
+} from '../lib/time'
+import { pageIconFor } from '../components/pageIcons'
 
-export // ---------------------------------------------------------------------------
-// §16.1 Today Timeline Rail — day strip 07:00–22:00 with time-positioned
-// chips (due dates, alarms, events) and a live "now" marker.
-// ---------------------------------------------------------------------------
-const RAIL_START = 7
-const RAIL_END = 22
+export const RAIL_START = 7
+export const RAIL_END = 22
+export const railPercent = (hour: number) =>
+  ((Math.min(RAIL_END, Math.max(RAIL_START, hour)) - RAIL_START) / (RAIL_END - RAIL_START)) * 100
 
-interface RailChip {
-  id: string
-  hour: number
-  label: string
-  tone: string
-  onClick: () => void
-}
-
-function TodayRail({ items, onOpenItem }: { items: WorkspaceItem[]; onOpenItem: (i: WorkspaceItem) => void }) {
-  const navigate = useNavigate()
-  const [events, setEvents] = useState<CalEvent[]>([])
-  const [alarms, setAlarms] = useState<Alarm[]>([])
-  const [now, setNow] = useState(() => new Date())
-  const [openHour, setOpenHour] = useState<number | null>(null)
-
-  useEffect(() => {
-    const load = () => {
-      void db.events.toArray().then(setEvents)
-      void db.alarms.toArray().then(setAlarms)
-      setNow(new Date())
-    }
-    load()
-    const t = window.setInterval(load, 60000)
-    return () => window.clearInterval(t)
-  }, [])
-
-  const span = RAIL_END - RAIL_START
-  const today = todayISO()
-  const pct = (h: number) => `${(Math.min(RAIL_END, Math.max(RAIL_START, h)) - RAIL_START) / span / 10}%`
-
-  const chips: RailChip[] = []
-  for (const i of items) {
-    if (i.dueDate === today) {
-      chips.push({ id: i.id, hour: 9, label: i.title, tone: 'var(--primary)', onClick: () => onOpenItem(i) })
-    }
-  }
-  for (const a of alarms) {
-    if (!a.enabled) continue
-    const d = new Date(a.at)
-    if (d.toISOString().slice(0, 10) === today || a.repeat === 'daily') {
-      chips.push({ id: a.id, hour: d.getHours(), label: a.title, tone: 'var(--warn)', onClick: () => navigate('/alarms') })
-    }
-  }
-  for (const ev of events) {
-    const d = new Date(ev.at)
-    if (d.toISOString().slice(0, 10) === today) {
-      chips.push({ id: ev.id, hour: d.getHours() + d.getMinutes() / 60, label: ev.title, tone: 'var(--info)', onClick: () => navigate('/calendar') })
-    }
-  }
-  // stack per hour slot (max 3 visible, +n popover for the rest)
-  const groups = new Map<number, RailChip[]>()
-  for (const c of chips) {
-    const h = Math.min(RAIL_END - 0.01, Math.max(RAIL_START, Math.floor(c.hour)))
-    groups.set(h, [...(groups.get(h) ?? []), c])
-  }
-
-  const nowH = now.getHours() + now.getMinutes() / 60
-  const nowVisible = nowH >= RAIL_START && nowH <= RAIL_END
-
-  return (
-    <section
-      className="elev-raised relative mb-4 rounded-token-lg border border-line bg-raised p-4 pt-6"
-      aria-label="Today timeline"
-    >
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-[0.95em] font-semibold">
-          <CalendarDays size={15} className="text-primary" />
-          Today
-        </h2>
-        <span className="font-mono text-[0.72em] text-ink-faint">
-          {RAIL_START}:00 – {RAIL_END}:00
-        </span>
-      </div>
-      <div className="relative h-14">
-        {Array.from({ length: span + 1 }, (_, i) => RAIL_START + i).map((h) => (
-          <div key={h} className="absolute inset-y-0" style={{ left: pct(h) }} aria-hidden>
-            <div className="h-full w-px bg-line" />
-            <span className="absolute -top-3.5 left-0 -translate-x-1/2 font-mono text-[0.62em] text-ink-faint">
-              {h}
-            </span>
-          </div>
-        ))}
-        {[...groups.entries()].map(([h, list]) => (
-          <div key={h} className="absolute inset-y-0" style={{ left: pct(h) }} aria-hidden={false}>
-            {list.slice(0, 3).map((c, idx) => (
-              <button
-                key={c.id}
-                className="focus-ring absolute left-1 max-w-28 truncate rounded-token-sm px-1.5 py-0.5 text-[0.7em] font-medium"
-                style={{
-                  top: 4 + idx * 17,
-                  background: c.tone,
-                  color: 'var(--bg)'
-                }}
-                title={c.label}
-                onClick={c.onClick}
-                aria-label={`${c.label} at ${h}:00`}
-              >
-                {c.label}
-              </button>
-            ))}
-            {list.length > 3 && (
-              <>
-                <button
-                  className="focus-ring absolute left-1 rounded-token-sm bg-surface px-1.5 py-0.5 text-[0.7em] text-ink-muted hover:text-ink"
-                  style={{ top: 4 + 3 * 17 }}
-                  onClick={() => setOpenHour(openHour === h ? null : h)}
-                  aria-label={`${list.length - 3} more at ${h}:00`}
-                >
-                  +{list.length - 3}
-                </button>
-                {openHour === h && (
-                  <div className="elev-overlay absolute left-1 z-20 mt-1 w-44 rounded-token border border-line bg-raised p-1" style={{ top: 4 + 3 * 17 }}>
-                    {list.slice(3).map((c) => (
-                      <button
-                        key={c.id}
-                        className="focus-ring block w-full truncate rounded-token-sm px-2 py-1 text-left text-[0.75em] hover:bg-surface"
-                        onClick={() => {
-                          setOpenHour(null)
-                          c.onClick()
-                        }}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ))}
-        {nowVisible && (
-          <div className="absolute inset-y-0 z-10 w-px bg-bad" style={{ left: pct(nowH) }} aria-hidden>
-            <span
-              className="absolute -top-3.5 left-0 -translate-x-1/2 rounded-token-sm px-1 py-0.5 font-mono text-[0.6em] font-semibold"
-              style={{ background: 'var(--bad)', color: 'var(--bg)' }}
-            >
-              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-        )}
-        {chips.length === 0 && (
-          <p className="absolute inset-0 flex items-center justify-center text-[0.8em] text-ink-faint">
-            Nothing scheduled today — add a due date, alarm, or event.
-          </p>
-        )}
-      </div>
-      <div className="mt-2 flex items-center gap-3 text-[0.68em] text-ink-faint">
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full" style={{ background: 'var(--primary)' }} /> due date
-        </span>
-        <span className="flex items-center gap-1">
-          <AlarmClock size={11} /> alarm
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full" style={{ background: 'var(--info)' }} /> event
-        </span>
-      </div>
-    </section>
-  )
+const MOOD_COPY = {
+  idle: 'Keeping you company.',
+  happy: 'A little win. A little victory dance.',
+  focused: 'Holding the line while you focus.',
+  tired: 'Even knights need a rest.',
+  worried: 'One small step gets us moving.'
 }
 
 export function DashboardPage() {
@@ -187,227 +62,501 @@ export function DashboardPage() {
   const databases = useItemsStore((s) => s.databases)
   const pages = usePagesStore((s) => s.pages)
   const sessions = useLockdownStore((s) => s.sessions)
-  const petMood = usePetStore((s) => s.mood)
-
-  const today = todayISO()
+  const name = useSettingsStore((s) => s.profileName)
+  const [editing, setEditing] = useState<WorkspaceItem | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [tab, setTab] = useState<'today' | 'upcoming'>('today')
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(id)
+  }, [])
+  const today = toISODate(now)
   const all = Object.values(items)
-  const dueToday = all.filter((i) => i.dueDate === today)
-  const overdue = all.filter(
-    (i) =>
-      i.dueDate &&
-      i.dueDate < today &&
-      !(databases[i.databaseId ?? '']?.statuses.find((st) => st.id === i.status)?.isDone)
-  )
+  const tasks = all.filter((i) => i.type !== 'habit' && i.type !== 'epic')
+  const isDone = (item: WorkspaceItem) =>
+    (databases[item.databaseId ?? '']?.statuses ?? DEFAULT_STATUSES).some(
+      (s) => s.id === item.status && s.isDone
+    )
+  const openTasks = tasks
+    .filter((i) => !isDone(i))
+    .sort((a, b) => {
+      const score = (i: WorkspaceItem) =>
+        (i.dueDate && i.dueDate <= today ? 0 : 4) + (i.status === 'doing' ? 0 : 2) + (i.databaseId ? 1 : 0)
+      return (
+        score(a) - score(b) || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.rank - b.rank
+      )
+    })
+  const displayed = tab === 'today' ? openTasks : openTasks.filter((i) => i.dueDate && i.dueDate > today)
+  const featured = displayed[0]
   const habits = all.filter((i) => i.type === 'habit')
-  const habitsDue = habits.filter((h) => (h.completions ?? []).length || h.recurrence)
-  const doneHabits = habits.filter((h) => (h.completions ?? []).includes(today))
-
+  const dueHabits = habits.filter((h) => occursOn(h.recurrence, now))
+  const doneHabits = dueHabits.filter((h) => h.completions?.includes(today)).length
   const totals = focusTotals(sessions)
-  const chart = Array.from({ length: 7 }, (_, idx) => {
-    const d = addDays(new Date(), idx - 6)
-    return {
-      day: d.toLocaleDateString([], { weekday: 'short' }),
-      min: Math.round((totals.byDay.get(toISODate(d)) ?? 0) / 60000)
+  const weekFocus = Array.from(
+    { length: 7 },
+    (_, i) => totals.byDay.get(toISODate(addDays(now, -i))) ?? 0
+  ).reduce((sum, n) => sum + n, 0)
+  const completed = tasks.filter(isDone).length
+  const overdue = openTasks.filter((i) => i.dueDate && i.dueDate < today).length
+  const greeting =
+    now.getHours() < 5
+      ? 'A quiet night'
+      : now.getHours() < 12
+        ? 'Good morning'
+        : now.getHours() < 18
+          ? 'Good afternoon'
+          : 'Good evening'
+
+  const complete = async (item: WorkspaceItem) => {
+    const statuses = databases[item.databaseId ?? '']?.statuses ?? DEFAULT_STATUSES
+    const target = statuses.find((s) => s.isDone)
+    if (!target) {
+      setEditing(item)
+      return
     }
-  })
-
-  const dueList = [...overdue, ...dueToday].filter((i): i is (typeof i) & { dueDate: string } => !!i.dueDate)
-
-  const hour = new Date().getHours()
-  const greeting = hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+    await useItemsStore.getState().setItemStatus(item.id, target.id)
+    usePetStore.getState().bumpHappy()
+    useToasts.getState().push(`Completed “${item.title}”`, 'success')
+  }
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="dashboard-page">
+      <header className="dashboard-heading">
         <div>
-          <h1 className="text-[1.9em] font-bold tracking-tight">
+          <div className="date-label">
+            <Sun size={14} />
+            {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <h1>
             {greeting}
-            <span className="text-ink-faint">.</span>
+            {name && name !== 'You' ? `, ${name}` : ''}
+            <span>.</span>
           </h1>
-          <p className="text-[0.95em] text-ink-muted">
-            {new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-            {overdue.length > 0 ? ` · ${overdue.length} overdue` : ''}
-          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" icon={<Lock size={14} />} onClick={() => navigate('/lockdown')}>
-            Lockdown
-          </Button>
-          <Button variant="primary" icon={<Plus size={14} />} onClick={() => navigate('/tasks')}>
-            New task
-          </Button>
-        </div>
-      </div>
+        <Button icon={<Plus size={15} />} onClick={() => setCreating(true)}>
+          Add task
+        </Button>
+      </header>
 
-      <TodayRail
-        items={all}
-        onOpenItem={(i) => navigate(i.databaseId ? `/workspace/items/${i.databaseId}` : '/tasks')}
-      />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* today */}
-        <section className="elev-raised rounded-token-lg border border-line bg-raised p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[0.95em] font-semibold">
-              <CheckSquare size={15} className="text-primary" />
-              Due today
-              <span className="text-[0.75em] font-normal text-ink-faint">({dueToday.length + overdue.length})</span>
-            </h2>
-            <button className="focus-ring text-[0.78em] text-primary hover:underline" onClick={() => navigate('/tasks')}>
-              View all
-            </button>
-          </div>
-          <ul className="space-y-1.5">
-            {dueList.slice(0, 6).map((i) => (
-              <li key={i.id}>
-                <button
-                  className="focus-ring flex w-full items-center gap-2 rounded-token-sm px-2 py-1.5 text-left hover:bg-surface"
-                  onClick={() => navigate(i.databaseId ? `/workspace/items/${i.databaseId}` : '/tasks')}
-                >
-                  <span className="min-w-0 flex-1 truncate text-[0.88em]">{i.title}</span>
-                  <span className={`text-[0.7em] ${i.dueDate < today ? 'text-bad' : 'text-ink-faint'}`}>
-                    {i.dueDate < today ? 'overdue' : 'today'}
-                  </span>
-                  <StatusPill
-                    small
-                    color={statusColor(databases[i.databaseId ?? ''] ?? null, i.status)}
-                    label={databases[i.databaseId ?? '']?.statuses.find((s) => s.id === i.status)?.name ?? i.status}
-                  />
-                </button>
-              </li>
-            ))}
-            {dueToday.length + overdue.length === 0 && (
-              <li className="py-4 text-center text-[0.82em] text-ink-faint">Nothing due today. Enjoy the calm.</li>
-            )}
-          </ul>
-        </section>
-
-        {/* habits */}
-        <section className="elev-raised rounded-token-lg border border-line bg-raised p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[0.95em] font-semibold">
-              <Flame size={15} className="text-warn" />
-              Habits
-              <span className="text-[0.75em] font-normal text-ink-faint">
-                {doneHabits.length}/{habitsDue.length} today
-              </span>
-            </h2>
-            <button className="focus-ring text-[0.78em] text-primary hover:underline" onClick={() => navigate('/habits')}>
-              All habits
-            </button>
-          </div>
-          <ul className="space-y-1.5">
-            {habits.slice(0, 5).map((h) => {
-              const done = (h.completions ?? []).includes(today)
-              return (
-                <li key={h.id} className="flex items-center gap-2">
-                  <button
-                    className="focus-ring flex h-5 w-5 items-center justify-center rounded-full border transition-colors"
-                    style={{
-                      borderColor: done ? 'var(--ok)' : 'var(--line-strong)',
-                      background: done ? 'var(--ok)' : 'transparent'
-                    }}
-                    aria-label={`Mark ${h.title} ${done ? 'not done' : 'done'}`}
-                    onClick={() => {
-                      void useItemsStore.getState().toggleHabitCompletion(h.id, today)
-                      if (!done) usePetStore.getState().bumpHappy()
-                    }}
-                  >
-                    {done && <span className="text-[0.7em] font-bold text-white">✓</span>}
-                  </button>
-                  <span className={`min-w-0 flex-1 truncate text-[0.88em] ${done ? 'line-through opacity-60' : ''}`}>
-                    {h.title}
-                  </span>
-                  <span className="text-[0.7em] text-ink-faint">
-                    {streakFor(h.completions, h.recurrence)} streak
-                  </span>
-                </li>
-              )
-            })}
-            {habits.length === 0 && (
-              <li className="py-4 text-center text-[0.82em] text-ink-faint">No habits yet — add one in Habits.</li>
-            )}
-          </ul>
-        </section>
-
-        {/* pet + focus */}
-        <section className="elev-raised flex flex-col items-center justify-between rounded-token-lg border border-line bg-raised p-4">
-          <div className="flex w-full items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[0.95em] font-semibold">
-              <Lock size={15} className="text-primary" />
-              Focus
-            </h2>
-            <button className="focus-ring text-[0.78em] text-primary hover:underline" onClick={() => navigate('/profile')}>
-              Stats
-            </button>
-          </div>
-          <div className="flex w-full flex-1 items-center justify-around py-3">
-            <Pet mood={petMood} size={104} />
-            <div className="space-y-1 text-[0.85em]">
-              <div>
-                <div className="text-[1.5em] font-bold tabular-nums" style={{ fontSize: '1.9em' }}>
-                  {minutesLabel(totals.totalMs)}
-                </div>
-                <div className="text-[0.72em] text-ink-faint">total focus time</div>
+      <div className="dashboard-layout">
+        <div className="dashboard-main">
+          <SpotlightCard as="section" className="panel today-panel" aria-labelledby="today-title">
+            <div className="panel-heading">
+              <div className="panel-title">
+                <Sun size={17} />
+                <h2 id="today-title">Today</h2>
+                <span className="count-badge">{openTasks.length}</span>
               </div>
-              <div className="text-[0.8em] text-ink-muted">
-                {totals.currentStreak}d streak · {totals.sessionCount} sessions
+              <div className="quiet-tabs" role="tablist" aria-label="Task horizon">
+                <button role="tab" aria-selected={tab === 'today'} onClick={() => setTab('today')}>
+                  Up next
+                </button>
+                <button role="tab" aria-selected={tab === 'upcoming'} onClick={() => setTab('upcoming')}>
+                  Upcoming
+                </button>
               </div>
             </div>
-          </div>
-          <div className="h-20 w-full rounded-token bg-surface/40 p-1">
-            <ResponsiveContainer>
-              <BarChart data={chart}>
-                <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: 'var(--ink-faint)', fontSize: 9 }} />
-                <YAxis tick={{ fill: 'var(--ink-faint)', fontSize: 9 }} width={22} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 11 }}
-                  formatter={(v) => [`${v} min`, 'focus']}
-                />
-                <Bar dataKey="min" fill="var(--primary)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      </div>
-
-      {/* recent pages */}
-      <section className="mt-4">
-        <div className="mb-3 flex items-center gap-1.5 text-[0.95em] font-semibold">
-          <LayoutGrid size={15} className="text-primary" />
-          Recent pages
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Object.values(pages)
-            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-            .slice(0, 4)
-            .map((p) => (
-              <button
-                key={p.id}
-                className="focus-ring elev-raised group rounded-token border border-line bg-raised p-3.5 text-left transition-transform hover:-translate-y-0.5"
-                onClick={() => navigate(p.branch === 'personal' ? `/notes/${p.id}` : `/workspace/${p.id}`)}
-              >
-                <div className="truncate text-[0.92em] font-medium group-hover:text-primary">{p.title}</div>
-                <div className="mt-1 text-[0.72em] text-ink-faint">
-                  {p.branch === 'personal' ? 'Note' : 'Workspace'} · {p.blocks.length} blocks
+            {featured ? (
+              <div className="featured-task">
+                <div className="featured-task-meta">
+                  <span className="small-dot" />
+                  {featured.databaseId
+                    ? (databases[featured.databaseId]?.name ?? 'Workspace')
+                    : 'Personal task'}
+                  <span className="featured-due">
+                    <Clock3 size={12} />
+                    {featured.dueDate === today
+                      ? 'Due today'
+                      : featured.dueDate && featured.dueDate < today
+                        ? 'Overdue'
+                        : featured.dueDate
+                          ? new Date(`${featured.dueDate}T12:00:00`).toLocaleDateString([], {
+                              month: 'short',
+                              day: 'numeric'
+                            })
+                          : 'No deadline'}
+                  </span>
                 </div>
-              </button>
-            ))}
-        </div>
-      </section>
+                <button className="featured-task-title" onClick={() => setEditing(featured)}>
+                  <h3>{featured.title}</h3>
+                </button>
+                <p>
+                  {featured.description ||
+                    'Give this your full attention. Everything else can wait a little.'}
+                </p>
+                <div className="featured-actions">
+                  <Button
+                    className="focus-action"
+                    icon={<Lock size={14} />}
+                    onClick={() => navigate('/lockdown', { state: { objective: featured.title } })}
+                  >
+                    Start focus session
+                  </Button>
+                  <button className="text-action" onClick={() => void complete(featured)}>
+                    <Check size={14} />
+                    Complete task
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="featured-task empty-feature">
+                <h3>{tab === 'upcoming' ? 'Nothing on the horizon.' : 'A little breathing room.'}</h3>
+                <p>
+                  {tab === 'upcoming'
+                    ? 'Add a due date to a task to plan ahead.'
+                    : 'Add a task when you’re ready for your next step.'}
+                </p>
+                <Button icon={<Plus size={14} />} onClick={() => setCreating(true)}>
+                  Add task
+                </Button>
+              </div>
+            )}
+            <div className="next-task-list">
+              {displayed.slice(1, 3).map((item) => (
+                <div className="next-task-row" key={item.id}>
+                  <button
+                    className="task-check"
+                    aria-label={`Complete ${item.title}`}
+                    onClick={() => void complete(item)}
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button className="next-task-name" onClick={() => setEditing(item)}>
+                    {item.title}
+                  </button>
+                  <span>{item.databaseId ? 'Project' : 'Personal'}</span>
+                </div>
+              ))}
+            </div>
+            <div className="today-metrics">
+              <div>
+                <span className="metric">
+                  {String(completed).padStart(2, '0')}
+                  <small>/{String(tasks.length).padStart(2, '0')}</small>
+                </span>
+                <span>Tasks completed</span>
+              </div>
+              <div>
+                <span className="metric">{minutesLabel(weekFocus)}</span>
+                <span>Focus this week</span>
+              </div>
+              <div>
+                <span className="metric effort">
+                  {totals.currentStreak}
+                  <small> {totals.currentStreak === 1 ? 'day' : 'days'}</small>
+                </span>
+                <span>Focus streak</span>
+              </div>
+            </div>
+          </SpotlightCard>
 
-      <div className="mt-6 flex items-center gap-2 text-[0.78em] text-ink-faint">
-        <CalendarDays size={13} />
-        <span>
-          {new Date().toLocaleDateString([], { month: 'long', year: 'numeric' })} — local-first, everything on this
-          device.
-        </span>
-        <ArrowRight size={12} />
-        <button className="focus-ring text-primary hover:underline" onClick={() => navigate('/settings')}>
-          Settings
+          <div className="dashboard-secondary">
+            <CalendarCard items={tasks} onOpenItem={setEditing} />
+            <section className="panel dashboard-music" aria-labelledby="music-heading">
+              <div className="panel-heading">
+                <div className="panel-title">
+                  <Music2 size={16} />
+                  <h2 id="music-heading">On the record</h2>
+                </div>
+                <button className="text-link" onClick={() => navigate('/music')}>
+                  Library
+                </button>
+              </div>
+              <MusicCard compact />
+            </section>
+          </div>
+
+          <section className="recent-section" aria-labelledby="recent-heading">
+            <div className="panel-heading">
+              <h2 id="recent-heading">Pick up where you left off</h2>
+              <button className="text-link" onClick={() => navigate('/workspace')}>
+                Workspace
+              </button>
+            </div>
+            <div className="recent-pages">
+              {Object.values(pages)
+                .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+                .slice(0, 3)
+                .map((page) => {
+                  const Icon = pageIconFor(page.icon)
+                  return (
+                    <button
+                      key={page.id}
+                      className="recent-page"
+                      onClick={() =>
+                        navigate(page.branch === 'personal' ? `/notes/${page.id}` : `/workspace/${page.id}`)
+                      }
+                    >
+                      <span className="page-glyph">
+                        <Icon size={17} strokeWidth={1.5} />
+                      </span>
+                      <span>
+                        <strong>{page.title}</strong>
+                        <small>{timeAgo(page.updatedAt)}</small>
+                      </span>
+                    </button>
+                  )
+                })}
+            </div>
+            {Object.keys(pages).length === 0 && (
+              <button className="text-action" onClick={() => navigate('/workspace')}>
+                Create your first page
+              </button>
+            )}
+          </section>
+        </div>
+
+        <aside className="dashboard-aside" aria-label="Your rhythm">
+          <section className="panel habits-panel" aria-labelledby="habit-heading">
+            <div className="panel-heading">
+              <div className="panel-title">
+                <Flame size={17} className="effort" />
+                <h2 id="habit-heading">Small steps, daily</h2>
+              </div>
+              <button className="text-link" onClick={() => navigate('/habits')}>
+                View all
+              </button>
+            </div>
+            <div className="habit-summary">
+              <span className="metric effort">
+                {doneHabits}
+                <small>/{dueHabits.length}</small>
+              </span>
+              <span>habits today</span>
+              <div className="habit-progress">
+                <span style={{ width: `${dueHabits.length ? (doneHabits / dueHabits.length) * 100 : 0}%` }} />
+              </div>
+            </div>
+            {habits.slice(0, 3).map((habit) => (
+              <HabitRow key={habit.id} habit={habit} today={today} />
+            ))}
+            {habits.length === 0 && (
+              <div className="habit-empty">
+                <p>Add your first habit to start a streak.</p>
+                <Button size="sm" onClick={() => navigate('/habits')}>
+                  Add habit
+                </Button>
+              </div>
+            )}
+            <p className="habit-footnote">Consistency, not perfection.</p>
+          </section>
+
+          <section className="panel weather-panel">
+            <WeatherWidget />
+          </section>
+        </aside>
+      </div>
+      <footer className="dashboard-footer">
+        <HardDrive size={12} />
+        <span>Local-first. Your work stays yours.</span>
+        {overdue > 0 && (
+          <button className="text-link" onClick={() => navigate('/tasks')}>
+            {overdue} overdue {overdue === 1 ? 'task' : 'tasks'} to revisit
+          </button>
+        )}
+      </footer>
+      {(editing || creating) && (
+        <ItemModal
+          db={editing?.databaseId ? (databases[editing.databaseId] ?? null) : null}
+          databaseId={editing?.databaseId ?? null}
+          editing={editing}
+          creating={creating ? { type: 'task', status: 'todo', dueDate: today } : null}
+          onClose={() => {
+            setEditing(null)
+            setCreating(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function HabitRow({ habit, today }: { habit: WorkspaceItem; today: string }) {
+  const done = !!habit.completions?.includes(today)
+  const days = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i - 6))
+  return (
+    <div className="dashboard-habit">
+      <div className="habit-topline">
+        <button
+          className={`habit-check ${done ? 'is-done' : ''}`}
+          aria-label={`Mark ${habit.title} ${done ? 'not done' : 'done'}`}
+          aria-pressed={done}
+          onClick={() => {
+            void useItemsStore.getState().toggleHabitCompletion(habit.id, today)
+            if (!done) usePetStore.getState().bumpHappy()
+          }}
+        >
+          {done && <Check size={12} />}
         </button>
+        <span>{habit.title}</span>
+        <span className="habit-streak">
+          <Flame size={11} />
+          <b>{streakFor(habit.completions, habit.recurrence)}</b>
+        </span>
+      </div>
+      <div className="habit-week">
+        {days.map((day) => (
+          <span
+            key={toISODate(day)}
+            className={
+              habit.completions?.includes(toISODate(day))
+                ? 'is-complete'
+                : toISODate(day) === today
+                  ? 'is-today'
+                  : ''
+            }
+            title={`${day.toLocaleDateString()}: ${habit.completions?.includes(toISODate(day)) ? 'completed' : 'not completed'}`}
+          >
+            {habit.completions?.includes(toISODate(day)) ? (
+              <Check size={10} />
+            ) : (
+              day.toLocaleDateString([], { weekday: 'narrow' })
+            )}
+          </span>
+        ))}
       </div>
     </div>
+  )
+}
+
+function CalendarCard({
+  items,
+  onOpenItem
+}: {
+  items: WorkspaceItem[]
+  onOpenItem: (i: WorkspaceItem) => void
+}) {
+  const navigate = useNavigate()
+  const [selected, setSelected] = useState(() => new Date())
+  const [events, setEvents] = useState<CalEvent[]>([])
+  const [alarms, setAlarms] = useState<Alarm[]>([])
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      const [ev, al] = await Promise.all([db.events.toArray(), db.alarms.toArray()])
+      if (alive) {
+        setEvents(ev)
+        setAlarms(al)
+        setNow(new Date())
+      }
+    }
+    void load()
+    const id = setInterval(() => void load(), 60000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
+  const selectedISO = toISODate(selected)
+  const start = addDays(selected, -((selected.getDay() + 6) % 7))
+  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
+  const chosenEvents = events
+    .filter((ev) => toISODate(new Date(ev.at)) === selectedISO)
+    .map((ev) => ({
+      id: ev.id,
+      at: new Date(ev.at),
+      title: ev.title,
+      kind: 'Event',
+      open: () => navigate('/calendar')
+    }))
+  const chosenAlarms = alarms
+    .filter((a) => a.enabled && (a.repeat === 'daily' || toISODate(new Date(a.at)) === selectedISO))
+    .map((a) => ({
+      id: a.id,
+      at: new Date(a.at),
+      title: a.title,
+      kind: 'Alarm',
+      open: () => navigate('/alarms')
+    }))
+  const schedule = [...chosenEvents, ...chosenAlarms].sort(
+    (a, b) => a.at.getHours() - b.at.getHours() || a.at.getMinutes() - b.at.getMinutes()
+  )
+  const due = items.filter((i) => i.dueDate === selectedISO)
+  const current = selectedISO === todayISO()
+  return (
+    <section className="panel calendar-card" aria-labelledby="calendar-heading">
+      <div className="panel-heading">
+        <div className="panel-title">
+          <CalendarDays size={16} />
+          <h2 id="calendar-heading">A look at your week</h2>
+        </div>
+        <button className="text-link" onClick={() => navigate('/calendar')}>
+          Calendar
+        </button>
+      </div>
+      <div className="calendar-month">
+        <span>{selected.toLocaleDateString([], { month: 'long', year: 'numeric' })}</span>
+        <div>
+          <IconBtn label="Previous week" onClick={() => setSelected(addDays(selected, -7))}>
+            <ChevronLeft size={14} />
+          </IconBtn>
+          <IconBtn label="Next week" onClick={() => setSelected(addDays(selected, 7))}>
+            <ChevronRight size={14} />
+          </IconBtn>
+        </div>
+      </div>
+      <div className="calendar-week">
+        {days.map((day) => (
+          <button
+            key={toISODate(day)}
+            className={toISODate(day) === selectedISO ? 'is-selected' : ''}
+            onClick={() => setSelected(day)}
+            aria-label={day.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+            aria-pressed={toISODate(day) === selectedISO}
+          >
+            <span>{day.toLocaleDateString([], { weekday: 'short' }).slice(0, 2)}</span>
+            <strong>{day.getDate()}</strong>
+            <i className={toISODate(day) === todayISO() ? 'today-mark' : ''} />
+          </button>
+        ))}
+      </div>
+      <div className="calendar-agenda">
+        <div className="agenda-label">
+          {current ? 'Today’s schedule' : selected.toLocaleDateString([], { weekday: 'long' })}
+          <span>{schedule.length} events</span>
+        </div>
+        {schedule.slice(0, 2).map((event) => (
+          <button className="agenda-event" key={event.id} onClick={event.open}>
+            <time>{event.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
+            <span>{event.title}</span>
+          </button>
+        ))}
+        {!schedule.length && <p className="calendar-empty">No events scheduled. Room to focus.</p>}
+        {due.slice(0, 1).map((item) => (
+          <button className="agenda-due" key={item.id} onClick={() => onOpenItem(item)}>
+            <Circle size={11} />
+            <span>{item.title}</span>
+            <small>Due {current ? 'today' : 'this day'}</small>
+          </button>
+        ))}
+      </div>
+      <div className="today-rail" aria-label="Today timeline, 07:00 to 22:00">
+        <div className="rail-rule" />
+        {[7, 10, 13, 16, 19, 22].map((h) => (
+          <span className="rail-tick" style={{ left: `${railPercent(h)}%` }} key={h}>
+            {String(h).padStart(2, '0')}
+          </span>
+        ))}
+        {schedule.map((event) => (
+          <button
+            key={event.id}
+            className="rail-event"
+            style={{ left: `${railPercent(event.at.getHours() + event.at.getMinutes() / 60)}%` }}
+            title={event.title}
+            aria-label={`${event.title}, ${event.kind}`}
+            onClick={event.open}
+          />
+        ))}
+        {current && now.getHours() >= RAIL_START && now.getHours() <= RAIL_END && (
+          <span
+            className="rail-now"
+            aria-label="Current time"
+            style={{ left: `${railPercent(now.getHours() + now.getMinutes() / 60)}%` }}
+          />
+        )}
+      </div>
+    </section>
   )
 }

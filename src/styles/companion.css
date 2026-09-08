@@ -1,0 +1,271 @@
+/* A single settings-controlled companion above the app, not a page or card. */
+.floating-nova {
+  z-index: 70;
+  user-select: none;
+}
+.floating-nova-avatar {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-drag: none;
+}
+.floating-nova[data-dragging='true'] .floating-nova-avatar {
+  cursor: grabbing;
+}
+.floating-nova-avatar .nova-pet[data-animated='true']:not([data-pose='sleeping']) {
+  animation: pet-hover var(--pet-hover-period) var(--ease) infinite alternate;
+}
+.floating-nova[data-dragging='true'] .nova-pet {
+  animation: none;
+}
+@keyframes pet-hover {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(var(--space-0_5) * -1));
+  }
+}
+.floating-nova-tools button {
+  touch-action: none;
+}
+.floating-nova-label {
+  gap: var(--space-1_5);
+}
+.floating-nova-popover {
+  position: fixed;
+  right: auto;
+  bottom: auto;
+  z-index: 80;
+  box-sizing: border-box;
+  overflow: auto;
+  transform-origin: center;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+}
+.floating-nova-actions {
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--hairline-width) solid var(--line);
+  padding: var(--space-3);
+}
+.nova-actions-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.nova-actions-heading strong {
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+}
+.nova-actions-heading span {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--type-caption);
+}
+.nova-actions-heading button {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+.nova-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.nova-actions-grid > button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  min-height: var(--space-9);
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  font-size: var(--type-body-s);
+  background: var(--bg);
+  color: var(--ink);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.nova-actions-grid > button svg {
+  color: var(--current);
+  flex-shrink: 0;
+}
+.nova-actions-grid > button:hover {
+  border-color: var(--line-strong);
+}
+.nova-pet-settings-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  width: 100%;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: var(--hairline-width) solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--type-caption);
+}
+.nova-interaction-feedback {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: calc(100% + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  width: max-content;
+  max-width: var(--space-40);
+  padding: var(--space-1) var(--space-2);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+  font-size: var(--type-caption);
+  pointer-events: none;
+}
+.nova-interaction-feedback svg {
+  color: var(--current);
+  flex-shrink: 0;
+}
+.floating-nova-chat {
+  max-width: none;
+  overflow: hidden;
+}
+.floating-nova-chat .nova-chat.is-compact {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+}
+.floating-nova-chat .nova-chat-heading,
+.floating-nova-chat .nova-composer {
+  flex-shrink: 0;
+}
+.floating-nova-chat .nova-connection-panel {
+  min-height: 0;
+  max-height: 40%;
+  flex-shrink: 1;
+  overflow: auto;
+}
+.floating-nova-chat .nova-chat-log {
+  min-height: 0;
+}
+.floating-nova-chat .nova-chat-error {
+  max-height: 25%;
+  overflow: auto;
+  flex-shrink: 0;
+}
+.floating-nova-chat .nova-composer {
+  margin-top: 0;
+}
+
+.pet-settings-panel {
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  scroll-margin-top: var(--space-5);
+}
+.pet-settings-panel > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.pet-settings-panel > header > svg {
+  color: var(--current);
+}
+.pet-settings-panel h2 {
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+}
+.pet-settings-panel > header > span {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+}
+.pet-settings-panel > header > .is-enabled {
+  color: var(--current);
+}
+.pet-settings-panel > p {
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  margin-bottom: var(--space-3);
+  max-width: var(--prose-width);
+}
+.pet-settings-panel > label {
+  padding-block: var(--space-2);
+}
+.pet-settings-panel > .pet-motion-note {
+  font-size: var(--type-caption);
+  margin: var(--space-2) 0;
+}
+.pet-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.pet-settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--hairline-width) solid var(--line);
+}
+.pet-settings-note p {
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.pet-model-dot {
+  width: var(--space-1);
+  height: var(--space-1);
+  margin-top: var(--space-1_5);
+  border-radius: var(--radius-round);
+  background: var(--ink-muted);
+  flex-shrink: 0;
+}
+.pet-model-dot.is-connected {
+  background: var(--current);
+}
+@media (pointer: coarse) {
+  .floating-nova-tools {
+    opacity: 1;
+  }
+  .floating-nova-tools button {
+    width: var(--space-7);
+    height: var(--space-7);
+  }
+  .nova-actions-grid > button {
+    min-height: var(--space-10);
+  }
+}
+@media (max-width: 48rem) {
+  .pet-settings-panel {
+    padding: var(--space-4);
+  }
+  .pet-settings-actions {
+    align-items: stretch;
+  }
+  .pet-settings-actions button {
+    min-height: var(--space-9);
+  }
+  .floating-nova-chat .nova-chat-heading {
+    padding: var(--space-2);
+  }
+}
+@media (max-height: 30rem) {
+  .floating-nova-chat .nova-composer {
+    margin: var(--space-1) var(--space-2) var(--space-2);
+    padding: var(--space-2);
+  }
+  .floating-nova-chat .nova-composer textarea {
+    min-height: var(--space-7);
+  }
+  .floating-nova-chat .nova-chat-log {
+    padding-block: var(--space-2);
+  }
+}

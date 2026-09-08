@@ -1,8 +1,14 @@
 import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  FileText, FolderPlus, Pencil, Trash2, Link2, MessageSquare,
-  Database as DbIcon, History
+  FileText,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  Link2,
+  MessageSquare,
+  Database as DbIcon,
+  History
 } from 'lucide-react'
 import type { Block, PageRecord } from '../lib/types'
 import { usePagesStore } from '../stores/pagesStore'
@@ -30,7 +36,12 @@ export function WorkspacePage() {
         .sort((a, b) => a.title.localeCompare(b.title)),
     [pages]
   )
-  const current = pageId ? pages[pageId] : undefined
+  const [query] = useSearchParams()
+  const current = pageId
+    ? pages[pageId]
+    : query.has('overview')
+      ? undefined
+      : roots.find((p) => p.blocks.some((b) => b.type === 'database'))
 
   if (current && current.branch !== 'workspace') {
     return (
@@ -39,25 +50,38 @@ export function WorkspacePage() {
           icon={<FileText size={24} />}
           title="This page lives in Notes"
           hint="Open it from the Notes page."
-          action={<Button variant="primary" onClick={() => navigate(`/notes/${current.id}`)}>Go to Notes</Button>}
+          action={
+            <Button variant="primary" onClick={() => navigate(`/notes/${current.id}`)}>
+              Go to Notes
+            </Button>
+          }
         />
       </div>
     )
   }
 
   return (
-    <div className="flex h-full min-h-0">
-      <aside className="glass-panel w-60 shrink-0 border-r border-line" aria-label="Workspace pages">
+    <div className="workspace-layout flex h-full min-h-0">
+      <aside className="workspace-tree shrink-0 border-r border-line" aria-label="Workspace pages">
         <div className="flex items-center justify-between px-3 py-2.5">
-          <span className="text-[0.85em] font-semibold uppercase tracking-wider text-ink-faint">Pages</span>
-          <IconBtn label="New page" onClick={() => void usePagesStore.getState().createPage({ title: 'Untitled', branch: 'workspace' })}>
+          <span className="text-[0.85em] font-semibold  text-ink-faint">Pages</span>
+          <IconBtn
+            label="New page"
+            onClick={() =>
+              void usePagesStore.getState().createPage({ title: 'Untitled', branch: 'workspace' })
+            }
+          >
             <FolderPlus size={15} />
           </IconBtn>
         </div>
         <div className="px-2 pb-4">
+          <button className="workspace-overview-link" onClick={() => navigate('/workspace?overview=1')}>
+            <FileText size={14} />
+            All pages
+          </button>
           <ul>
             {roots.map((p) => (
-              <TreeNode key={p.id} page={p} current={pageId} depth={0} />
+              <TreeNode key={p.id} page={p} current={current?.id} depth={0} />
             ))}
           </ul>
           {roots.length === 0 && (
@@ -69,11 +93,12 @@ export function WorkspacePage() {
         {current ? (
           <PageView page={current} />
         ) : (
-          <div className="mx-auto max-w-3xl p-8">
+          <div className="workspace-overview">
             <div className="mb-6">
               <h2 className="text-[1.6em] font-bold tracking-tight">Workspace</h2>
               <p className="mt-1 text-[0.92em] text-ink-muted">
-                Blocks, databases, and projects — one local-first space. Open a page to read it, or edit it full-screen.
+                Blocks, databases, and projects — one local-first space. Open a page to read it, or edit it
+                full-screen.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -84,7 +109,7 @@ export function WorkspacePage() {
                 .map((p) => (
                   <button
                     key={p.id}
-                    className="focus-ring elev-raised rounded-token border border-line bg-raised p-4 text-left transition-transform hover:-translate-y-0.5"
+                    className="focus-ring elev-raised rounded-token border border-line bg-raised p-4 text-left transition-transform "
                     onClick={() => navigate(`/workspace/${p.id}`)}
                   >
                     <div className="flex items-center gap-2 text-[0.95em] font-semibold">
@@ -92,7 +117,7 @@ export function WorkspacePage() {
                       {p.title}
                     </div>
                     <div className="mt-1 text-[0.75em] text-ink-faint">
-                      {p.blocks.length} blocks · {timeAgo(p.updatedAt)}
+                      {p.blocks.length} blocks / {timeAgo(p.updatedAt)}
                     </div>
                   </button>
                 ))}
@@ -131,7 +156,10 @@ function TreeNode({ page, current, depth }: { page: PageRecord; current?: string
           width={170}
           align="end"
           trigger={
-            <span className="focus-ring hidden h-6 w-6 shrink-0 items-center justify-center rounded text-ink-faint hover:text-ink group-hover:flex" aria-label={`Actions for ${page.title}`}>
+            <span
+              className="focus-ring hidden h-6 w-6 shrink-0 items-center justify-center rounded text-ink-faint hover:text-ink group-hover:flex"
+              aria-label={`Actions for ${page.title}`}
+            >
               ⋯
             </span>
           }
@@ -148,7 +176,9 @@ function TreeNode({ page, current, depth }: { page: PageRecord; current?: string
             icon={<FolderPlus size={13} />}
             label="New sub-page"
             onClick={async () => {
-              const p = await usePagesStore.getState().createPage({ title: 'Untitled', parentId: page.id, branch: 'workspace' })
+              const p = await usePagesStore
+                .getState()
+                .createPage({ title: 'Untitled', parentId: page.id, branch: 'workspace' })
               navigate(`/workspace/${p.id}`)
             }}
           />
@@ -182,42 +212,43 @@ export function PageView({ page, routePrefix = 'workspace' }: { page: PageRecord
 
   const backlinks = useMemo(() => {
     const needle = `[[${page.title}]]`
-    return Object.values(pages).filter((p) => p.id !== page.id && p.blocks.some((b) => b.content.includes(needle)))
+    return Object.values(pages).filter(
+      (p) => p.id !== page.id && p.blocks.some((b) => b.content.includes(needle))
+    )
   }, [pages, page.id, page.title])
 
   const adapter: EditorSession = useMemo(
-    () =>
-      ({
-        page,
-        blocks: page.blocks,
-        focusContent: { current: new Map() },
-        history: [],
-        historyIndex: 0,
-        canUndo: false,
-        canRedo: false,
-        undo: () => undefined,
-        redo: () => undefined,
-        jumpTo: () => undefined,
-        selection: [],
-        setSelection: () => undefined,
-        toggleSelection: () => undefined,
-        clearSelection: () => undefined,
-        focusRequest: null,
-        requestFocus: () => undefined,
-        commit: () => undefined,
-        insertNew: () => 'x',
-        convert: () => undefined,
-        remove: () => undefined,
-        duplicate: () => undefined,
-        move: () => undefined,
-        composeColumns: () => undefined,
-        setBlockContent: () => undefined,
-        commitTextEdit: () => undefined,
-        patchBlock: () => undefined,
-        takeSnapshot: () => undefined,
-        restoreSnapshot: () => undefined,
-        createDatabaseBlock: () => undefined
-      }),
+    () => ({
+      page,
+      blocks: page.blocks,
+      focusContent: { current: new Map() },
+      history: [],
+      historyIndex: 0,
+      canUndo: false,
+      canRedo: false,
+      undo: () => undefined,
+      redo: () => undefined,
+      jumpTo: () => undefined,
+      selection: [],
+      setSelection: () => undefined,
+      toggleSelection: () => undefined,
+      clearSelection: () => undefined,
+      focusRequest: null,
+      requestFocus: () => undefined,
+      commit: () => undefined,
+      insertNew: () => 'x',
+      convert: () => undefined,
+      remove: () => undefined,
+      duplicate: () => undefined,
+      move: () => undefined,
+      composeColumns: () => undefined,
+      setBlockContent: () => undefined,
+      commitTextEdit: () => undefined,
+      patchBlock: () => undefined,
+      takeSnapshot: () => undefined,
+      restoreSnapshot: () => undefined,
+      createDatabaseBlock: () => undefined
+    }),
     [page]
   )
 
@@ -225,34 +256,54 @@ export function PageView({ page, routePrefix = 'workspace' }: { page: PageRecord
   const HeadIcon = pageIconFor(page.icon)
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
+    <div className={`workspace-document ${tops.some((b) => b.type === 'database') ? 'has-database' : ''}`}>
       <div className="mb-4 flex items-center gap-2">
-        <h1 className="flex min-w-0 flex-1 items-center gap-2.5 text-[1.8em] font-bold tracking-tight">
-          <HeadIcon size={28} className="shrink-0 text-primary" />
+        <h1 className="workspace-page-title flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="workspace-page-glyph">
+            <HeadIcon size={22} className="shrink-0" />
+          </span>
           <span className="truncate">{page.title}</span>
         </h1>
-        <Button variant="ghost" size="sm" icon={<History size={14} />} onClick={() => navigate(`/${routePrefix}/${page.id}/edit`)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<History size={14} />}
+          onClick={() => navigate(`/${routePrefix}/${page.id}/edit`)}
+        >
           History
         </Button>
-        <Button variant="primary" size="sm" icon={<Pencil size={13} />} onClick={() => navigate(`/${routePrefix}/${page.id}/edit`)}>
+        <Button
+          variant="primary"
+          size="sm"
+          icon={<Pencil size={13} />}
+          onClick={() => navigate(`/${routePrefix}/${page.id}/edit`)}
+        >
           Edit full-screen
         </Button>
       </div>
 
       <div className="space-y-1">
-        {tops.map((b) => (
-          <ReadBlock key={b.id} block={b} adapter={adapter} onOpenPage={(id) => navigate(`/workspace/${id}`)} />
-        ))}
+        {tops
+          .filter((b) => !(b.type === 'heading1' && b.content === page.title))
+          .map((b) => (
+            <ReadBlock
+              key={b.id}
+              block={b}
+              adapter={adapter}
+              onOpenPage={(id) => navigate(`/workspace/${id}`)}
+            />
+          ))}
       </div>
 
-      <div className="mt-10 grid gap-4 border-t border-line pt-6 sm:grid-cols-2">
+      <div className="workspace-page-meta mt-10 grid gap-4 border-t border-line pt-6 sm:grid-cols-2">
         <div>
-          <div className="mb-2 flex items-center gap-1.5 text-[0.8em] font-semibold uppercase tracking-wider text-ink-faint">
+          <div className="mb-2 flex items-center gap-1.5 text-[0.8em] font-semibold  text-ink-faint">
             <Link2 size={12} /> Backlinks ({backlinks.length})
           </div>
           {backlinks.length === 0 ? (
             <p className="text-[0.82em] text-ink-faint">
-              Nothing links here yet. Use <code className="rounded bg-sunken px-1">[[{page.title}]]</code> in any block.
+              Nothing links here yet. Use <code className="rounded bg-sunken px-1">[[{page.title}]]</code> in
+              any block.
             </p>
           ) : (
             <ul className="space-y-1">
@@ -270,7 +321,7 @@ export function PageView({ page, routePrefix = 'workspace' }: { page: PageRecord
           )}
         </div>
         <div>
-          <div className="mb-2 flex items-center gap-1.5 text-[0.8em] font-semibold uppercase tracking-wider text-ink-faint">
+          <div className="mb-2 flex items-center gap-1.5 text-[0.8em] font-semibold  text-ink-faint">
             <MessageSquare size={12} /> Comments ({comments.length})
           </div>
           {comments.length === 0 ? (
@@ -300,18 +351,30 @@ function ReadBlock({
   onOpenPage: (id: string) => void
 }) {
   const pages = usePagesStore((s) => s.pages)
-  const isText = ['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'quote', 'code', 'callout', 'todo', 'text'].includes(block.type)
+  const isText = [
+    'paragraph',
+    'heading1',
+    'heading2',
+    'heading3',
+    'bullet',
+    'numbered',
+    'quote',
+    'code',
+    'callout',
+    'todo',
+    'text'
+  ].includes(block.type)
 
   if (block.type === 'database') {
     return (
-      <div className="py-2">
+      <div className="workspace-database-block">
         <DatabaseBlock dbId={String(block.props.dbId ?? '')} />
       </div>
     )
   }
   if (isText) {
     return (
-      <div className={block.type === 'heading1' ? 'pt-3' : ''}>
+      <div className={`workspace-prose ${block.type === 'heading1' ? 'pt-3' : ''}`}>
         <LinkedText
           content={block.content}
           className={
@@ -332,7 +395,13 @@ function ReadBlock({
                           : ''
           }
           prefix={
-            block.type === 'bullet' ? '• ' : block.type === 'todo' ? (block.checked ? '☑ ' : '☐ ') : undefined
+            block.type === 'bullet'
+              ? '• '
+              : block.type === 'todo'
+                ? block.checked
+                  ? '☑ '
+                  : '☐ '
+                : undefined
           }
           onOpen={(title) => {
             const p = Object.values(pages).find((x) => x.title === title)
@@ -395,13 +464,17 @@ export function DatabaseRoutePage() {
         <EmptyState
           icon={<DbIcon size={24} />}
           title="Database not found"
-          action={<Button variant="primary" onClick={() => navigate('/workspace')}>Back to Workspace</Button>}
+          action={
+            <Button variant="primary" onClick={() => navigate('/workspace')}>
+              Back to Workspace
+            </Button>
+          }
         />
       </div>
     )
   }
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="workspace-database-route">
       <div className="mb-3 flex items-center gap-2">
         <DbIcon size={18} className="text-primary" />
         <h1 className="text-[1.4em] font-bold tracking-tight">{db.name}</h1>
@@ -416,4 +489,3 @@ export function DatabaseRoutePage() {
     </div>
   )
 }
-

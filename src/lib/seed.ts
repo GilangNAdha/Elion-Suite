@@ -36,13 +36,33 @@ export async function seedIfEmpty(): Promise<void> {
     updatedAt: now,
     blocks: [
       b('heading1', 'Welcome to Elion', 1),
-      b('paragraph', 'A local-first productivity suite: Workspace (blocks + databases), Lockdown (focus sessions), tasks, habits, notes, calendar — all on one device, no cloud.', 2),
+      b(
+        'paragraph',
+        'A local-first productivity suite: Workspace (blocks + databases), Lockdown (focus sessions), tasks, habits, notes, calendar — all on one device, no cloud.',
+        2
+      ),
       b('heading2', 'Try the flagship editor', 3),
-      b('paragraph', 'Press “Edit full-screen” on any page. Drag a block chip from the left library onto the canvas to insert, drop it onto an existing block to convert it in place, or drop it on a block’s edge to compose columns. Ctrl+K opens the command palette; the History panel lists every action in plain language.', 4),
+      b(
+        'paragraph',
+        'Press “Edit full-screen” on any page. Drag a block chip from the left library onto the canvas to insert, drop it onto an existing block to convert it in place, or drop it on a block’s edge to compose columns. Ctrl+K opens the command palette; the History panel lists every action in plain language.',
+        4
+      ),
       b('heading2', 'Lockdown', 5),
-      b('paragraph', 'Full-screen focus with wallpaper (static / video / 3D), a soundscape mixer, Pomodoro cycles, and session analytics. The distraction guard is a soft nudge — by design.', 6),
-      b('callout', 'Everything you see (pages, items, presets, snapshots) lives in IndexedDB on this device. See [[Project Aurora]] for the item model in action.', 7),
-      b('paragraph', 'Links like [[Project Aurora]] are cross-page links; each page has a Backlinks panel.', 8)
+      b(
+        'paragraph',
+        'Full-screen focus with wallpaper (static / video / 3D), a soundscape mixer, Pomodoro cycles, and session analytics. The distraction guard is a soft nudge — by design.',
+        6
+      ),
+      b(
+        'callout',
+        'Everything you see (pages, items, presets, snapshots) lives in IndexedDB on this device. See [[Project Aurora]] for the item model in action.',
+        7
+      ),
+      b(
+        'paragraph',
+        'Links like [[Project Aurora]] are cross-page links; each page has a Backlinks panel.',
+        8
+      )
     ]
   }
 
@@ -58,7 +78,11 @@ export async function seedIfEmpty(): Promise<void> {
     blocks: [
       b('heading1', 'Project Aurora', 1),
       b('paragraph', 'Sample project database (Jira-style tracking over the shared item model).', 2),
-      b('paragraph', 'The database below is a block — edit it full-screen to add items, views, workflows, sprints, and automations.', 3)
+      b(
+        'paragraph',
+        'The database below is a block — edit it full-screen to add items, views, workflows, sprints, and automations.',
+        3
+      )
     ]
   }
 
@@ -73,7 +97,11 @@ export async function seedIfEmpty(): Promise<void> {
     updatedAt: now,
     blocks: [
       b('heading1', 'Scratchpad', 1),
-      b('paragraph', 'Your quick notes. Edited here, on the Notes page, or inside a Lockdown widget — same record, live-synced.', 2),
+      b(
+        'paragraph',
+        'Your quick notes. Edited here, on the Notes page, or inside a Lockdown widget — same record, live-synced.',
+        2
+      ),
       b('todo', 'Check the immersive editor’s drag-to-replace', 3, { checked: false }),
       b('todo', 'Start a Lockdown session with the soundscape on', 4, { checked: false }),
       b('todo', 'Review the burndown chart in Project Aurora', 5, { checked: true })
@@ -118,8 +146,20 @@ export async function seedIfEmpty(): Promise<void> {
     properties,
     statuses,
     views: [
-      { id: uid(), name: 'Board', kind: 'board', visibleProperties: ['title', 'status', 'priority'], swimlane: 'none', wipLimit: 3 },
-      { id: uid(), name: 'Table', kind: 'table', visibleProperties: ['title', 'status', 'priority', 'dueDate'] },
+      {
+        id: uid(),
+        name: 'Board',
+        kind: 'board',
+        visibleProperties: ['title', 'status', 'priority'],
+        swimlane: 'none',
+        wipLimit: 3
+      },
+      {
+        id: uid(),
+        name: 'Table',
+        kind: 'table',
+        visibleProperties: ['title', 'status', 'priority', 'dueDate']
+      },
       { id: uid(), name: 'Timeline', kind: 'timeline', visibleProperties: ['title'] },
       { id: uid(), name: 'Calendar', kind: 'calendar', visibleProperties: ['title'] }
     ],
@@ -132,7 +172,10 @@ export async function seedIfEmpty(): Promise<void> {
   const dbBlockId = uid()
   const pageWithDb = {
     ...projectPage,
-    blocks: [...projectPage.blocks, { id: dbBlockId, type: 'database' as const, content: '', parentId: null, order: 4, props: { dbId } }]
+    blocks: [
+      ...projectPage.blocks,
+      { id: dbBlockId, type: 'database' as const, content: '', parentId: null, order: 4, props: { dbId } }
+    ]
   }
   await db.pages.put(pageWithDb)
 
@@ -140,10 +183,19 @@ export async function seedIfEmpty(): Promise<void> {
   const sprintId = uid()
   const sStart = toISODate(addDays(new Date(), -5))
   const sEnd = toISODate(addDays(new Date(), 8))
-  await db.sprints.add({ id: sprintId, databaseId: dbId, name: 'Sprint 1', start: sStart, end: sEnd, goal: 'Ship the editor shell' })
+  await db.sprints.add({
+    id: sprintId,
+    databaseId: dbId,
+    name: 'Sprint 1',
+    start: sStart,
+    end: sEnd,
+    goal: 'Ship the editor shell'
+  })
 
   // ---- items ----
-  const mk = (p: Partial<WorkspaceItem> & { title: string; rank: number; status: string }): WorkspaceItem => ({
+  const mk = (
+    p: Partial<WorkspaceItem> & { title: string; rank: number; status: string }
+  ): WorkspaceItem => ({
     id: uid(),
     type: 'task',
     description: '',
@@ -155,27 +207,165 @@ export async function seedIfEmpty(): Promise<void> {
     updatedAt: now,
     ...p
   })
-  const epic = mk({ title: 'Epic: Immersive editor', type: 'epic', status: 'doing', priority: 'high', rank: 1000, storyPoints: 13, labels: ['editor'] })
-  const story1 = mk({ title: 'Drag-to-replace with content preservation', type: 'story', status: 'doing', priority: 'highest', rank: 2000, storyPoints: 8, parentId: epic.id, sprintId, dueDate: toISODate(addDays(new Date(), 3)), labels: ['editor', 'dnd'] })
-  const story2 = mk({ title: 'Visible history stack + Time Machine', type: 'story', status: 'todo', priority: 'high', rank: 3000, storyPoints: 8, parentId: epic.id, sprintId, dueDate: toISODate(addDays(new Date(), 6)), labels: ['editor'] })
-  const story3 = mk({ title: 'Edgeless canvas tools (pen, arrows)', type: 'story', status: 'todo', priority: 'medium', rank: 4000, storyPoints: 5, parentId: epic.id, sprintId, labels: ['canvas'] })
-  const t1 = mk({ title: 'Soundscape mixer in Lockdown', status: 'done', priority: 'medium', rank: 5000, storyPoints: 5, sprintId, labels: ['lockdown'] })
-  const t2 = mk({ title: 'Pomodoro cycle counter + cues', status: 'done', priority: 'medium', rank: 6000, storyPoints: 3, sprintId, labels: ['lockdown'] })
-  const t3 = mk({ title: 'Theme contrast auto-correction', status: 'doing', priority: 'high', rank: 7000, storyPoints: 3, sprintId, dueDate: toISODate(addDays(new Date(), 1)), labels: ['theming'] })
-  const t4 = mk({ title: 'Offline STT dictation (Whisper WASM)', status: 'backlog', priority: 'high', rank: 8000, storyPoints: 8, labels: ['stt'] })
-  const t5 = mk({ title: 'Cumulative flow report', status: 'backlog', priority: 'low', rank: 9000, storyPoints: 3, labels: ['reports'] })
+  const epic = mk({
+    title: 'Epic: Immersive editor',
+    type: 'epic',
+    status: 'doing',
+    priority: 'high',
+    rank: 1000,
+    storyPoints: 13,
+    labels: ['editor']
+  })
+  const story1 = mk({
+    title: 'Drag-to-replace with content preservation',
+    type: 'story',
+    status: 'doing',
+    priority: 'highest',
+    rank: 2000,
+    storyPoints: 8,
+    parentId: epic.id,
+    sprintId,
+    dueDate: toISODate(addDays(new Date(), 3)),
+    labels: ['editor', 'dnd']
+  })
+  const story2 = mk({
+    title: 'Visible history stack + Time Machine',
+    type: 'story',
+    status: 'todo',
+    priority: 'high',
+    rank: 3000,
+    storyPoints: 8,
+    parentId: epic.id,
+    sprintId,
+    dueDate: toISODate(addDays(new Date(), 6)),
+    labels: ['editor']
+  })
+  const story3 = mk({
+    title: 'Edgeless canvas tools (pen, arrows)',
+    type: 'story',
+    status: 'todo',
+    priority: 'medium',
+    rank: 4000,
+    storyPoints: 5,
+    parentId: epic.id,
+    sprintId,
+    labels: ['canvas']
+  })
+  const t1 = mk({
+    title: 'Soundscape mixer in Lockdown',
+    status: 'done',
+    priority: 'medium',
+    rank: 5000,
+    storyPoints: 5,
+    sprintId,
+    labels: ['lockdown']
+  })
+  const t2 = mk({
+    title: 'Pomodoro cycle counter + cues',
+    status: 'done',
+    priority: 'medium',
+    rank: 6000,
+    storyPoints: 3,
+    sprintId,
+    labels: ['lockdown']
+  })
+  const t3 = mk({
+    title: 'Theme contrast auto-correction',
+    status: 'doing',
+    priority: 'high',
+    rank: 7000,
+    storyPoints: 3,
+    sprintId,
+    dueDate: toISODate(addDays(new Date(), 1)),
+    labels: ['theming']
+  })
+  const t4 = mk({
+    title: 'Offline STT dictation (Whisper WASM)',
+    status: 'backlog',
+    priority: 'high',
+    rank: 8000,
+    storyPoints: 8,
+    labels: ['stt']
+  })
+  const t5 = mk({
+    title: 'Cumulative flow report',
+    status: 'backlog',
+    priority: 'low',
+    rank: 9000,
+    storyPoints: 3,
+    labels: ['reports']
+  })
 
   const unassigned: WorkspaceItem[] = [
-    mk({ title: 'Book dentist appointment', status: 'todo', priority: 'medium', rank: 1000, databaseId: null, dueDate: toISODate(addDays(new Date(), 1)), labels: ['personal'] }),
-    mk({ title: 'Prepare Q4 proposal outline', status: 'doing', priority: 'high', rank: 2000, databaseId: null, dueDate: toISODate(addDays(new Date(), 4)), labels: ['work'] }),
-    mk({ title: 'Water the plants', status: 'todo', priority: 'lowest', rank: 3000, databaseId: null, labels: ['home'] }),
-    mk({ title: 'Read 30 pages of “Deep Work”', status: 'done', priority: 'low', rank: 4000, databaseId: null, labels: ['reading'] })
+    mk({
+      title: 'Book dentist appointment',
+      status: 'todo',
+      priority: 'medium',
+      rank: 1000,
+      databaseId: null,
+      dueDate: toISODate(addDays(new Date(), 1)),
+      labels: ['personal']
+    }),
+    mk({
+      title: 'Prepare Q4 proposal outline',
+      description: 'Shape the narrative, outline the key ideas, and leave a clear next step.',
+      status: 'doing',
+      priority: 'high',
+      rank: 2000,
+      databaseId: null,
+      dueDate: toISODate(new Date()),
+      labels: ['work']
+    }),
+    mk({
+      title: 'Water the plants',
+      status: 'todo',
+      priority: 'lowest',
+      rank: 3000,
+      databaseId: null,
+      labels: ['home']
+    }),
+    mk({
+      title: 'Read 30 pages of “Deep Work”',
+      status: 'done',
+      priority: 'low',
+      rank: 4000,
+      databaseId: null,
+      labels: ['reading']
+    })
   ]
 
   const habits: WorkspaceItem[] = [
-    mk({ title: 'Read 20 pages', type: 'habit', status: 'todo', rank: 1000, databaseId: null, recurrence: { freq: 'daily' }, completions: [toISODate(addDays(new Date(), -1)), toISODate(addDays(new Date(), -2)), toISODate(addDays(new Date(), -3))] }),
-    mk({ title: 'Exercise 30 min', type: 'habit', status: 'todo', rank: 2000, databaseId: null, recurrence: { freq: 'weekdays' }, completions: [toISODate(addDays(new Date(), -1))] }),
-    mk({ title: 'Weekly meal prep', type: 'habit', status: 'todo', rank: 3000, databaseId: null, recurrence: { freq: 'weekly', days: [5] }, completions: [] })
+    mk({
+      title: 'Read 20 pages',
+      type: 'habit',
+      status: 'todo',
+      rank: 1000,
+      databaseId: null,
+      recurrence: { freq: 'daily' },
+      completions: [
+        toISODate(addDays(new Date(), -1)),
+        toISODate(addDays(new Date(), -2)),
+        toISODate(addDays(new Date(), -3))
+      ]
+    }),
+    mk({
+      title: 'Exercise 30 min',
+      type: 'habit',
+      status: 'todo',
+      rank: 2000,
+      databaseId: null,
+      recurrence: { freq: 'weekdays' },
+      completions: [toISODate(addDays(new Date(), -1))]
+    }),
+    mk({
+      title: 'Weekly meal prep',
+      type: 'habit',
+      status: 'todo',
+      rank: 3000,
+      databaseId: null,
+      recurrence: { freq: 'weekly', days: [5] },
+      completions: []
+    })
   ]
 
   await db.items.bulkAdd([epic, story1, story2, story3, t1, t2, t3, t4, t5, ...unassigned, ...habits])
@@ -198,22 +388,23 @@ export async function seedIfEmpty(): Promise<void> {
   await db.lockdownPresets.add({
     id: presetId,
     name: 'Deep Work',
-    wallpaper: { tier: 'scene3d', scene: 'particles' },
+    wallpaper: { tier: 'static', builtin: 'nocturne' },
+    layout: 'centered',
     soundscape: { layers: { rain: 0.5, fire: 0, white: 0, cafe: 0.3, wind: 0 } },
     pomodoro: { workMin: 25, breakMin: 5, goalCycles: 4 },
     widgets: [
       { id: uid(), type: 'clock', x: 72, y: 72, w: 230, h: 120 },
       { id: uid(), type: 'timer', x: 340, y: 72, w: 280, h: 220 },
-      { id: uid(), type: 'notes', x: 72, y: 240, w: 300, h: 260 },
-      { id: uid(), type: 'pet', x: 410, y: 330, w: 180, h: 170 }
+      { id: uid(), type: 'notes', x: 72, y: 240, w: 300, h: 260 }
     ],
     createdAt: now,
     updatedAt: now
   })
   await db.lockdownPresets.add({
     id: uid(),
-    name: 'Café Focus',
-    wallpaper: { tier: 'static' },
+    name: 'Forest retreat',
+    wallpaper: { tier: 'static', builtin: 'forest' },
+    layout: 'centered',
     soundscape: { layers: { rain: 0, fire: 0, white: 0, cafe: 0.7, wind: 0.1 } },
     pomodoro: { workMin: 50, breakMin: 10, goalCycles: 2 },
     widgets: [

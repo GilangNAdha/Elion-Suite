@@ -1,16 +1,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AuroraTheme } from '../lib/types'
+import { ELION_SEED } from '../tokens/theme'
 
 export const DEFAULT_THEME: AuroraTheme = {
   id: 'default',
-  name: 'Aurora Night',
-  seed: { h: 228, s: 68, l: 60 },
-  harmony: 'complementary',
+  name: 'Premium dark glass',
+  seed: { ...ELION_SEED },
+  harmony: 'analogous',
   mode: 'dark',
   density: 'comfortable',
   radius: 12,
-  glass: 35
+  glass: 83
 }
 
 export const BUILT_IN_PRESETS: AuroraTheme[] = [
@@ -67,6 +68,34 @@ export const BUILT_IN_PRESETS: AuroraTheme[] = [
   }
 ]
 
+export function isValidTheme(value: unknown): value is AuroraTheme {
+  if (!value || typeof value !== 'object') return false
+  const t = value as AuroraTheme
+  return (
+    typeof t.id === 'string' &&
+    typeof t.name === 'string' &&
+    !!t.seed &&
+    Number.isFinite(t.seed.h) &&
+    t.seed.h >= 0 &&
+    t.seed.h <= 360 &&
+    Number.isFinite(t.seed.s) &&
+    t.seed.s >= 0 &&
+    t.seed.s <= 100 &&
+    Number.isFinite(t.seed.l) &&
+    t.seed.l >= 0 &&
+    t.seed.l <= 100 &&
+    ['dark', 'light'].includes(t.mode) &&
+    ['compact', 'comfortable', 'spacious'].includes(t.density) &&
+    ['complementary', 'analogous', 'triadic', 'split-complementary', 'monochromatic'].includes(t.harmony) &&
+    Number.isFinite(t.radius) &&
+    t.radius >= 0 &&
+    t.radius <= 24 &&
+    Number.isFinite(t.glass) &&
+    t.glass >= 0 &&
+    t.glass <= 100
+  )
+}
+
 interface ThemeState {
   theme: AuroraTheme
   presets: AuroraTheme[]
@@ -104,8 +133,14 @@ export const useThemeStore = create<ThemeState>()(
       importJSON: (json) => {
         try {
           const data = JSON.parse(json) as { theme?: AuroraTheme; presets?: AuroraTheme[] }
-          if (data.theme) set({ theme: data.theme })
-          if (Array.isArray(data.presets)) set({ presets: data.presets })
+          if (!data || typeof data !== 'object' || (!data.theme && !data.presets)) return false
+          if (data.theme && !isValidTheme(data.theme)) return false
+          if (data.presets && (!Array.isArray(data.presets) || !data.presets.every(isValidTheme)))
+            return false
+          set({
+            ...(data.theme ? { theme: data.theme } : {}),
+            ...(data.presets ? { presets: data.presets } : {})
+          })
           return true
         } catch {
           return false
@@ -114,6 +149,28 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'elion-theme',
+      version: 1,
+      migrate: (persisted) => {
+        const old = persisted as Pick<ThemeState, 'theme' | 'presets' | 'reducedMotion'>
+        // Only upgrade the untouched previous factory preset; preserve custom
+        // seeds, density, glass and user-saved presets across this design pass.
+        const untouched = (t: AuroraTheme) =>
+          t.id === 'default' &&
+          t.name === 'Aurora Night' &&
+          t.seed.h === 228 &&
+          t.seed.s === 68 &&
+          t.seed.l === 60 &&
+          t.harmony === 'complementary' &&
+          t.mode === 'dark' &&
+          t.density === 'comfortable' &&
+          t.radius === 12 &&
+          t.glass === 35
+        return {
+          ...old,
+          theme: old.theme && untouched(old.theme) ? DEFAULT_THEME : (old.theme ?? DEFAULT_THEME),
+          presets: (old.presets ?? BUILT_IN_PRESETS).map((p) => (untouched(p) ? DEFAULT_THEME : p))
+        }
+      },
       partialize: (s) => ({ theme: s.theme, presets: s.presets, reducedMotion: s.reducedMotion })
     }
   )

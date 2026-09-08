@@ -2,14 +2,40 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDraggable } from '@dnd-kit/core'
 import {
-  FileText, Plus, FolderPlus, History as HistoryIcon, Camera, Trash2,
-  RotateCcw, X, AlignLeft, AlignCenter, AlignRight, Link2, Mic, CornerUpLeft, Table2, MessageSquare
+  FileText,
+  Plus,
+  FolderPlus,
+  History as HistoryIcon,
+  Camera,
+  Trash2,
+  RotateCcw,
+  X,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link2,
+  Mic,
+  CornerUpLeft,
+  Table2,
+  MessageSquare
 } from 'lucide-react'
 import type { PageRecord, Block, BlockType } from '../../lib/types'
 import { BLOCK_CATEGORIES, BLOCK_LABEL } from '../../lib/blockEngine'
 import { BLOCK_ICON } from './blocks'
 import type { EditorSession } from './useEditorSession'
-import { Button, IconBtn, Input, Select, Tabs, Toggle, MenuLabel, Menu, MenuItem, Kbd, useToasts } from '../ui'
+import {
+  Button,
+  IconBtn,
+  Input,
+  Select,
+  Tabs,
+  Toggle,
+  MenuLabel,
+  Menu,
+  MenuItem,
+  Kbd,
+  useToasts
+} from '../ui'
 import { usePagesStore } from '../../stores/pagesStore'
 import { useItemsStore } from '../../stores/itemsStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -91,7 +117,10 @@ export function LeftPanel({
     .sort((a, b) => a.title.localeCompare(b.title))
 
   return (
-    <div className="glass-panel relative flex h-full min-h-0 flex-col border-r border-line">
+    <div
+      className="editor-left-panel relative flex h-full min-h-0 flex-col border-r border-line bg-surface"
+      style={{ width, minWidth: 0, flexShrink: 0 }}
+    >
       <div className="p-2">
         <Tabs
           tabs={[
@@ -142,7 +171,9 @@ function OutlineTree({ page, roots, depth }: { page: PageRecord; roots: PageReco
         <li key={p.id} role="treeitem" aria-expanded>
           <button
             className={`focus-ring flex w-full items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-left text-[0.88em] ${
-              p.id === page.id ? 'bg-primary-soft font-medium text-primary' : 'text-ink-muted hover:bg-raised hover:text-ink'
+              p.id === page.id
+                ? 'bg-primary-soft font-medium text-primary'
+                : 'text-ink-muted hover:bg-raised hover:text-ink'
             }`}
             style={{ paddingLeft: 8 + depth * 14 }}
             onClick={() =>
@@ -176,7 +207,9 @@ function OutlineChildren({ pageId, depth, current }: { pageId: string; depth: nu
         <li key={c.id}>
           <button
             className={`focus-ring flex w-full items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-left text-[0.86em] ${
-              c.id === current ? 'bg-primary-soft font-medium text-primary' : 'text-ink-muted hover:bg-raised hover:text-ink'
+              c.id === current
+                ? 'bg-primary-soft font-medium text-primary'
+                : 'text-ink-muted hover:bg-raised hover:text-ink'
             }`}
             style={{ paddingLeft: 8 + depth * 14 }}
             onClick={() =>
@@ -201,9 +234,7 @@ function BlockLibrary({ onInsertBlock }: { onInsertBlock: (t: BlockType) => void
     <div className="space-y-3">
       {BLOCK_CATEGORIES.map((cat) => (
         <div key={cat.name}>
-          <div className="mb-1 px-1 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
-            {cat.name}
-          </div>
+          <div className="mb-1 px-1 text-[0.72em] font-semibold  text-ink-faint">{cat.name}</div>
           <div className="grid grid-cols-2 gap-1.5">
             {cat.types.map((t) => (
               <LibraryChip key={t} type={t} onInsert={() => onInsertBlock(t)} />
@@ -213,9 +244,7 @@ function BlockLibrary({ onInsertBlock }: { onInsertBlock: (t: BlockType) => void
       ))}
       {Object.keys(templates).length > 0 && (
         <div>
-          <div className="mb-1 px-1 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
-            Templates
-          </div>
+          <div className="mb-1 px-1 text-[0.72em] font-semibold  text-ink-faint">Templates</div>
           <div className="grid grid-cols-2 gap-1.5">
             {Object.values(templates).map((t) => (
               <button
@@ -263,7 +292,15 @@ function LibraryChip({ type, onInsert }: { type: BlockType; onInsert: () => void
       aria-label={`Insert ${type} block — drag onto the page, or click`}
     >
       <span className="text-ink-faint">{BLOCK_ICON[type]}</span>
-      <span className="truncate capitalize">{type === 'heading1' ? 'Heading 1' : type === 'heading2' ? 'Heading 2' : type === 'heading3' ? 'Heading 3' : type}</span>
+      <span className="truncate capitalize">
+        {type === 'heading1'
+          ? 'Heading 1'
+          : type === 'heading2'
+            ? 'Heading 2'
+            : type === 'heading3'
+              ? 'Heading 3'
+              : type}
+      </span>
     </button>
   )
 }
@@ -292,7 +329,8 @@ export function RightPanel({
   const startResize = (e: React.PointerEvent) => {
     const startX = e.clientX
     const startW = width
-    const onMove = (ev: PointerEvent) => onResize(Math.max(220, Math.min(420, startW - (ev.clientX - startX))))
+    const onMove = (ev: PointerEvent) =>
+      onResize(Math.max(220, Math.min(420, startW - (ev.clientX - startX))))
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
@@ -302,9 +340,12 @@ export function RightPanel({
   }
 
   return (
-    <div className="glass-panel relative flex h-full min-h-0 flex-col border-l border-line">
+    <div
+      className="editor-right-panel relative flex h-full min-h-0 flex-col border-l border-line bg-surface"
+      style={{ width, minWidth: 0, flexShrink: 0 }}
+    >
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
-        <span className="text-[0.85em] font-semibold uppercase tracking-wider text-ink-faint">Inspector</span>
+        <span className="text-[0.85em] font-semibold  text-ink-faint">Inspector</span>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {selectionCount > 1 ? (
@@ -328,7 +369,7 @@ export function RightPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
-      <div className="mb-1.5 text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">{title}</div>
+      <div className="mb-1.5 text-[0.72em] font-semibold  text-ink-faint">{title}</div>
       {children}
     </div>
   )
@@ -355,7 +396,18 @@ function BlockInspector({
 }) {
   const navigate = useNavigate()
   const [imageUrl, setImageUrl] = useState(String(block.props.src ?? ''))
-  const isText = ['paragraph', 'heading1', 'heading2', 'heading3', 'quote', 'callout', 'todo', 'bullet', 'numbered', 'text'].includes(block.type)
+  const isText = [
+    'paragraph',
+    'heading1',
+    'heading2',
+    'heading3',
+    'quote',
+    'callout',
+    'todo',
+    'bullet',
+    'numbered',
+    'text'
+  ].includes(block.type)
   const align = String(block.props.align ?? 'left')
 
   return (
@@ -366,8 +418,30 @@ function BlockInspector({
           aria-label="Block type"
           onChange={(e) => session.convert(block.id, e.target.value as BlockType)}
         >
-          {(['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo', 'quote', 'code', 'callout', 'text', 'divider', 'image', 'gallery', 'columns', 'frame', 'duel'] as BlockType[]).map((t) => (
-            <option key={t} value={t}>{BLOCK_LABEL[t]}</option>
+          {(
+            [
+              'paragraph',
+              'heading1',
+              'heading2',
+              'heading3',
+              'bullet',
+              'numbered',
+              'todo',
+              'quote',
+              'code',
+              'callout',
+              'text',
+              'divider',
+              'image',
+              'gallery',
+              'columns',
+              'frame',
+              'duel'
+            ] as BlockType[]
+          ).map((t) => (
+            <option key={t} value={t}>
+              {BLOCK_LABEL[t]}
+            </option>
           ))}
         </Select>
       </Section>
@@ -380,11 +454,19 @@ function BlockInspector({
                 key={a}
                 aria-label={`Align ${a}`}
                 className={`focus-ring flex h-8 w-8 items-center justify-center rounded-token-sm border ${
-                  align === a ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted hover:text-ink'
+                  align === a
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-line text-ink-muted hover:text-ink'
                 }`}
                 onClick={() => session.patchBlock(block.id, { props: { ...block.props, align: a } })}
               >
-                {a === 'left' ? <AlignLeft size={14} /> : a === 'center' ? <AlignCenter size={14} /> : <AlignRight size={14} />}
+                {a === 'left' ? (
+                  <AlignLeft size={14} />
+                ) : a === 'center' ? (
+                  <AlignCenter size={14} />
+                ) : (
+                  <AlignRight size={14} />
+                )}
               </button>
             ))}
           </div>
@@ -400,7 +482,11 @@ function BlockInspector({
             onChange={(e) => setImageUrl(e.target.value)}
           />
           <div className="mt-2 flex gap-2">
-            <Button size="sm" variant="soft" onClick={() => session.patchBlock(block.id, { props: { ...block.props, src: imageUrl } })}>
+            <Button
+              size="sm"
+              variant="soft"
+              onClick={() => session.patchBlock(block.id, { props: { ...block.props, src: imageUrl } })}
+            >
               Apply URL
             </Button>
             <label className="cursor-pointer">
@@ -415,7 +501,8 @@ function BlockInspector({
                   const f = e.target.files?.[0]
                   if (!f) return
                   const r = new FileReader()
-                  r.onload = () => session.patchBlock(block.id, { props: { ...block.props, src: String(r.result) } })
+                  r.onload = () =>
+                    session.patchBlock(block.id, { props: { ...block.props, src: String(r.result) } })
                   r.readAsDataURL(f)
                 }}
               />
@@ -429,14 +516,23 @@ function BlockInspector({
           <Select
             value={String(block.props.kind ?? 'rect')}
             aria-label="Shape kind"
-            onChange={(e) => session.patchBlock(block.id, { props: { ...block.props, kind: e.target.value } })}
+            onChange={(e) =>
+              session.patchBlock(block.id, { props: { ...block.props, kind: e.target.value } })
+            }
           >
             <option value="rect">Rectangle</option>
             <option value="ellipse">Ellipse</option>
             <option value="diamond">Diamond</option>
           </Select>
           <div className="mt-2 flex gap-1.5">
-            {['var(--primary-soft)', 'var(--ok)', 'var(--warn)', 'var(--bad)', 'var(--info)', 'var(--accent)'].map((c) => (
+            {[
+              'var(--primary-soft)',
+              'var(--ok)',
+              'var(--warn)',
+              'var(--bad)',
+              'var(--info)',
+              'var(--accent)'
+            ].map((c) => (
               <button
                 key={c}
                 aria-label={`Fill ${c}`}
@@ -456,11 +552,14 @@ function BlockInspector({
               value={String(block.props.title ?? '')}
               aria-label="Frame title"
               placeholder="Frame title"
-              onChange={(e) => session.patchBlock(block.id, { props: { ...block.props, title: e.target.value } })}
+              onChange={(e) =>
+                session.patchBlock(block.id, { props: { ...block.props, title: e.target.value } })
+              }
             />
           </ParamRow>
           <p className="mt-2 text-[0.75em] leading-relaxed text-ink-faint">
-            In Edgeless mode, drag blocks onto the frame to group them; in Page mode its children render inside.
+            In Edgeless mode, drag blocks onto the frame to group them; in Page mode its children render
+            inside.
           </p>
         </Section>
       )}
@@ -471,7 +570,9 @@ function BlockInspector({
             <Select
               value={String(block.props.mood ?? '')}
               aria-label="Duel mood"
-              onChange={(e) => session.patchBlock(block.id, { props: { ...block.props, mood: e.target.value || undefined } })}
+              onChange={(e) =>
+                session.patchBlock(block.id, { props: { ...block.props, mood: e.target.value || undefined } })
+              }
             >
               <option value="">Follow companion mood</option>
               <option value="idle">Calm (standoff)</option>
@@ -510,7 +611,13 @@ function BlockInspector({
       )}
 
       <Section title="Actions">
-        <Button size="sm" variant="outline" className="w-full" icon={<Mic size={13} />} onClick={onOpenComments}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          icon={<Mic size={13} />}
+          onClick={onOpenComments}
+        >
           Comments
         </Button>
       </Section>
@@ -540,7 +647,13 @@ function BulkInspector({ session }: { session: EditorSession }) {
                 })
               }
             >
-              {a === 'left' ? <AlignLeft size={14} /> : a === 'center' ? <AlignCenter size={14} /> : <AlignRight size={14} />}
+              {a === 'left' ? (
+                <AlignLeft size={14} />
+              ) : a === 'center' ? (
+                <AlignCenter size={14} />
+              ) : (
+                <AlignRight size={14} />
+              )}
             </button>
           ))}
         </div>
@@ -559,8 +672,9 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
 
   const backlinks = useMemo(() => {
     const needle = `[[${page.title}]]`
-    return Object.values(pages)
-      .filter((p) => p.id !== page.id && p.blocks.some((b) => b.content.includes(needle)))
+    return Object.values(pages).filter(
+      (p) => p.id !== page.id && p.blocks.some((b) => b.content.includes(needle))
+    )
   }, [pages, page.id, page.title])
 
   return (
@@ -584,7 +698,9 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
                 aria-label={`Set page icon to ${ic}`}
                 aria-pressed={active}
                 className={`focus-ring rounded-token-sm border p-1.5 ${
-                  active ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-faint hover:text-ink'
+                  active
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-line text-ink-faint hover:text-ink'
                 }`}
                 onClick={() => void setIcon(page.id, ic)}
               >
@@ -596,7 +712,13 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
       </Section>
 
       <Section title="Version">
-        <Button size="sm" variant="soft" className="w-full" icon={<Camera size={13} />} onClick={() => session.takeSnapshot('Manual snapshot')}>
+        <Button
+          size="sm"
+          variant="soft"
+          className="w-full"
+          icon={<Camera size={13} />}
+          onClick={() => session.takeSnapshot('Manual snapshot')}
+        >
           Snapshot now
         </Button>
         <p className="mt-1.5 text-[0.75em] text-ink-faint">
@@ -606,7 +728,12 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
 
       <Section title="Save as template">
         <div className="flex gap-1.5">
-          <Input placeholder="Template name" value={tplName} aria-label="Template name" onChange={(e) => setTplName(e.target.value)} />
+          <Input
+            placeholder="Template name"
+            value={tplName}
+            aria-label="Template name"
+            onChange={(e) => setTplName(e.target.value)}
+          />
           <Button
             size="sm"
             variant="outline"
@@ -627,8 +754,8 @@ function PageInspector({ page, session }: { page: PageRecord; session: EditorSes
       <Section title={`Backlinks (${backlinks.length})`}>
         {backlinks.length === 0 ? (
           <p className="text-[0.8em] text-ink-faint">
-            No pages link to this page yet. Use <code className="rounded bg-sunken px-1">[[{page.title}]]</code> in any
-            block.
+            No pages link to this page yet. Use{' '}
+            <code className="rounded bg-sunken px-1">[[{page.title}]]</code> in any block.
           </p>
         ) : (
           <ul className="space-y-1">
@@ -708,7 +835,12 @@ export function SnapshotsDrawer({
       onClose={onClose}
       footer={
         <div className="flex gap-1.5">
-          <Input placeholder="Label (optional)" value={label} aria-label="Snapshot label" onChange={(e) => setLabel(e.target.value)} />
+          <Input
+            placeholder="Label (optional)"
+            value={label}
+            aria-label="Snapshot label"
+            onChange={(e) => setLabel(e.target.value)}
+          />
           <Button
             size="sm"
             variant="primary"
@@ -729,18 +861,21 @@ export function SnapshotsDrawer({
       ) : (
         <ul className="space-y-1">
           {mine.map((s) => (
-            <li key={s.id} className="flex items-center gap-2 rounded-token-sm border border-line bg-surface/40 p-2">
+            <li
+              key={s.id}
+              className="flex items-center gap-2 rounded-token-sm border border-line bg-surface/40 p-2"
+            >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="truncate text-[0.88em] font-medium">{s.label}</span>
                   {s.auto && (
-                    <span className="rounded-sm bg-sunken px-1 py-0.5 text-[0.62em] font-semibold uppercase text-ink-faint">
+                    <span className="rounded-sm bg-sunken px-1 py-0.5 text-[0.62em] font-semibold text-ink-faint">
                       auto
                     </span>
                   )}
                 </div>
                 <div className="text-[0.72em] text-ink-faint">
-                  {timeAgo(s.takenAt)} · {s.blocks.length} blocks
+                  {timeAgo(s.takenAt)} / {s.blocks.length} blocks
                 </div>
               </div>
               <IconBtn label={`Restore ${s.label}`} onClick={() => session.restoreSnapshot(s.id)}>
@@ -782,11 +917,15 @@ export function CommentsDrawer({
   return (
     <Drawer title="Comments" icon={<MessageSquare size={15} />} onClose={onClose}>
       {!blockId ? (
-        <p className="px-2 py-6 text-center text-[0.85em] text-ink-faint">Select a block first, then use its “Comments” action.</p>
+        <p className="px-2 py-6 text-center text-[0.85em] text-ink-faint">
+          Select a block first, then use its “Comments” action.
+        </p>
       ) : (
         <div className="space-y-2">
           {mine.length === 0 && (
-            <p className="px-2 py-4 text-center text-[0.82em] text-ink-faint">No comments on this block yet.</p>
+            <p className="px-2 py-4 text-center text-[0.82em] text-ink-faint">
+              No comments on this block yet.
+            </p>
           )}
           {mine.map((c) => (
             <div key={c.id} className="rounded-token border border-line bg-surface/40 p-2.5">

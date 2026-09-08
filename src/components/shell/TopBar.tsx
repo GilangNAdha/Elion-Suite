@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Search, Sparkle, UserRound } from 'lucide-react'
+import { Bell, Search, Sparkle, UserRound, ChevronRight, ShieldCheck } from 'lucide-react'
 import { IconBtn, Kbd, Menu, MenuItem, MenuLabel, MenuSep } from '../ui'
+import { DictationButton } from '../Dictation'
 import { NotificationCenter } from './NotificationCenter'
 import { useNotifyStore } from '../../stores/notifyStore'
 import { useThemeStore } from '../../stores/themeStore'
@@ -51,29 +52,37 @@ export function TopBar() {
         items: Object.values(items),
         pages: Object.values(pages),
         filters,
-        databases: Object.fromEntries(Object.entries(databases).map(([k, v]) => [k, { name: v.name, pageId: v.pageId }]))
+        databases: Object.fromEntries(
+          Object.entries(databases).map(([k, v]) => [k, { name: v.name, pageId: v.pageId }])
+        )
       }),
     [query, items, pages, filters, databases]
   )
 
   const seg = location.pathname.split('/')[1]
-  const title =
-    seg === '' ? 'Dashboard' : seg.charAt(0).toUpperCase() + seg.slice(1)
+  const title = seg === '' ? 'Dashboard' : seg.charAt(0).toUpperCase() + seg.slice(1)
 
   const nextPreset = () => {
     const i = presets.findIndex((p) => p.id === activeTheme.id)
-    applyPreset(presets[(i + 1) % presets.length].id)
+    if (presets.length) applyPreset(presets[(i + 1) % presets.length].id)
   }
 
   return (
-    <header className="glass-panel relative z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line px-3">
+    <header className="app-topbar relative z-30 flex shrink-0 items-center gap-3 border-b border-line">
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[1.02em] font-semibold">{title}</h1>
+        <div className="topbar-breadcrumb">
+          <span>Personal space</span>
+          <ChevronRight size={12} />
+          <strong>{title}</strong>
+        </div>
       </div>
 
       {/* Global search */}
-      <div className="relative hidden w-72 sm:block">
-        <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
+      <div className="topbar-search relative hidden w-72 sm:block">
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint"
+        />
         <input
           ref={searchRef}
           value={query}
@@ -82,11 +91,14 @@ export function TopBar() {
             setSearchOpen(true)
           }}
           onFocus={() => setSearchOpen(true)}
-          onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-          placeholder="Search everything…  ( / )"
+          onBlur={(e) => {
+            if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setSearchOpen(false)
+          }}
+          placeholder="Search your space"
           aria-label="Global search"
           className="focus-ring h-9 w-full rounded-token-sm border border-line bg-surface/60 pl-8 pr-8 text-[0.9em] placeholder:text-ink-faint"
         />
+        <DictationButton label="Dictate search" getTarget={() => searchRef.current} />
         <span className="absolute right-2.5 top-1/2 hidden -translate-y-1/2 md:block">
           <Kbd>/</Kbd>
         </span>
@@ -99,15 +111,19 @@ export function TopBar() {
               <button
                 key={`${h.kind}-${h.id}`}
                 className="focus-ring flex w-full items-center gap-2 rounded-token-sm px-2.5 py-2 text-left hover:bg-surface"
-                onMouseDown={() => {
+                onClick={() => {
                   navigate(h.route)
                   setQuery('')
                   searchRef.current?.blur()
                 }}
               >
                 <span
-                  className={`rounded-sm px-1.5 py-0.5 text-[0.68em] font-semibold uppercase tracking-wide ${
-                    h.kind === 'item' ? 'bg-info/15 text-info' : h.kind === 'page' ? 'bg-ok/15 text-ok' : 'bg-warn/15 text-warn'
+                  className={`rounded-sm px-1.5 py-0.5 text-[0.68em] font-semibold  ${
+                    h.kind === 'item'
+                      ? 'bg-info/15 text-info'
+                      : h.kind === 'page'
+                        ? 'bg-ok/15 text-ok'
+                        : 'bg-warn/15 text-warn'
                   }`}
                 >
                   {h.kind}
@@ -136,7 +152,7 @@ export function TopBar() {
         >
           <Bell size={17} />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1 text-[0.62em] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1 text-[0.62em] font-bold text-[var(--on-bad)]">
               {unread > 99 ? '99+' : unread}
             </span>
           )}

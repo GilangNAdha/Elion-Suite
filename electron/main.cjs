@@ -1,9 +1,10 @@
 // Elion Suite — Electron main process
 // Windows packaging (NSIS + portable) via electron-builder, see package.json.
 
-const { app, BrowserWindow, ipcMain, screen } = require('electron')
+const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
+require('./minicpm.cjs').installMiniCpmIpc(ipcMain)
 
 let win = null
 let nudgeThresholdMs = 8000
@@ -138,3 +139,22 @@ ipcMain.handle('display:list', () => {
     bounds: d.bounds
   }))
 })
+
+// Dictation shortcut capture only; inference remains in the shared local worker.
+let voiceAccelerator = null
+ipcMain.handle('voice:configure-shortcut', (_event, { enabled, accelerator }) => {
+  if (voiceAccelerator) globalShortcut.unregister(voiceAccelerator)
+  voiceAccelerator = null
+  if (!enabled) return { ok: true }
+  const allowed = ['CommandOrControl+Alt+D', 'CommandOrControl+Shift+Space']
+  if (!allowed.includes(accelerator)) return { ok: false, error: 'Choose a supported dictation shortcut.' }
+  try {
+    const ok = globalShortcut.register(accelerator, () => {
+      // Never dictate into another application, or compete with Handy outside Elion.
+      if (win && win.isFocused()) win.webContents.send('voice:toggle')
+    })
+    if (ok) voiceAccelerator = accelerator
+    return { ok, error: ok ? undefined : 'This shortcut is in use — choose another in Settings.' }
+  } catch { return { ok: false, error: 'The shortcut could not be registered — choose another in Settings.' } }
+})
+app.on('will-quit', () => globalShortcut.unregisterAll())

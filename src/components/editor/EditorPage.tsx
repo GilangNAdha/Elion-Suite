@@ -1,34 +1,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors
-} from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core'
 import {
-  ArrowLeft, Undo2, Redo2, PanelLeft, PanelRight, History, Camera,
-  Command, MousePointer2, X, AlignLeft, AlignCenter, AlignRight, Eraser
+  ArrowLeft,
+  Undo2,
+  Redo2,
+  PanelLeft,
+  PanelRight,
+  History,
+  Camera,
+  Command,
+  MousePointer2,
+  X,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Eraser
 } from 'lucide-react'
 import type { Block, BlockType } from '../../lib/types'
-import { computeDropIntent, makeBlock, topLevelBlocks, childrenOf, BLOCK_LABEL, TEXT_BLOCK_TYPES } from '../../lib/blockEngine'
+import {
+  computeDropIntent,
+  makeBlock,
+  topLevelBlocks,
+  childrenOf,
+  BLOCK_LABEL,
+  TEXT_BLOCK_TYPES
+} from '../../lib/blockEngine'
 import type { DropIntent } from '../../lib/blockEngine'
 import { useEditorSession } from './useEditorSession'
 import { BlockView, BlockToolbar, BLOCK_ICON, nullAfter } from './blocks'
 import { LeftPanel, RightPanel, HistoryDrawer, SnapshotsDrawer, CommentsDrawer } from './panels'
 import { EdgelessCanvas } from './EdgelessCanvas'
-import { Button, IconBtn, Kbd, Tabs, EmptyState } from '../ui'
+import { Button, IconBtn, Kbd, Tabs, EmptyState, useToasts } from '../ui'
 import { CommandPalette, usePaletteActions } from '../shell/CommandPalette'
+import { DictationButton } from '../Dictation'
 import { usePagesStore } from '../../stores/pagesStore'
 import type { EdgelessApi } from './EdgelessCanvas'
 
 type OverlayKind = null | 'history' | 'snapshots' | 'comments'
-type DragInfo =
-  | { kind: 'chip'; blockType: BlockType }
-  | { kind: 'block'; blockIds: string[] }
+type DragInfo = { kind: 'chip'; blockType: BlockType } | { kind: 'block'; blockIds: string[] }
 
 interface LayoutPref {
   leftOpen: boolean
@@ -76,7 +87,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
   const page = usePagesStore((s) => s.pages[pageId])!
   const session = useEditorSession(page)
   const pushToast = (t: string, tone?: 'info' | 'success' | 'error') =>
-    import('../ui').then(({ useToasts }) => useToasts.getState().push(t, tone ?? 'info'))
+    useToasts.getState().push(t, tone ?? 'info')
 
   const [layout, setLayout] = useState<LayoutPref>(loadLayout)
   const [overlay, setOverlay] = useState<OverlayKind>(null)
@@ -86,7 +97,9 @@ function EditorChrome({ pageId }: { pageId: string }) {
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null)
   const [intent, setIntent] = useState<DropIntent | null>(null)
-  const [intentRects, setIntentRects] = useState<Record<string, { top: number; left: number; width: number; height: number }>>({})
+  const [intentRects, setIntentRects] = useState<
+    Record<string, { top: number; left: number; width: number; height: number }>
+  >({})
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const tbTimer = useRef<number | null>(null)
@@ -177,7 +190,9 @@ function EditorChrome({ pageId }: { pageId: string }) {
       return
     }
     const rects = Object.fromEntries(
-      Object.entries(intentRects).filter(([id]) => !('blockIds' in dragInfo && dragInfo.blockIds.includes(id)))
+      Object.entries(intentRects).filter(
+        ([id]) => !('blockIds' in dragInfo && dragInfo.blockIds.includes(id))
+      )
     )
     // rects are measured in CONTENT coordinates (scroll included) — the
     // pointer must be offset the same way or drop intent drifts while scrolled
@@ -200,8 +215,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
       return
     }
     if (!info || !it || it.kind === 'none') return
-    const targetId =
-      it.kind === 'append' ? null : 'blockId' in it ? (it.blockId ?? null) : null
+    const targetId = it.kind === 'append' ? null : 'blockId' in it ? (it.blockId ?? null) : null
 
     if (info.kind === 'chip') {
       const t = info.blockType
@@ -249,7 +263,10 @@ function EditorChrome({ pageId }: { pageId: string }) {
     const canvas = canvasRef.current
     if (!canvas) return
     const r = canvas.getBoundingClientRect()
-    marqueeStart.current = { x: e.clientX - r.left + canvas.scrollLeft, y: e.clientY - r.top + canvas.scrollTop }
+    marqueeStart.current = {
+      x: e.clientX - r.left + canvas.scrollLeft,
+      y: e.clientY - r.top + canvas.scrollTop
+    }
     const added = new Set<string>()
     const onMove = (ev: PointerEvent) => {
       const c = canvasRef.current
@@ -265,9 +282,13 @@ function EditorChrome({ pageId }: { pageId: string }) {
       const minY = Math.min(marqueeStart.current.y, y)
       const maxY = Math.max(marqueeStart.current.y, y)
       const hit = Object.entries(rects)
-        .filter(([id, r2]) =>
-          !added.has(id) &&
-          r2.left < maxX && r2.left + r2.width > minX && r2.top < maxY && r2.top + r2.height > minY
+        .filter(
+          ([id, r2]) =>
+            !added.has(id) &&
+            r2.left < maxX &&
+            r2.left + r2.width > minX &&
+            r2.top < maxY &&
+            r2.top + r2.height > minY
         )
         .map(([id]) => id)
       if (hit.length) {
@@ -301,17 +322,18 @@ function EditorChrome({ pageId }: { pageId: string }) {
         (el as HTMLElement | null)?.isContentEditable
       const mod = e.metaKey || e.ctrlKey
       const isCE = !!(el && (el as HTMLElement).isContentEditable)
+      const dictated = isCE && (el as HTMLElement).dataset.dictationEdit === '1'
       if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen((o) => !o)
       } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') {
-        // inside a block being edited, Ctrl+Z must undo TEXT (native), not the
-        // block history
-        if (isCE) return
+        // Typed text keeps native undo. Programmatic voice insertion uses
+        // the real editor history until the user starts typing again.
+        if (isCE && !dictated) return
         e.preventDefault()
         session.undo()
       } else if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
-        if (isCE) return
+        if (isCE && !dictated) return
         e.preventDefault()
         session.redo()
       } else if (e.key === 'Escape') {
@@ -324,7 +346,12 @@ function EditorChrome({ pageId }: { pageId: string }) {
       } else if (!editing && (e.key === 'Delete' || e.key === 'Backspace') && session.selection.length) {
         e.preventDefault()
         session.remove(session.selection)
-      } else if (!editing && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && session.selection.length) {
+      } else if (
+        !editing &&
+        e.altKey &&
+        (e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
+        session.selection.length
+      ) {
         e.preventDefault()
         const ids = session.selection
         const first = session.blocks.find((b) => b.id === ids[0])
@@ -351,7 +378,8 @@ function EditorChrome({ pageId }: { pageId: string }) {
     snapshotNow: () => session.takeSnapshot('Manual snapshot')
   })
 
-  const selectedOne = session.selection.length === 1 ? session.blocks.find((b) => b.id === session.selection[0]) : undefined
+  const selectedOne =
+    session.selection.length === 1 ? session.blocks.find((b) => b.id === session.selection[0]) : undefined
 
   // §15.3 transform bar — measure the selected block for the floating bar
   // (re-measured on selection change AND on canvas scroll)
@@ -440,7 +468,12 @@ function EditorChrome({ pageId }: { pageId: string }) {
     return (
       <div
         className="pointer-events-none absolute z-20 flex items-center justify-center rounded-token-md border-2 border-dashed border-primary/60 bg-primary/5 text-primary"
-        style={{ top: r.top - 8, left: onLeft ? r.left - 56 : r.left + r.width + 8, width: 48, height: r.height + 16 }}
+        style={{
+          top: r.top - 8,
+          left: onLeft ? r.left - 56 : r.left + r.width + 8,
+          width: 48,
+          height: r.height + 16
+        }}
         aria-hidden
       >
         <span className="text-[0.7em] font-semibold">{onLeft ? 'left' : 'right'}</span>
@@ -450,7 +483,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
 
   return (
     <div
-      className="relative flex h-full overflow-hidden bg-bg text-ink"
+      className="immersive-editor relative flex h-full overflow-hidden bg-bg text-ink"
       onMouseMove={(e) => {
         if (e.clientY < 48) pokeToolbar()
       }}
@@ -462,7 +495,10 @@ function EditorChrome({ pageId }: { pageId: string }) {
         aria-label="Editor toolbar"
         onMouseEnter={pokeToolbar}
       >
-        <div className="glass-panel flex h-12 items-center gap-1.5 border-b border-line px-2" style={{ elevation: 'overlay' } as never}>
+        <div
+          className="glass-panel flex h-12 items-center gap-1.5 border-b border-line px-2"
+          style={{ elevation: 'overlay' } as never}
+        >
           <IconBtn label="Back to app" onClick={() => navigate(-1)}>
             <ArrowLeft size={16} />
           </IconBtn>
@@ -489,6 +525,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
             value={layout.mode}
             onChange={(m) => patchLayout({ mode: m })}
           />
+          <DictationButton global label="Dictate into active block" />
           <span className="mx-1 h-5 w-px bg-line" />
           <IconBtn label="Undo (Ctrl+Z)" onClick={session.undo} disabled={!session.canUndo}>
             <Undo2 size={16} />
@@ -496,20 +533,35 @@ function EditorChrome({ pageId }: { pageId: string }) {
           <IconBtn label="Redo (Ctrl+Shift+Z)" onClick={session.redo} disabled={!session.canRedo}>
             <Redo2 size={16} />
           </IconBtn>
-          <IconBtn label="History" active={overlay === 'history'} onClick={() => setOverlay(overlay === 'history' ? null : 'history')}>
+          <IconBtn
+            label="History"
+            active={overlay === 'history'}
+            onClick={() => setOverlay(overlay === 'history' ? null : 'history')}
+          >
             <History size={16} />
           </IconBtn>
-          <IconBtn label="Version snapshots (Time Machine)" onClick={() => setOverlay(overlay === 'snapshots' ? null : 'snapshots')}>
+          <IconBtn
+            label="Version snapshots (Time Machine)"
+            onClick={() => setOverlay(overlay === 'snapshots' ? null : 'snapshots')}
+          >
             <Camera size={16} />
           </IconBtn>
           <IconBtn label="Command palette (Ctrl+K)" onClick={() => setPaletteOpen(true)}>
             <Command size={16} />
           </IconBtn>
           <span className="mx-1 h-5 w-px bg-line" />
-          <IconBtn label="Toggle left panel" active={layout.leftOpen} onClick={() => patchLayout({ leftOpen: !layout.leftOpen })}>
+          <IconBtn
+            label="Toggle left panel"
+            active={layout.leftOpen}
+            onClick={() => patchLayout({ leftOpen: !layout.leftOpen })}
+          >
             <PanelLeft size={16} />
           </IconBtn>
-          <IconBtn label="Toggle inspector" active={layout.rightOpen} onClick={() => patchLayout({ rightOpen: !layout.rightOpen })}>
+          <IconBtn
+            label="Toggle inspector"
+            active={layout.rightOpen}
+            onClick={() => patchLayout({ rightOpen: !layout.rightOpen })}
+          >
             <PanelRight size={16} />
           </IconBtn>
           <Button variant="primary" size="sm" onClick={() => navigate(-1)}>
@@ -556,12 +608,16 @@ function EditorChrome({ pageId }: { pageId: string }) {
           {/* ------- main canvas ------- */}
           <div className="relative flex min-w-0 flex-1 flex-col">
             {layout.mode === 'page' ? (
-              <div ref={canvasRef} onPointerDown={onCanvasPointerDown} className="relative h-full overflow-auto">
-                <div className="mx-auto max-w-3xl px-10 pb-56 pt-16">
+              <div
+                ref={canvasRef}
+                onPointerDown={onCanvasPointerDown}
+                className="relative h-full overflow-auto"
+              >
+                <div className="editor-prose-canvas">
                   {tops.length === 0 && (
                     <EmptyState
-                      title="Empty page"
-                      hint="Type in the first block, or drag one in from the library panel."
+                      title="Start writing, or press `/` for blocks"
+                      hint="Choose a block from the library to begin."
                     />
                   )}
                   {renderBlocks(null)}
@@ -597,7 +653,7 @@ function EditorChrome({ pageId }: { pageId: string }) {
             {/* §15.3 floating transform bar (single text-block selection) */}
             {selectedOne && selRect && TEXT_BLOCK_TYPES.includes(selectedOne.type) && (
               <div
-                className="elev-overlay absolute z-40 flex items-center gap-1 rounded-token-full border border-line bg-raised p-1 shadow-lg"
+                className="glass-panel elev-overlay absolute z-40 flex items-center gap-1 rounded-token-lg border border-line p-1"
                 style={{ top: Math.max(8, selRect.top - 44), left: Math.max(8, selRect.left) }}
                 role="toolbar"
                 aria-label="Block formatting"
@@ -618,13 +674,23 @@ function EditorChrome({ pageId }: { pageId: string }) {
                   <button
                     key={a}
                     className={`focus-ring flex h-7 w-7 items-center justify-center rounded-token-sm ${
-                      String(selectedOne.props.align ?? 'left') === a ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-surface hover:text-ink'
+                      String(selectedOne.props.align ?? 'left') === a
+                        ? 'bg-primary-soft text-primary'
+                        : 'text-ink-muted hover:bg-surface hover:text-ink'
                     }`}
                     aria-label={`Align ${a}`}
                     aria-pressed={String(selectedOne.props.align ?? 'left') === a}
-                    onClick={() => session.patchBlock(selectedOne.id, { props: { ...selectedOne.props, align: a } })}
+                    onClick={() =>
+                      session.patchBlock(selectedOne.id, { props: { ...selectedOne.props, align: a } })
+                    }
                   >
-                    {a === 'left' ? <AlignLeft size={13} /> : a === 'center' ? <AlignCenter size={13} /> : <AlignRight size={13} />}
+                    {a === 'left' ? (
+                      <AlignLeft size={13} />
+                    ) : a === 'center' ? (
+                      <AlignCenter size={13} />
+                    ) : (
+                      <AlignRight size={13} />
+                    )}
                   </button>
                 ))}
                 <span className="mx-0.5 h-4 w-px bg-line" />

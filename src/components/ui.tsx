@@ -1,5 +1,8 @@
 import {
   createContext,
+  cloneElement,
+  isValidElement,
+  forwardRef,
   useContext,
   useEffect,
   useRef,
@@ -30,17 +33,17 @@ export function Button({
   icon?: ReactNode
 }) {
   const base =
-    'inline-flex items-center justify-center gap-1.5 rounded-token-sm font-medium transition-colors duration-150 select-none disabled:opacity-40 disabled:pointer-events-none focus-ring'
+    'elion-button inline-flex items-center justify-center gap-2 rounded-token-sm font-medium transition-opacity duration-150 select-none disabled:opacity-40 disabled:pointer-events-none focus-ring'
   const sizes = size === 'sm' ? 'h-7 px-2.5 text-[0.85em]' : 'h-9 px-3.5'
   const variants: Record<ButtonVariant, string> = {
-    primary: 'bg-primary text-primary-on hover:opacity-90',
-    outline: 'border border-line bg-surface/40 hover:bg-raised text-ink',
+    primary: 'border border-line bg-raised text-ink hover:opacity-80',
+    outline: 'border border-line bg-transparent text-ink hover:opacity-80',
     ghost: 'text-ink-muted hover:text-ink hover:bg-raised',
-    soft: 'bg-primary-soft text-primary hover:opacity-80',
+    soft: 'border border-line bg-surface text-primary hover:opacity-80',
     danger: 'bg-bad/15 text-bad hover:bg-bad/25'
   }
   return (
-    <button className={`${base} ${sizes} ${variants[variant]} ${className}`} {...rest}>
+    <button type="button" className={`${base} ${sizes} ${variants[variant]} ${className}`} {...rest}>
       {icon}
       {children}
     </button>
@@ -56,6 +59,7 @@ export function IconBtn({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean }) {
   return (
     <button
+      type="button"
       aria-label={label}
       title={label}
       className={`focus-ring inline-flex h-8 w-8 items-center justify-center rounded-token-sm transition-colors duration-150 ${
@@ -76,17 +80,23 @@ export function StatusPill({
   color,
   label,
   small = false,
+  weight = 'subtle',
   className = ''
 }: {
   color: string
   label: string
   small?: boolean
+  weight?: 'subtle' | 'bold'
   className?: string
 }) {
-  const style: CSSProperties & Record<string, string> = { '--pill': color }
+  const semantic = color.match(/^var\(--(ok|warn|bad|info)\)$/)?.[1]
+  const style: CSSProperties & Record<string, string> = {
+    '--pill': color,
+    '--pill-ink': semantic ? `var(--on-${semantic})` : 'var(--bg)'
+  }
   return (
     <span
-      className={`status-pill ${small ? 'status-pill-sm' : ''} ${className}`}
+      className={`status-pill ${small ? 'status-pill-sm' : ''} ${weight === 'bold' ? 'status-pill-bold' : ''} ${className}`}
       style={style}
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />
@@ -141,22 +151,30 @@ export function Menu({
           : 'left-0 top-full mt-1'
   return (
     <div className="relative" ref={ref}>
-      <span
-        className="inline-flex cursor-pointer"
-        role="button"
-        tabIndex={0}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setOpen((o) => !o)
+      {isValidElement<ButtonHTMLAttributes<HTMLButtonElement>>(trigger) &&
+      (trigger.type === 'button' || trigger.type === Button || trigger.type === IconBtn) ? (
+        cloneElement(trigger, {
+          'aria-haspopup': 'menu',
+          'aria-expanded': open,
+          onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+            trigger.props.onClick?.(event)
+            if (!event.defaultPrevented) setOpen((o) => !o)
           }
-        }}
-      >
-        {trigger}
-      </span>
+        })
+      ) : (
+        <button
+          type="button"
+          className="focus-ring inline-flex rounded-token-sm"
+          aria-label={
+            isValidElement<{ 'aria-label'?: string }>(trigger) ? trigger.props['aria-label'] : undefined
+          }
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {trigger}
+        </button>
+      )}
       {open && (
         <div
           role="menu"
@@ -191,7 +209,11 @@ export function MenuItem({
       role="menuitem"
       aria-checked={active}
       className={`focus-ring flex w-full items-center gap-2 rounded-token-sm px-2 py-1.5 text-left text-[0.92em] transition-colors ${
-        danger ? 'text-bad hover:bg-bad/10' : active ? 'text-primary hover:bg-primary-soft' : 'text-ink hover:bg-surface'
+        danger
+          ? 'text-bad hover:bg-bad/10'
+          : active
+            ? 'text-primary hover:bg-primary-soft'
+            : 'text-ink hover:bg-surface'
       }`}
       onClick={() => {
         close()
@@ -207,7 +229,7 @@ export function MenuItem({
 }
 
 export function MenuLabel({ children }: { children: ReactNode }) {
-  return <div className="px-2 pb-1 pt-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">{children}</div>
+  return <div className="px-2 pb-1 pt-1.5 text-[0.75em] font-semibold text-ink-faint">{children}</div>
 }
 
 export function MenuSep() {
@@ -241,6 +263,28 @@ export function Modal({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (e.key === 'Tab' && ref.current) {
+        const elements = Array.from(
+          ref.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex="0"]'
+          )
+        ).filter((el) => el.getClientRects().length > 0)
+        const first = elements[0],
+          last = elements.at(-1)
+        if (!first) {
+          e.preventDefault()
+          ref.current.focus()
+        } else if (
+          e.shiftKey &&
+          (document.activeElement === first || document.activeElement === ref.current)
+        ) {
+          e.preventDefault()
+          last?.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -248,14 +292,14 @@ export function Modal({
   if (!open) return null
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-[var(--backdrop)]" onClick={onClose} aria-hidden />
       <div
         ref={ref}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="elev-overlay relative w-full rounded-token-lg bg-raised outline-none"
+        className="elev-overlay relative w-full rounded-token-lg border border-line bg-raised focus-ring"
         style={{ maxWidth: width }}
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -265,9 +309,7 @@ export function Modal({
           </IconBtn>
         </div>
         <div className="max-h-[70vh] overflow-y-auto p-4">{children}</div>
-        {footer && (
-          <div className="flex justify-end gap-2 border-t border-line px-4 py-3">{footer}</div>
-        )}
+        {footer && <div className="flex justify-end gap-2 border-t border-line px-4 py-3">{footer}</div>}
       </div>
     </div>,
     document.body
@@ -278,21 +320,24 @@ export function Modal({
 // Form controls
 // ---------------------------------------------------------------------------
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const { className = '', ...rest } = props
-  return (
-    <input
-      className={`focus-ring h-9 w-full rounded-token-sm border border-line bg-surface/60 px-3 text-[0.95em] placeholder:text-ink-faint ${className}`}
-      {...rest}
-    />
-  )
-}
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function Input(props, ref) {
+    const { className = '', ...rest } = props
+    return (
+      <input
+        ref={ref}
+        className={`focus-ring h-9 w-full rounded-token-sm border border-line bg-surface px-3 text-[0.95em] placeholder:text-ink-faint ${className}`}
+        {...rest}
+      />
+    )
+  }
+)
 
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const { className = '', ...rest } = props
   return (
     <textarea
-      className={`focus-ring w-full rounded-token-sm border border-line bg-surface/60 px-3 py-2 text-[0.95em] placeholder:text-ink-faint ${className}`}
+      className={`focus-ring w-full rounded-token-sm border border-line bg-surface px-3 py-2 text-[0.95em] placeholder:text-ink-faint ${className}`}
       {...rest}
     />
   )
@@ -302,7 +347,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   const { className = '', children, ...rest } = props
   return (
     <select
-      className={`focus-ring h-9 w-full rounded-token-sm border border-line bg-surface/60 px-2.5 text-[0.95em] ${className}`}
+      className={`focus-ring h-9 w-full rounded-token-sm border border-line bg-surface px-2.5 text-[0.95em] ${className}`}
       {...rest}
     >
       {children}
@@ -380,7 +425,7 @@ export function Toggle({
         }`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+          className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-ink transition-transform ${
             checked ? 'translate-x-[18px]' : ''
           }`}
         />
@@ -425,7 +470,7 @@ export function Tabs<T extends string>({
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="rounded border border-line bg-sunken px-1.5 py-0.5 font-mono text-[0.72em] text-ink-muted">
+    <kbd className="rounded border border-line bg-sunken px-1.5 py-0.5 font-sans text-[0.72em] text-ink-muted">
       {children}
     </kbd>
   )
