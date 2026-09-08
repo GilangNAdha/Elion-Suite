@@ -32,7 +32,7 @@ export const useMusicStore = create<MusicState>()(
       currentId: null,
       playing: false,
       volume: 0.8,
-      skin: 'disc',
+      skin: 'turntable',
       position: 0,
       duration: 0,
       seekSignal: 0,
@@ -51,13 +51,18 @@ export const useMusicStore = create<MusicState>()(
         }),
       removeTrack: (id) =>
         set((s) => {
+          const removed = s.tracks.find((t) => t.id === id)
+          if (removed?.kind === 'file' && removed.src.startsWith('blob:')) URL.revokeObjectURL(removed.src)
           const tracks = s.tracks.filter((t) => t.id !== id)
           return {
             tracks,
-            currentId: s.currentId === id ? tracks[0]?.id ?? null : s.currentId
+            currentId: s.currentId === id ? (tracks[0]?.id ?? null) : s.currentId,
+            playing: tracks.length ? s.playing : false,
+            position: s.currentId === id ? 0 : s.position,
+            duration: s.currentId === id ? 0 : s.duration
           }
         }),
-      select: (id) => set({ currentId: id, playing: true, position: 0 }),
+      select: (id) => set({ currentId: id, playing: true, position: 0, duration: 0 }),
       setPlaying: (v) => set({ playing: v }),
       setVolume: (v) => set({ volume: v }),
       setSkin: (sk) => set({ skin: sk }),
@@ -70,8 +75,7 @@ export const useMusicStore = create<MusicState>()(
       partialize: (s) => ({
         // File tracks are object URLs — not restorable after reload; keep youtube only.
         tracks: s.tracks.filter((t) => t.kind === 'youtube'),
-        currentId:
-          s.tracks.find((t) => t.id === s.currentId)?.kind === 'youtube' ? s.currentId : null,
+        currentId: s.tracks.find((t) => t.id === s.currentId)?.kind === 'youtube' ? s.currentId : null,
         volume: s.volume,
         skin: s.skin
       })

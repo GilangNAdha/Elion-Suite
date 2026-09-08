@@ -36,10 +36,12 @@ export interface PaletteAction {
   perform: () => void
 }
 
-export function usePaletteActions(editorContext?: {
-  insertBlock: (type: string) => void
-  snapshotNow: () => void
-} | null): PaletteAction[] {
+export function usePaletteActions(
+  editorContext?: {
+    insertBlock: (type: string) => void
+    snapshotNow: () => void
+  } | null
+): PaletteAction[] {
   const navigate = useNavigate()
   const pages = usePagesStore((s) => s.pages)
   const filters = usePagesStore((s) => s.savedFilters)
@@ -51,17 +53,73 @@ export function usePaletteActions(editorContext?: {
 
   return useMemo(() => {
     const nav: PaletteAction[] = [
-      { id: 'nav-dash', label: 'Go to Dashboard', icon: <LayoutDashboard size={15} />, perform: () => navigate('/') },
-      { id: 'nav-ws', label: 'Go to Workspace', icon: <Blocks size={15} />, perform: () => navigate('/workspace') },
-      { id: 'nav-tasks', label: 'Go to Tasks', icon: <CheckSquare size={15} />, perform: () => navigate('/tasks') },
-      { id: 'nav-habits', label: 'Go to Habits', icon: <Repeat size={15} />, perform: () => navigate('/habits') },
-      { id: 'nav-cal', label: 'Go to Calendar', icon: <CalendarDays size={15} />, perform: () => navigate('/calendar') },
-      { id: 'nav-notes', label: 'Go to Notes', icon: <NotebookPen size={15} />, perform: () => navigate('/notes') },
-      { id: 'nav-alarms', label: 'Go to Alarms', icon: <BellRing size={15} />, perform: () => navigate('/alarms') },
-      { id: 'nav-music', label: 'Go to Music', icon: <Music2 size={15} />, perform: () => navigate('/music') },
-      { id: 'nav-profile', label: 'Go to Profile', icon: <UserRound size={15} />, perform: () => navigate('/profile') },
-      { id: 'nav-settings', label: 'Go to Settings', icon: <Settings size={15} />, perform: () => navigate('/settings') },
-      { id: 'nav-lockdown', label: 'Start Lockdown', hint: 'Full-screen focus', icon: <Lock size={15} />, perform: () => navigate('/lockdown') }
+      {
+        id: 'nav-dash',
+        label: 'Go to Dashboard',
+        icon: <LayoutDashboard size={15} />,
+        perform: () => navigate('/')
+      },
+      {
+        id: 'nav-ws',
+        label: 'Go to Workspace',
+        icon: <Blocks size={15} />,
+        perform: () => navigate('/workspace')
+      },
+      {
+        id: 'nav-tasks',
+        label: 'Go to Tasks',
+        icon: <CheckSquare size={15} />,
+        perform: () => navigate('/tasks')
+      },
+      {
+        id: 'nav-habits',
+        label: 'Go to Habits',
+        icon: <Repeat size={15} />,
+        perform: () => navigate('/habits')
+      },
+      {
+        id: 'nav-cal',
+        label: 'Go to Calendar',
+        icon: <CalendarDays size={15} />,
+        perform: () => navigate('/calendar')
+      },
+      {
+        id: 'nav-notes',
+        label: 'Go to Notes',
+        icon: <NotebookPen size={15} />,
+        perform: () => navigate('/notes')
+      },
+      {
+        id: 'nav-alarms',
+        label: 'Go to Alarms',
+        icon: <BellRing size={15} />,
+        perform: () => navigate('/alarms')
+      },
+      {
+        id: 'nav-music',
+        label: 'Go to Music',
+        icon: <Music2 size={15} />,
+        perform: () => navigate('/music')
+      },
+      {
+        id: 'nav-profile',
+        label: 'Go to Profile',
+        icon: <UserRound size={15} />,
+        perform: () => navigate('/profile')
+      },
+      {
+        id: 'nav-settings',
+        label: 'Go to Settings',
+        icon: <Settings size={15} />,
+        perform: () => navigate('/settings')
+      },
+      {
+        id: 'nav-lockdown',
+        label: 'Start Lockdown',
+        hint: 'Full-screen focus',
+        icon: <Lock size={15} />,
+        perform: () => navigate('/lockdown')
+      }
     ]
 
     const pageActions: PaletteAction[] = Object.values(pages)
@@ -79,7 +137,8 @@ export function usePaletteActions(editorContext?: {
       id: `filter-${f.id}`,
       label: `Run filter: ${f.name}`,
       icon: <Filter size={15} />,
-      perform: () => navigate(f.databaseId ? `/workspace/items/${f.databaseId}?filter=${f.id}` : '/tasks?filter=' + f.id)
+      perform: () =>
+        navigate(f.databaseId ? `/workspace/items/${f.databaseId}?filter=${f.id}` : '/tasks?filter=' + f.id)
     }))
 
     const dbActions: PaletteAction[] = Object.values(databases).map((d) => ({
@@ -106,20 +165,45 @@ export function usePaletteActions(editorContext?: {
     }))
 
     const editorActions: PaletteAction[] = editorContext
-      ? (
-          [
-            { id: 'e-snap', label: 'Take version snapshot', hint: 'Time Machine', icon: <CornerDownLeft size={15} />, perform: () => editorContext.snapshotNow() },
-            ...(['heading1', 'heading2', 'paragraph', 'todo', 'code', 'quote', 'callout', 'divider', 'image', 'columns'] as const).map((bt) => ({
-              id: `e-insert-${bt}`,
-              label: `Insert block: ${bt}`,
-              icon: <FileText size={15} />,
-              perform: () => editorContext.insertBlock(bt)
-            }))
-          ] as PaletteAction[]
-        )
+      ? ([
+          {
+            id: 'e-snap',
+            label: 'Take version snapshot',
+            hint: 'Time Machine',
+            icon: <CornerDownLeft size={15} />,
+            perform: () => editorContext.snapshotNow()
+          },
+          ...(
+            [
+              'heading1',
+              'heading2',
+              'paragraph',
+              'todo',
+              'code',
+              'quote',
+              'callout',
+              'divider',
+              'image',
+              'columns'
+            ] as const
+          ).map((bt) => ({
+            id: `e-insert-${bt}`,
+            label: `Insert block: ${bt}`,
+            icon: <FileText size={15} />,
+            perform: () => editorContext.insertBlock(bt)
+          }))
+        ] as PaletteAction[])
       : []
 
-    return [...nav, ...pageActions, ...filterActions, ...dbActions, ...templateActions, ...themeActions, ...editorActions]
+    return [
+      ...nav,
+      ...pageActions,
+      ...filterActions,
+      ...dbActions,
+      ...templateActions,
+      ...themeActions,
+      ...editorActions
+    ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages, filters, templates, databases, presets, editorContext, profileName, navigate, applyPreset])
 }
@@ -168,8 +252,13 @@ export function CommandPalette({
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[150] flex items-start justify-center pt-[12vh]">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
-      <div className="elev-overlay relative h-fit w-full max-w-lg rounded-token-lg border border-line bg-raised" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div className="absolute inset-0 bg-[var(--backdrop)]" onClick={onClose} aria-hidden />
+      <div
+        className="elev-overlay relative h-fit w-full max-w-lg rounded-token-lg border border-line bg-raised"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+      >
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search size={16} className="text-ink-faint" />
           <input

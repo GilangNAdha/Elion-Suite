@@ -19,6 +19,7 @@ export interface ActiveTimer {
   endsAt: number | null
   cyclesDone: number
   running: boolean
+  remainingMs: number | null
 }
 
 interface LockdownState {
@@ -55,7 +56,7 @@ export const useLockdownStore = create<LockdownState>()((set, get) => ({
   sessions: [],
   ready: false,
   active: null,
-  timer: { phase: 'idle', endsAt: null, cyclesDone: 0, running: false },
+  timer: { phase: 'idle', endsAt: null, cyclesDone: 0, running: false, remainingMs: null },
 
   init: async () => {
     const [presets, sessions] = await Promise.all([
@@ -120,10 +121,20 @@ export const useLockdownStore = create<LockdownState>()((set, get) => ({
     return copy
   },
 
-  startSession: (presetId, objective) =>
+  startSession: (presetId, objective) => {
+    const preset = get().presets[presetId]
+    if (!preset || get().active) return
     set({
-      active: { presetId, objective, start: new Date().toISOString(), interruptions: 0 }
-    }),
+      active: { presetId, objective, start: new Date().toISOString(), interruptions: 0 },
+      timer: {
+        phase: 'work',
+        endsAt: Date.now() + preset.pomodoro.workMin * 60000,
+        remainingMs: null,
+        cyclesDone: 0,
+        running: true
+      }
+    })
+  },
 
   logInterruption: () => {
     const a = get().active
@@ -148,7 +159,7 @@ export const useLockdownStore = create<LockdownState>()((set, get) => ({
     set({
       sessions: [session, ...get().sessions],
       active: null,
-      timer: { phase: 'idle', endsAt: null, cyclesDone: 0, running: false }
+      timer: { phase: 'idle', endsAt: null, cyclesDone: 0, running: false, remainingMs: null }
     })
   },
 

@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Trash2, ImagePlus } from 'lucide-react'
 import type { ItemType, Priority, RecurrenceRule, WorkspaceDatabase, WorkspaceItem } from '../../lib/types'
-import { Modal, Button, Input, Select, Textarea, Toggle, MenuSep } from '../ui'
+import { Modal, Button, Input, Select, Textarea, Toggle, MenuSep, useToasts } from '../ui'
 import { useItemsStore } from '../../stores/itemsStore'
 import { usePetStore } from '../../stores/petStore'
+import { DictationButton } from '../Dictation'
+import { todayISO } from '../../lib/time'
 import { DEFAULT_STATUSES } from '../views/views'
 
 const PRIORITIES: Priority[] = ['lowest', 'low', 'medium', 'high', 'highest']
@@ -29,10 +31,13 @@ export function ItemModal({
   const bumpHappy = usePetStore((s) => s.bumpHappy)
 
   const statuses = db?.statuses ?? DEFAULT_STATUSES
+  const titleRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(editing?.title ?? creating?.title ?? '')
   const [type, setType] = useState<ItemType>(editing?.type ?? creating?.type ?? db?.defaultType ?? 'task')
   const [status, setStatus] = useState(
-    editing?.status ?? creating?.status ?? (db ? statuses.find((s) => !s.isBacklog)?.id ?? statuses[0].id : 'todo')
+    editing?.status ??
+      creating?.status ??
+      (db ? (statuses.find((s) => !s.isBacklog)?.id ?? statuses[0].id) : 'todo')
   )
   const [priority, setPriority] = useState<Priority>(editing?.priority ?? 'medium')
   const [assignee, setAssignee] = useState(editing?.assignee ?? '')
@@ -68,7 +73,10 @@ export function ItemModal({
       status,
       priority,
       assignee: assignee.trim() || undefined,
-      labels: labels.split(',').map((l) => l.trim()).filter(Boolean),
+      labels: labels
+        .split(',')
+        .map((l) => l.trim())
+        .filter(Boolean),
       dueDate: dueDate || undefined,
       startDate: startDate || undefined,
       storyPoints: storyPoints ? Number(storyPoints) : undefined,
@@ -83,6 +91,9 @@ export function ItemModal({
     } else {
       await createItem({ ...payload, title: trimmed, databaseId })
     }
+    useToasts
+      .getState()
+      .push(editing ? 'Changes saved' : type === 'habit' ? 'Habit created' : 'Task created', 'success')
     onClose()
   }
 
@@ -93,7 +104,7 @@ export function ItemModal({
     }
   }
 
-  const doneToday = editing?.type === 'habit' && (editing.completions ?? []).includes(new Date().toISOString().slice(0, 10))
+  const doneToday = editing?.type === 'habit' && (editing.completions ?? []).includes(todayISO())
 
   return (
     <Modal
@@ -114,7 +125,7 @@ export function ItemModal({
             <Button
               variant="soft"
               onClick={async () => {
-                await useItemsStore.getState().toggleHabitCompletion(editing.id, new Date().toISOString().slice(0, 10))
+                await useItemsStore.getState().toggleHabitCompletion(editing.id, todayISO())
                 bumpHappy()
               }}
             >
@@ -125,13 +136,26 @@ export function ItemModal({
             Cancel
           </Button>
           <Button variant="primary" disabled={!title.trim()} onClick={() => void save()}>
-            {editing ? 'Save' : 'Create'}
+            {editing ? 'Save changes' : type === 'habit' ? 'Create habit' : 'Create task'}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
-        <Input placeholder="Item title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus aria-label="Title" />
+        <div className="voice-input">
+          <Input
+            ref={titleRef}
+            placeholder="Item title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            aria-label="Title"
+          />
+          <DictationButton
+            label={type === 'habit' ? 'Dictate habit title' : 'Dictate task title'}
+            getTarget={() => titleRef.current}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -156,7 +180,11 @@ export function ItemModal({
           </label>
           <label className="block">
             <span className="mb-1 block text-[0.78em] text-ink-muted">Priority</span>
-            <Select value={priority} onChange={(e) => setPriority(e.target.value as Priority)} aria-label="Priority">
+            <Select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as Priority)}
+              aria-label="Priority"
+            >
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -170,11 +198,21 @@ export function ItemModal({
           </label>
           <label className="block">
             <span className="mb-1 block text-[0.78em] text-ink-muted">Start date</span>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} aria-label="Start date" />
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              aria-label="Start date"
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-[0.78em] text-ink-muted">Due date</span>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" />
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              aria-label="Due date"
+            />
           </label>
           {db && (
             <label className="block">
@@ -203,7 +241,12 @@ export function ItemModal({
           )}
           <label className="block">
             <span className="mb-1 block text-[0.78em] text-ink-muted">Labels (comma-separated)</span>
-            <Input value={labels} onChange={(e) => setLabels(e.target.value)} aria-label="Labels" placeholder="design, q3" />
+            <Input
+              value={labels}
+              onChange={(e) => setLabels(e.target.value)}
+              aria-label="Labels"
+              placeholder="design, q3"
+            />
           </label>
         </div>
 
@@ -211,7 +254,11 @@ export function ItemModal({
           <div className="rounded-token border border-ok/30 bg-ok/5 p-3">
             <div className="mb-2 text-[0.8em] font-semibold text-ok">Recurrence</div>
             <div className="grid grid-cols-2 gap-3">
-              <Select value={freq} onChange={(e) => setFreq(e.target.value as RecurrenceRule['freq'])} aria-label="Recurrence">
+              <Select
+                value={freq}
+                onChange={(e) => setFreq(e.target.value as RecurrenceRule['freq'])}
+                aria-label="Recurrence"
+              >
                 <option value="daily">Daily</option>
                 <option value="weekdays">Weekdays</option>
                 <option value="weekly">Weekly</option>
@@ -222,7 +269,7 @@ export function ItemModal({
                     <button
                       key={i}
                       className={`focus-ring h-8 w-8 rounded-full text-[0.78em] font-semibold ${
-                        weekDays.includes(i) ? 'bg-ok text-white' : 'bg-sunken text-ink-muted'
+                        weekDays.includes(i) ? 'bg-ok text-[var(--on-ok)]' : 'bg-sunken text-ink-muted'
                       }`}
                       aria-pressed={weekDays.includes(i)}
                       onClick={() =>
@@ -240,7 +287,12 @@ export function ItemModal({
 
         <div>
           <span className="mb-1 block text-[0.78em] text-ink-muted">Description</span>
-          <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} aria-label="Description" />
+          <Textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            aria-label="Description"
+          />
         </div>
 
         {/* custom fields (Notion-style property system) */}
@@ -286,7 +338,10 @@ export function ItemModal({
               />
             </label>
             {cover && (
-              <button className="focus-ring text-[0.8em] text-bad hover:underline" onClick={() => setCover('')}>
+              <button
+                className="focus-ring text-[0.8em] text-bad hover:underline"
+                onClick={() => setCover('')}
+              >
                 Remove
               </button>
             )}
@@ -317,7 +372,11 @@ function CustomFieldEditor({
     <label className="block">
       <span className="mb-1 block text-[0.75em] text-ink-muted">{p.name}</span>
       {p.type === 'select' ? (
-        <Select value={String(value ?? '')} onChange={(e) => onChange(e.target.value || undefined)} aria-label={p.name}>
+        <Select
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          aria-label={p.name}
+        >
           <option value="">—</option>
           {(p.options ?? []).map((o) => (
             <option key={o} value={o}>
@@ -346,15 +405,34 @@ function CustomFieldEditor({
           })}
         </div>
       ) : p.type === 'number' ? (
-        <Input type="number" value={value == null ? '' : String(value)} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} aria-label={p.name} />
+        <Input
+          type="number"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+          aria-label={p.name}
+        />
       ) : p.type === 'date' ? (
-        <Input type="date" value={String(value ?? '')} onChange={(e) => onChange(e.target.value || undefined)} aria-label={p.name} />
+        <Input
+          type="date"
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          aria-label={p.name}
+        />
       ) : p.type === 'checkbox' ? (
         <Toggle label={value ? 'Checked' : 'Unchecked'} checked={!!value} onChange={onChange} />
       ) : p.type === 'url' ? (
-        <Input type="url" value={String(value ?? '')} onChange={(e) => onChange(e.target.value || undefined)} aria-label={p.name} />
+        <Input
+          type="url"
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          aria-label={p.name}
+        />
       ) : (
-        <Input value={String(value ?? '')} onChange={(e) => onChange(e.target.value || undefined)} aria-label={p.name} />
+        <Input
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          aria-label={p.name}
+        />
       )}
     </label>
   )

@@ -1,16 +1,23 @@
 import { useMemo, useRef, useState } from 'react'
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  useDroppable
-} from '@dnd-kit/core'
+import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import {
+  useSortable,
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  Plus, CalendarDays, ChevronLeft, ChevronRight, Flag, Tag, Clock3, ImagePlus, GripVertical
+  Plus,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  Tag,
+  Clock3,
+  ImagePlus,
+  GripVertical
 } from 'lucide-react'
 import type { CalEvent, WorkspaceDatabase, WorkspaceItem } from '../../lib/types'
 import { fieldsFor, OPS_BY_KIND, type FieldDef } from '../../lib/filterEngine'
@@ -30,7 +37,7 @@ export const PRIORITY_COLOR: Record<string, string> = {
 
 export function statusColor(db: WorkspaceDatabase | null, statusId: string): string {
   const s = db?.statuses.find((x) => x.id === statusId)
-  return s?.color ?? 'var(--ink-muted)'
+  return s?.color ?? DEFAULT_STATUSES.find((st) => st.id === statusId)?.color ?? 'var(--ink-muted)'
 }
 
 export function useDbItems(db: WorkspaceDatabase | null) {
@@ -85,7 +92,7 @@ export function TableView({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[0.9em]">
         <thead>
-          <tr className="border-b border-line text-left text-[0.78em] uppercase tracking-wider text-ink-faint">
+          <tr className="border-b border-line text-left text-[0.78em]  text-ink-faint">
             <th className="px-2 py-2 font-semibold">Title</th>
             {cols.map((c) => (
               <th key={c.key} className="px-2 py-2 font-semibold">
@@ -107,12 +114,30 @@ export function TableView({
                 </button>
               </td>
               {cols.map((c) => (
-                <td key={c.key} className="px-2 py-1.5">
-                  <CellEditor item={it} field={c} db={db} onChange={(v) => void updateItem(it.id, { [c.key.startsWith('cf:') ? 'customFields' : c.key]: c.key.startsWith('cf:') ? { ...it.customFields, [c.key.slice(3)]: v } : v })} />
+                <td
+                  key={c.key}
+                  className={`px-2 py-1.5 ${c.kind === 'number' ? 'font-mono tabular-nums' : ''}`}
+                >
+                  <CellEditor
+                    item={it}
+                    field={c}
+                    db={db}
+                    onChange={(v) =>
+                      void updateItem(it.id, {
+                        [c.key.startsWith('cf:') ? 'customFields' : c.key]: c.key.startsWith('cf:')
+                          ? { ...it.customFields, [c.key.slice(3)]: v }
+                          : v
+                      })
+                    }
+                  />
                 </td>
               ))}
               <td className="px-1 py-1.5 text-right">
-                <IconBtn label={`Edit ${it.title}`} className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => onEdit(it)}>
+                <IconBtn
+                  label={`Edit ${it.title}`}
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                  onClick={() => onEdit(it)}
+                >
                   <Plus size={12} />
                 </IconBtn>
               </td>
@@ -126,7 +151,10 @@ export function TableView({
         </div>
       )}
       <div className="p-2">
-        <button className="focus-ring flex items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-[0.85em] text-ink-muted hover:bg-surface hover:text-ink" onClick={onAdd}>
+        <button
+          className="focus-ring flex items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-[0.85em] text-ink-muted hover:bg-surface hover:text-ink"
+          onClick={onAdd}
+        >
           <Plus size={14} /> Add item
         </button>
       </div>
@@ -151,7 +179,7 @@ function CellEditor({
   const isStatus = field.kind === 'select' && field.key === 'status'
   const selectOptions = isStatus
     ? (db?.statuses ?? []).map((s) => s.id)
-    : db?.properties.filter((p) => `cf:${p.id}` === field.key).flatMap((p) => p.options ?? []) ?? []
+    : (db?.properties.filter((p) => `cf:${p.id}` === field.key).flatMap((p) => p.options ?? []) ?? [])
   return (
     <span ref={wrapRef} className="relative inline-block">
       <button
@@ -191,7 +219,7 @@ function CellEditor({
               <option value="">—</option>
               {selectOptions.map((o) => (
                 <option key={o} value={o}>
-                  {isStatus ? db?.statuses.find((s) => s.id === o)?.name ?? o : o}
+                  {isStatus ? (db?.statuses.find((s) => s.id === o)?.name ?? o) : o}
                 </option>
               ))}
             </select>
@@ -263,7 +291,9 @@ export function BoardView({
   const activeSprint = useMemo(() => {
     if (!db) return null
     const today = todayISO()
-    return Object.values(sprints).find((s) => s.databaseId === db.id && s.start <= today && s.end >= today) ?? null
+    return (
+      Object.values(sprints).find((s) => s.databaseId === db.id && s.start <= today && s.end >= today) ?? null
+    )
   }, [sprints, db])
 
   const visible = useMemo(() => {
@@ -304,23 +334,29 @@ export function BoardView({
   }
 
   return (
-    <DndContext sensors={useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))} onDragEnd={onDragEnd}>
-      <div className="flex gap-3 overflow-x-auto pb-4">
+    <DndContext
+      sensors={useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+      )}
+      onDragEnd={onDragEnd}
+    >
+      <div className="board-columns">
         {statuses.map((st) => {
-          const colItems = visible
-            .filter((i) => i.status === st.id)
-            .sort((a, b) => a.rank - b.rank)
+          const colItems = visible.filter((i) => i.status === st.id).sort((a, b) => a.rank - b.rank)
           const over = wipLimit ? colItems.length >= wipLimit : false
           return (
-            <div key={st.id} className="flex w-64 shrink-0 flex-col">
+            <div key={st.id} className="board-column">
               <div
-                className={`mb-2 flex items-center justify-between px-1 ${over ? 'text-bad' : 'text-ink-muted'}`}
+                className={`board-column-header flex items-center justify-between ${over ? 'text-bad' : 'text-ink-muted'}`}
               >
                 <span className="flex items-center gap-1.5 text-[0.85em] font-semibold">
                   <span className="h-2 w-2 rounded-full" style={{ background: st.color }} />
                   {st.name}
                 </span>
-                <span className={`text-[0.75em] tabular-nums ${over ? 'font-bold' : 'text-ink-faint'}`}>
+                <span
+                  className={`count-badge text-[0.75em] tabular-nums ${over ? 'font-bold' : 'text-ink-faint'}`}
+                >
                   {colItems.length}
                   {wipLimit ? `/${wipLimit}` : ''}
                 </span>
@@ -343,7 +379,10 @@ export function BoardView({
   )
 }
 
-function viewSprintHint(db: WorkspaceDatabase | null, sprint: { id: string; name: string; start: string; end: string } | null) {
+function viewSprintHint(
+  db: WorkspaceDatabase | null,
+  sprint: { id: string; name: string; start: string; end: string } | null
+) {
   const view = db?.views.find((v) => v.id === activeViewId(db))
   if (!view?.sprintOnly || !db) return null
   if (!sprint)
@@ -354,7 +393,8 @@ function viewSprintHint(db: WorkspaceDatabase | null, sprint: { id: string; name
     )
   return (
     <div className="mt-2 text-[0.8em] text-ink-faint">
-      Showing active sprint: <strong className="text-ink-muted">{sprint.name}</strong> ({sprint.start} → {sprint.end})
+      Showing active sprint: <strong className="text-ink-muted">{sprint.name}</strong> ({sprint.start} to{' '}
+      {sprint.end})
     </div>
   )
 }
@@ -391,13 +431,13 @@ function ColumnDrop({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 space-y-1.5 rounded-token border p-1.5 transition-colors ${
+      className={`board-column-floor flex-1 space-y-3 rounded-token border p-1.5 ${
         isOver ? (over ? 'border-bad bg-bad/10' : 'border-primary bg-primary/5') : 'border-transparent'
       }`}
     >
       {lanes.map(([lane, laneItems]) => (
         <SortableContext key={lane} items={laneItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="mb-1 mt-1 flex items-center gap-1 px-1 text-[0.7em] font-semibold uppercase tracking-wider text-ink-faint first:mt-0">
+          <div className="mb-1 mt-1 flex items-center gap-1 px-1 text-[0.7em] font-semibold  text-ink-faint first:mt-0">
             {lane}
             <span className="h-px flex-1 bg-line" />
           </div>
@@ -406,10 +446,13 @@ function ColumnDrop({
           ))}
         </SortableContext>
       ))}
-      {lanes.length === 0 &&
-        items.map((i) => (
-          <BoardCard key={i.id} item={i} onEdit={onEdit} />
-        ))}
+      {lanes.length === 0 && (
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          {items.map((i) => (
+            <BoardCard key={i.id} item={i} onEdit={onEdit} />
+          ))}
+        </SortableContext>
+      )}
       {items.length === 0 && (
         <div className="rounded-token border border-dashed border-line px-2 py-4 text-center text-[0.78em] text-ink-faint">
           Drop items here
@@ -419,57 +462,71 @@ function ColumnDrop({
         className="focus-ring mt-1 flex w-full items-center gap-1 rounded-token-sm px-2 py-1.5 text-left text-[0.8em] text-ink-faint hover:bg-surface hover:text-ink"
         onClick={onAdd}
       >
-        <Plus size={12} /> Add
+        <Plus size={12} /> Add item
       </button>
     </div>
   )
 }
 
 export function BoardCard({ item, onEdit }: { item: WorkspaceItem; onEdit: (i: WorkspaceItem) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
-  const style = { transform: CSS.Transform.toString(transform), transition }
-  const db = useItemsStore((s) => s.databases[item.databaseId ?? ''])
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id
+  })
+  const database = useItemsStore((s) => s.databases[item.databaseId ?? ''])
+  const status = (database?.statuses ?? DEFAULT_STATUSES).find((s) => s.id === item.status)
+  const overdue = item.dueDate && item.dueDate < todayISO() && !status?.isDone
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={`elev-raised rounded-token border border-line bg-raised p-2.5 ${isDragging ? 'opacity-60' : ''}`}
-      {...attributes}
-      {...listeners}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`board-card ${isDragging ? 'is-dragging' : ''}`}
+      data-item-id={item.id}
     >
-      <button
-        className="focus-ring w-full text-left"
-        onClick={(e) => {
-          if (e.defaultPrevented) return // a drag just finished
-          onEdit(item)
-        }}
-        title={item.title}
-      >
-        <span className="block text-[0.9em] font-medium leading-snug">{item.title}</span>
-      </button>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <StatusPill small color={statusColor(db || null, item.status)} label={db?.statuses.find((s) => s.id === item.status)?.name ?? item.status} />
-        <span
-          className="flex items-center gap-0.5 rounded-sm px-1 py-0.5 text-[0.68em] font-semibold"
-          style={{ color: PRIORITY_COLOR[item.priority], background: 'var(--sunken)' }}
+      <div className="board-card-top">
+        <StatusPill small color={status?.color ?? 'var(--ink-muted)'} label={status?.name ?? item.status} />
+        <button
+          {...attributes}
+          {...listeners}
+          className="board-drag-handle"
+          aria-label={`Move ${item.title}`}
+          title="Drag to change status, or press Space and use arrow keys"
         >
-          <Flag size={9} />
-          {item.priority}
+          <GripVertical size={14} />
+        </button>
+      </div>
+      <button className="board-card-title" onClick={() => onEdit(item)}>
+        {item.title}
+      </button>
+      {item.description && <p className="board-card-description">{item.description}</p>}
+      {item.labels.length > 0 && (
+        <div className="board-card-labels">
+          {item.labels.slice(0, 3).map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      )}
+      <div className="board-card-bottom">
+        <span
+          className="board-priority"
+          style={{ color: PRIORITY_COLOR[item.priority] }}
+          title={`${item.priority} priority`}
+        >
+          <Flag size={11} />
+          <span>{item.priority}</span>
         </span>
         {item.dueDate && (
-          <span className={`flex items-center gap-0.5 text-[0.68em] ${item.dueDate < todayISO() ? 'text-bad' : 'text-ink-faint'}`}>
-            <Clock3 size={9} />
-            {item.dueDate.slice(5)}
+          <span className={`board-due ${overdue ? 'is-overdue' : ''}`}>
+            <CalendarDays size={11} />
+            <time dateTime={item.dueDate}>
+              {new Date(`${item.dueDate}T12:00:00`).toLocaleDateString([], {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </time>
           </span>
         )}
-        {item.labels.map((l) => (
-          <span key={l} className="flex items-center gap-0.5 rounded-sm bg-sunken px-1 py-0.5 text-[0.68em] text-ink-muted">
-            <Tag size={9} />
-            {l}
-          </span>
-        ))}
         {item.storyPoints != null && (
-          <span className="ml-auto rounded-full bg-primary-soft px-1.5 text-[0.68em] font-bold text-primary">
+          <span className="board-points" title={`${item.storyPoints} story points`}>
             {item.storyPoints}
           </span>
         )}
@@ -502,7 +559,13 @@ export function ListView({
   }
   return (
     <div>
-      <DndContext sensors={useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={useSensors(
+          useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+          useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+        )}
+        onDragEnd={onDragEnd}
+      >
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0.5">
             {items.map((i) => (
@@ -513,7 +576,10 @@ export function ListView({
       </DndContext>
       {items.length === 0 && <EmptyState title="No items" hint="Add an item to get started." />}
       <div className="p-2">
-        <button className="focus-ring flex items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-[0.85em] text-ink-muted hover:bg-surface hover:text-ink" onClick={onAdd}>
+        <button
+          className="focus-ring flex items-center gap-1.5 rounded-token-sm px-2 py-1.5 text-[0.85em] text-ink-muted hover:bg-surface hover:text-ink"
+          onClick={onAdd}
+        >
           <Plus size={14} /> Add item
         </button>
       </div>
@@ -538,13 +604,22 @@ function ListRow({ item, onEdit }: { item: WorkspaceItem; onEdit: (i: WorkspaceI
       >
         <GripVertical size={13} />
       </span>
-      <button className="focus-ring min-w-0 flex-1 truncate rounded text-left text-[0.92em]" onClick={() => onEdit(item)}>
+      <button
+        className="focus-ring min-w-0 flex-1 truncate rounded text-left text-[0.92em]"
+        onClick={() => onEdit(item)}
+      >
         {item.title}
       </button>
-      <StatusPill small color={statusColor(db || null, item.status)} label={db?.statuses.find((s) => s.id === item.status)?.name ?? item.status} />
+      <StatusPill
+        small
+        color={statusColor(db || null, item.status)}
+        label={db?.statuses.find((s) => s.id === item.status)?.name ?? item.status}
+      />
       <span className="w-14 text-right text-[0.75em] text-ink-faint">{item.priority}</span>
       {item.dueDate && (
-        <span className={`w-16 text-right text-[0.75em] tabular-nums ${item.dueDate < todayISO() ? 'text-bad' : 'text-ink-faint'}`}>
+        <span
+          className={`w-16 text-right text-[0.75em] tabular-nums ${item.dueDate < todayISO() ? 'text-bad' : 'text-ink-faint'}`}
+        >
           {item.dueDate.slice(5)}
         </span>
       )}
@@ -595,7 +670,6 @@ export function CalendarView({
   const dayAlarms = (iso: string) => (sources.alarms ?? []).filter((a) => toISODate(new Date(a.at)) === iso)
   const dayEvents = (iso: string) => (sources.events ?? []).filter((e) => toISODate(new Date(e.at)) === iso)
 
-
   return (
     <div className={compact ? '' : 'grid gap-4 lg:grid-cols-[1fr_280px]'}>
       <div>
@@ -618,7 +692,7 @@ export function CalendarView({
             </IconBtn>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-[0.72em] font-semibold uppercase tracking-wider text-ink-faint">
+        <div className="grid grid-cols-7 gap-1 text-center text-[0.72em] font-semibold  text-ink-faint">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
             <div key={d} className="py-1">
               {d}
@@ -629,7 +703,10 @@ export function CalendarView({
           {cells.map((d, i) => {
             if (!d)
               return (
-                <div key={i} className={`rounded-token ${compact ? 'min-h-14' : 'min-h-20'} bg-transparent`} />
+                <div
+                  key={i}
+                  className={`rounded-token ${compact ? 'min-h-14' : 'min-h-20'} bg-transparent`}
+                />
               )
             const iso = toISODate(d)
             const isToday = iso === todayISO()
@@ -668,7 +745,9 @@ export function CalendarView({
                     <span className="rounded-sm bg-ok/20 px-1 text-[0.62em] text-ok">{nHabits} habits</span>
                   )}
                   {nAlarms > 0 && (
-                    <span className="rounded-sm bg-warn/20 px-1 text-[0.62em] text-warn">{nAlarms} alarms</span>
+                    <span className="rounded-sm bg-warn/20 px-1 text-[0.62em] text-warn">
+                      {nAlarms} alarms
+                    </span>
                   )}
                   {nEvents > 0 && (
                     <span className="rounded-sm bg-info/20 px-1 text-[0.62em] text-info">{nEvents}</span>
@@ -708,9 +787,7 @@ export function CalendarView({
                 <div className="flex items-center gap-2 rounded-token-sm px-2 py-1.5 text-[0.85em]">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-warn" />
                   <span className="flex-1 truncate">{a.title}</span>
-                  <span className="text-[0.7em] tabular-nums text-ink-faint">
-                    {a.at.slice(11, 16)}
-                  </span>
+                  <span className="text-[0.7em] tabular-nums text-ink-faint">{a.at.slice(11, 16)}</span>
                 </div>
               </li>
             ))}
@@ -723,9 +800,11 @@ export function CalendarView({
                 </div>
               </li>
             ))}
-            {dayItems(selectedDay).length + dayEvents(selectedDay).length + dayAlarms(selectedDay).length + dayHabits(new Date(selectedDay + 'T12:00:00')).length === 0 && (
-              <li className="px-2 py-3 text-center text-[0.8em] text-ink-faint">Nothing scheduled</li>
-            )}
+            {dayItems(selectedDay).length +
+              dayEvents(selectedDay).length +
+              dayAlarms(selectedDay).length +
+              dayHabits(new Date(selectedDay + 'T12:00:00')).length ===
+              0 && <li className="px-2 py-3 text-center text-[0.8em] text-ink-faint">Nothing scheduled</li>}
           </ul>
         </div>
       )}
@@ -741,7 +820,13 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const withDates = items.filter((i) => i.dueDate)
   if (withDates.length === 0)
-    return <EmptyState icon={<CalendarDays size={20} />} title="No dated items" hint="Give items a due date to see the timeline." />
+    return (
+      <EmptyState
+        icon={<CalendarDays size={20} />}
+        title="No dated items"
+        hint="Give items a due date to see the timeline."
+      />
+    )
   const minD = Math.min(...withDates.map((i) => new Date(i.startDate ?? i.dueDate!).getTime()))
   const maxD = Math.max(...withDates.map((i) => new Date(i.dueDate!).getTime()))
   const span = Math.max(7, (maxD - minD) / 86400000)
@@ -799,7 +884,9 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
           <button
             className={`focus-ring rounded-token-full border px-2.5 py-0.5 text-[0.75em] ${
-              statusFilter === null ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted hover:border-line-strong'
+              statusFilter === null
+                ? 'border-primary bg-primary-soft text-primary'
+                : 'border-line text-ink-muted hover:border-line-strong'
             }`}
             onClick={() => setStatusFilter(null)}
             aria-pressed={statusFilter === null}
@@ -810,7 +897,9 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
             <button
               key={s.id}
               className={`focus-ring rounded-token-full border px-2.5 py-0.5 text-[0.75em] ${
-                statusFilter === s.id ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted hover:border-line-strong'
+                statusFilter === s.id
+                  ? 'border-primary bg-primary-soft text-primary'
+                  : 'border-line text-ink-muted hover:border-line-strong'
               }`}
               onClick={() => setStatusFilter(statusFilter === s.id ? null : s.id)}
               aria-pressed={statusFilter === s.id}
@@ -832,7 +921,11 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
                 <span className="truncate font-mono text-[0.62em] text-ink-faint">{b.label}</span>
               </div>
             ))}
-            <div className="absolute bottom-0 top-0 z-10 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden>
+            <div
+              className="absolute bottom-0 top-0 z-10 w-px bg-bad/70"
+              style={{ left: todayPct }}
+              aria-hidden
+            >
               <span
                 className="absolute -top-0.5 left-1 font-mono text-[0.58em] font-semibold"
                 style={{ color: 'var(--bad)' }}
@@ -856,13 +949,21 @@ export function TimelineView({ db, items }: { db: WorkspaceDatabase | null; item
                     }}
                     title={`${i.title}: ${i.startDate ?? i.dueDate} → ${i.dueDate}`}
                   />
-                  <div className="absolute bottom-0 top-0 w-px bg-bad/70" style={{ left: todayPct }} aria-hidden />
+                  <div
+                    className="absolute bottom-0 top-0 w-px bg-bad/70"
+                    style={{ left: todayPct }}
+                    aria-hidden
+                  />
                 </div>
-                <span className="w-20 shrink-0 text-right text-[0.72em] tabular-nums text-ink-faint">{i.dueDate}</span>
+                <span className="w-20 shrink-0 text-right text-[0.72em] tabular-nums text-ink-faint">
+                  {i.dueDate}
+                </span>
               </div>
             ))}
             {visible.length === 0 && (
-              <p className="py-3 text-center text-[0.85em] text-ink-faint">No dated items with this status.</p>
+              <p className="py-3 text-center text-[0.85em] text-ink-faint">
+                No dated items with this status.
+              </p>
             )}
           </div>
         </div>

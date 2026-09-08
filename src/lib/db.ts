@@ -19,7 +19,7 @@ import type {
 
 export interface BlobRecord {
   id: string
-  kind: 'wallpaper' | 'image' | 'video'
+  kind: 'wallpaper' | 'image' | 'video' | 'attachment'
   name: string
   data: Blob
 }

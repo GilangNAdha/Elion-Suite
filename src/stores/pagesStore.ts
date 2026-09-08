@@ -3,6 +3,7 @@ import { db } from '../lib/db'
 import {
   uid,
   type Block,
+  type BlockSuiteState,
   type BlockComment,
   type PageRecord,
   type PageSnapshot,
@@ -23,6 +24,15 @@ interface PagesState {
 
   createPage: (p: Partial<PageRecord> & { title: string }) => Promise<PageRecord>
   renamePage: (id: string, title: string) => Promise<void>
+  saveNative: (
+    id: string,
+    native: BlockSuiteState,
+    blocks: Block[],
+    title: string,
+    capturedAt?: string
+  ) => Promise<void>
+  setEditorMode: (id: string, mode: 'page' | 'edgeless') => Promise<void>
+  toggleFavorite: (id: string) => Promise<void>
   setIcon: (id: string, icon: string) => Promise<void>
   deletePage: (id: string) => Promise<void>
   movePage: (id: string, parentId: string | null) => Promise<void>
@@ -79,19 +89,20 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
       title: p.title,
       icon: p.icon ?? 'file-text',
       branch: p.branch ?? 'workspace',
-      blocks:
-        p.blocks ?? [
-          { id: uid(), type: 'heading1', content: p.title, parentId: null, order: 1, props: {} },
-          {
-            id: uid(),
-            type: 'paragraph',
-            content: 'Start writing, or drag a block from the library.',
-            parentId: null,
-            order: 2,
-            props: {}
-          }
-        ],
+      blocks: p.blocks ?? [
+        { id: uid(), type: 'heading1', content: p.title, parentId: null, order: 1, props: {} },
+        {
+          id: uid(),
+          type: 'paragraph',
+          content: '',
+          parentId: null,
+          order: 2,
+          props: {}
+        }
+      ],
       databaseId: p.databaseId ?? null,
+      editorMode: p.editorMode ?? 'page',
+      favorite: p.favorite ?? false,
       createdAt: now,
       updatedAt: now
     }
@@ -100,12 +111,39 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
     return page
   },
 
+  saveNative: async (id, native, blocks, title, capturedAt) => {
+    const page = get().pages[id]
+    if (!page) return
+    const patch = { native, blocks, title, updatedAt: capturedAt ?? new Date().toISOString() }
+    await db.pages.update(id, patch)
+    if (get().pages[id]) set({ pages: { ...get().pages, [id]: { ...get().pages[id], ...patch } } })
+  },
+
+  setEditorMode: async (id, editorMode) => {
+    const page = get().pages[id]
+    if (!page) return
+    await db.pages.update(id, { editorMode })
+    set({ pages: { ...get().pages, [id]: { ...get().pages[id], editorMode } } })
+  },
+
+  toggleFavorite: async (id) => {
+    const page = get().pages[id]
+    if (!page) return
+    const favorite = !page.favorite
+    await db.pages.update(id, { favorite })
+    set({ pages: { ...get().pages, [id]: { ...get().pages[id], favorite } } })
+  },
+
   renamePage: async (id, title) => {
     const page = get().pages[id]
     if (!page) return
-    const next = { ...page, title, updatedAt: new Date().toISOString() }
-    await db.pages.put(next)
-    set({ pages: { ...get().pages, [id]: next } })
+    const patch = {
+      title,
+      native: page.native ? { ...page.native, projectionDirty: true } : undefined,
+      updatedAt: new Date().toISOString()
+    }
+    await db.pages.update(id, patch)
+    set({ pages: { ...get().pages, [id]: { ...get().pages[id], ...patch } } })
   },
 
   setIcon: async (id, icon) => {
@@ -154,7 +192,12 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
   setBlocks: async (pageId, blocks) => {
     const page = get().pages[pageId]
     if (!page) return
-    const next = { ...page, blocks, updatedAt: new Date().toISOString() }
+    const next = {
+      ...page,
+      blocks,
+      native: page.native ? { ...page.native, projectionDirty: true } : undefined,
+      updatedAt: new Date().toISOString()
+    }
     await db.pages.put(next)
     set({ pages: { ...get().pages, [pageId]: next } })
   },
@@ -176,7 +219,8 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
       takenAt: new Date().toISOString(),
       label,
       auto,
-      blocks: JSON.parse(JSON.stringify(page.blocks))
+      blocks: JSON.parse(JSON.stringify(page.blocks)),
+      native: page.native ? { ...page.native } : undefined
     }
     await db.snapshots.add(snap)
     set({ snapshots: [snap, ...get().snapshots] })
@@ -185,7 +229,17 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
   restoreSnapshot: async (pageId, snapshotId) => {
     const snap = get().snapshots.find((s) => s.id === snapshotId)
     if (!snap) return null
-    await get().setBlocks(pageId, JSON.parse(JSON.stringify(snap.blocks)))
+    const page = get().pages[pageId]
+    if (!page || snap.pageId !== pageId) return null
+    const next = {
+      ...page,
+      title: snap.title,
+      blocks: JSON.parse(JSON.stringify(snap.blocks)) as Block[],
+      native: snap.native ? { ...snap.native } : undefined,
+      updatedAt: new Date().toISOString()
+    }
+    await db.pages.put(next)
+    set({ pages: { ...get().pages, [pageId]: next } })
     return snap
   },
 
@@ -226,7 +280,10 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
         next.props = props
         return next
       })
-      return get().createPage({ title: t.payload.title ?? t.name, blocks: blocks.length ? blocks : undefined })
+      return get().createPage({
+        title: t.payload.title ?? t.name,
+        blocks: blocks.length ? blocks : undefined
+      })
     }
     return null
   },
@@ -253,9 +310,12 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
     const list = [...(get().comments[pageId] ?? []), c]
     set({ comments: { ...get().comments, [pageId]: list } })
     for (const m of mentions) {
-      void useNotifyStore
-        .getState()
-        .push({ kind: 'mention', title: `${author} mentioned @${m}`, body: text.slice(0, 80), link: `pages/${pageId}` })
+      void useNotifyStore.getState().push({
+        kind: 'mention',
+        title: `${author} mentioned @${m}`,
+        body: text.slice(0, 80),
+        link: `pages/${pageId}`
+      })
     }
   },
 

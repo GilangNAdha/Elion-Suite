@@ -99,6 +99,9 @@ export function useEditorSession(page: PageRecord): EditorSession {
       const trimmed = historyRef.current.slice(0, historyIndexRef.current + 1)
       const arr: HistoryEntry[] = [...trimmed, { label, blocks: JSON.parse(JSON.stringify(next)) }]
       if (arr.length > HISTORY_CAP) arr.splice(0, arr.length - HISTORY_CAP)
+      historyRef.current = arr
+      historyIndexRef.current = arr.length - 1
+      blocksRef.current = next
       setHistory(arr)
       setHistoryIndex(arr.length - 1)
       setBlocks(next)
@@ -115,6 +118,12 @@ export function useEditorSession(page: PageRecord): EditorSession {
       if (!entry) return
       setHistoryIndex(clamped)
       const next = JSON.parse(JSON.stringify(entry.blocks)) as Block[]
+      blocksRef.current = next
+      historyIndexRef.current = clamped
+      for (const [id] of focusContentRef.current) {
+        const block = next.find((b) => b.id === id)
+        if (block) focusContentRef.current.set(id, block.content)
+      }
       setBlocks(next)
       schedulePersist(next)
     },
@@ -144,8 +153,9 @@ export function useEditorSession(page: PageRecord): EditorSession {
     (id: string, to: BlockType) => {
       const target = blocksRef.current.find((b) => b.id === id)
       if (!target) return
-      commit(`Converted ${BLOCK_LABEL[target.type].toLowerCase()} to ${BLOCK_LABEL[to].toLowerCase()}`, (cur) =>
-        cur.map((b) => (b.id === id ? convertBlock(b, to, cur) : b))
+      commit(
+        `Converted ${BLOCK_LABEL[target.type].toLowerCase()} to ${BLOCK_LABEL[to].toLowerCase()}`,
+        (cur) => cur.map((b) => (b.id === id ? convertBlock(b, to, cur) : b))
       )
       requestFocus(id)
     },
@@ -214,7 +224,14 @@ export function useEditorSession(page: PageRecord): EditorSession {
         // copies of edges point at the remapped endpoints
         const fixed = withOrder.map((c) =>
           c.type === 'edge'
-            ? { ...c, props: { ...c.props, from: remapId(String(c.props.from ?? '')), to: remapId(String(c.props.to ?? '')) } }
+            ? {
+                ...c,
+                props: {
+                  ...c.props,
+                  from: remapId(String(c.props.from ?? '')),
+                  to: remapId(String(c.props.to ?? ''))
+                }
+              }
             : c
         )
         return [...blocks, ...fixed]
@@ -326,8 +343,19 @@ export function useEditorSession(page: PageRecord): EditorSession {
           { id: 'done', name: 'Done', color: 'var(--ok)', isDone: true }
         ],
         views: [
-          { id: uid(), name: 'Board', kind: 'board', visibleProperties: ['title', 'status', 'priority'], swimlane: 'none' },
-          { id: uid(), name: 'Table', kind: 'table', visibleProperties: ['title', 'status', 'priority', 'dueDate'] }
+          {
+            id: uid(),
+            name: 'Board',
+            kind: 'board',
+            visibleProperties: ['title', 'status', 'priority'],
+            swimlane: 'none'
+          },
+          {
+            id: uid(),
+            name: 'Table',
+            kind: 'table',
+            visibleProperties: ['title', 'status', 'priority', 'dueDate']
+          }
         ],
         automations: [],
         defaultType: 'task'
@@ -365,8 +393,7 @@ export function useEditorSession(page: PageRecord): EditorSession {
       jumpTo,
       selection,
       setSelection,
-      toggleSelection: (id) =>
-        setSelection((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])),
+      toggleSelection: (id) => setSelection((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])),
       clearSelection: () => setSelection([]),
       focusRequest,
       requestFocus,
@@ -385,10 +412,29 @@ export function useEditorSession(page: PageRecord): EditorSession {
       createDatabaseBlock
     }),
     [
-      page, blocks, history, historyIndex, undo, redo, jumpTo, selection,
-      focusRequest, requestFocus, commit, insertNew, convert, remove, duplicate, move,
-      composeColumns, setBlockContent, commitTextEdit, patchBlock, takeSnapshot,
-      restoreSnapshot, createDatabaseBlock
+      page,
+      blocks,
+      history,
+      historyIndex,
+      undo,
+      redo,
+      jumpTo,
+      selection,
+      focusRequest,
+      requestFocus,
+      commit,
+      insertNew,
+      convert,
+      remove,
+      duplicate,
+      move,
+      composeColumns,
+      setBlockContent,
+      commitTextEdit,
+      patchBlock,
+      takeSnapshot,
+      restoreSnapshot,
+      createDatabaseBlock
     ]
   )
 }

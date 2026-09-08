@@ -1,437 +1,511 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { assetUrl } from '../lib/assets'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  Lock, LogOut, Plus, Copy, Trash2, Play, Clock3,
-  AlertTriangle, History, X, Settings2
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import {
+  ArrowLeft,
+  Check,
+  Clock3,
+  Copy,
+  History,
+  Lock,
+  LogOut,
+  Maximize,
+  Plus,
+  Settings2,
+  Shield,
+  Swords,
+  Trash2,
+  X
 } from 'lucide-react'
-import type { LockdownPreset, WidgetInstance } from '../lib/types'
+import type { AuroraTheme, LockdownPreset, WidgetInstance } from '../lib/types'
 import { uid } from '../lib/types'
 import { useLockdownStore } from '../stores/lockdownStore'
 import { useThemeStore } from '../stores/themeStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { deriveTheme, applyThemeCss } from '../tokens/theme'
-import { Button, IconBtn, Input, Modal, Toaster, Menu, MenuItem } from '../components/ui'
+import { usePetStore } from '../stores/petStore'
+import { Button, IconBtn, Input, Modal, StatusPill, Toaster, useToasts } from '../components/ui'
 import { Wallpaper } from '../components/lockdown/wallpaper'
+import { useReducedMotion } from '../lib/useReducedMotion'
 import { WidgetLayer, type WidgetDef } from '../components/lockdown/widgets'
+import { FocusTimer, FocusTimerEngine } from '../components/lockdown/FocusTimer'
 import { Mixer } from '../components/lockdown/Mixer'
 import { FocusHistory } from '../components/lockdown/FocusHistory'
+import { MusicCard } from '../components/music/Turntable'
 import { minutesLabel } from '../lib/time'
 
-type Phase = 'landing' | 'active'
+type Summary = { ms: number; interruptions: number; cycles: number }
 
 export function LockdownPage() {
   const navigate = useNavigate()
-  const { presets, sessions, active, ready, createPreset, deletePreset, duplicatePreset, updatePreset, startSession, endSession, logInterruption, setWidget } =
-    useLockdownStore()
-  const [phase, setPhase] = useState<Phase>('landing')
+  const location = useLocation()
+  const {
+    presets,
+    sessions,
+    active,
+    ready,
+    createPreset,
+    deletePreset,
+    duplicatePreset,
+    updatePreset,
+    startSession,
+    endSession,
+    logInterruption,
+    setWidget
+  } = useLockdownStore()
   const [presetId, setPresetId] = useState<string | null>(null)
-  const [objective, setObjective] = useState('')
+  const [objective, setObjective] = useState(
+    () => (location.state as { objective?: string } | null)?.objective ?? ''
+  )
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [customize, setCustomize] = useState(false)
   const [nudge, setNudge] = useState(false)
-  const [summary, setSummary] = useState<{ ms: number; interruptions: number; cycles: number } | null>(null)
+  const [summary, setSummary] = useState<Summary | null>(null)
   const [adding, setAdding] = useState<WidgetDef | null>(null)
+  const [finishing, setFinishing] = useState(false)
+  const [entering, setEntering] = useState(false)
   const guard = useSettingsStore((s) => s.guard)
-  const guardTimer = useRef<number | null>(null)
-  const cyclesRef = useRef(0)
-
-  const preset = presets[presetId ?? '']
+  const previousTheme = useRef<AuroraTheme | null>(null)
+  const reduced = useReducedMotion()
+  const list = Object.values(presets).sort(
+    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.name.localeCompare(b.name)
+  )
+  const preset = presets[presetId ?? ''] ?? list[0]
   const activePreset = active ? presets[active.presetId] : undefined
-
-  const enterFullscreen = useCallback((): Promise<void> => {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-      return document.documentElement.requestFullscreen().catch(() => undefined)
-    }
-    return Promise.resolve()
-  }, [])
-
-  const exitFullscreen = useCallback((): Promise<void> => {
-    if (document.fullscreenElement) return document.exitFullscreen().catch(() => undefined)
-    return Promise.resolve()
-  }, [])
-
-  const begin = async (id: string) => {
-    await enterFullscreen()
-    startSession(id, objective.trim())
-    setPhase('active')
-  }
-
-  const exit = useCallback(
-    async (showSummary: boolean) => {
-      const a = useLockdownStore.getState().active
-      if (a && showSummary) {
-        const ms = Date.now() - new Date(a.start).getTime()
-        setSummary({ ms, interruptions: a.interruptions, cycles: cyclesRef.current })
-      } else if (a) {
-        await endSession(cyclesRef.current)
-      }
-      await exitFullscreen()
-      // restore theme if the preset had an override
-      if (a && useLockdownStore.getState().presets[a.presetId]?.themeOverride) {
-        useThemeStore.getState().setTheme(useThemeStore.getState().presets[0] ? useThemeStore.getState().theme : useThemeStore.getState().theme)
-      }
-      navigate('/')
-    },
-    [endSession, exitFullscreen, navigate]
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor)
   )
 
-  // ---- distraction guard (best-effort, §8.2) ----
-  useEffect(() => {
-    if (phase !== 'active' || !guard.enabled) return
-    const threshold = guard.thresholdMs
-    let blurred = false
-    const onBlur = () => {
-      blurred = true
-      if (guardTimer.current) window.clearTimeout(guardTimer.current)
-      guardTimer.current = window.setTimeout(() => {
-        if (blurred) {
-          setNudge(true)
-          logInterruption()
-          const elion = (window as unknown as { elion?: { bringToFront?: () => void } }).elion
-          if (guard.bringToFront && elion?.bringToFront) elion.bringToFront()
-          guardTimer.current = window.setTimeout(() => setNudge(false), 8000)
-        }
-      }, threshold)
+  const restoreTheme = useCallback(() => {
+    if (previousTheme.current) {
+      useThemeStore.getState().setTheme(previousTheme.current)
+      previousTheme.current = null
     }
-    const onFocus = () => {
-      blurred = false
-      if (guardTimer.current) window.clearTimeout(guardTimer.current)
-    }
-    window.addEventListener('blur', onBlur)
-    window.addEventListener('focus', onFocus)
-    // Electron main-side nudge (mirrors the same behavior)
-    const elion = (window as unknown as { elion?: { onNudge?: (cb: () => void) => (() => void) | void } }).elion
-    const offNudge = elion?.onNudge?.(() => {
-      setNudge(true)
-      logInterruption()
-      window.setTimeout(() => setNudge(false), 8000)
-    })
-    return () => {
-      window.removeEventListener('blur', onBlur)
-      window.removeEventListener('focus', onFocus)
-      if (guardTimer.current) window.clearTimeout(guardTimer.current)
-      if (typeof offNudge === 'function') offNudge()
-    }
-  }, [phase, guard, logInterruption])
+  }, [])
+  useEffect(() => () => restoreTheme(), [restoreTheme])
 
-  // ---- theme override for the session ----
-  useEffect(() => {
-    if (phase !== 'active' || !activePreset?.themeOverride) return
-    const p = useThemeStore.getState().presets.find((x) => x.id === activePreset.themeOverride)
-    if (p) useThemeStore.getState().setTheme({ ...p })
-  }, [phase, activePreset?.themeOverride])
-
-  // ---- widget drag persistence ----
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
-  const onWidgetDragEnd = (e: DragEndEvent) => {
-    if (!active || !e.active.data.current?.widget) return
-    const w = e.active.data.current.widget as WidgetInstance
-    const nx = Math.max(0, w.x + e.delta.x)
-    const ny = Math.max(0, w.y + e.delta.y)
-    void setWidget(active.presetId, { ...w, x: nx, y: ny })
+  const enterFullscreen = async () => {
+    if (document.fullscreenElement || !document.documentElement.requestFullscreen) return
+    await document.documentElement.requestFullscreen().catch(() => undefined)
+  }
+  const begin = async () => {
+    if (!preset || entering || active) return
+    setEntering(true)
+    await enterFullscreen()
+    if (preset.themeOverride) {
+      const store = useThemeStore.getState()
+      const override = store.presets.find((p) => p.id === preset.themeOverride)
+      if (override) {
+        previousTheme.current = store.theme
+        store.setTheme(override)
+      }
+    }
+    const change = () => startSession(preset.id, objective.trim())
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => { finished: Promise<void> }
+    }
+    if (!reduced && doc.startViewTransition) {
+      document.documentElement.dataset.transition = 'lockdown'
+      const transition = doc.startViewTransition(change)
+      void transition.finished.finally(() => delete document.documentElement.dataset.transition)
+    } else change()
+    setEntering(false)
   }
 
-  const presetsList = useMemo(() => Object.values(presets).sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [presets])
+  const finish = async () => {
+    if (finishing) return
+    const state = useLockdownStore.getState()
+    if (!state.active) return
+    const result = {
+      ms: Date.now() - new Date(state.active.start).getTime(),
+      interruptions: state.active.interruptions,
+      cycles: state.timer.cyclesDone
+    }
+    setFinishing(true)
+    try {
+      await endSession(result.cycles)
+      restoreTheme()
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined)
+      setSummary(result)
+      setCustomize(false)
+    } catch {
+      useToasts.getState().push('Session could not be saved — keep this page open and try again.', 'error')
+    } finally {
+      setFinishing(false)
+    }
+  }
 
-  if (!ready) {
+  // A soft nudge, never OS-level enforcement. Disabled outside a live session.
+  useEffect(() => {
+    if (!active || !guard.enabled) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const blur = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        setNudge(true)
+        logInterruption()
+        const desktop = (window as unknown as { elion?: { bringToFront?: () => void } }).elion
+        if (guard.bringToFront) desktop?.bringToFront?.()
+      }, guard.thresholdMs)
+    }
+    const focus = () => clearTimeout(timer)
+    window.addEventListener('blur', blur)
+    window.addEventListener('focus', focus)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('blur', blur)
+      window.removeEventListener('focus', focus)
+    }
+  }, [active?.start, guard.enabled, guard.thresholdMs, guard.bringToFront, logInterruption])
+
+  const onWidgetDragEnd = (event: DragEndEvent) => {
+    if (!active || !event.active.data.current?.widget) return
+    const widget = event.active.data.current.widget as WidgetInstance
+    void setWidget(active.presetId, {
+      ...widget,
+      x: Math.max(0, Math.min(window.innerWidth - widget.w, widget.x + event.delta.x)),
+      y: Math.max(64, Math.min(window.innerHeight - widget.h, widget.y + event.delta.y))
+    })
+  }
+
+  if (!ready)
     return (
-      <div className="flex h-full items-center justify-center bg-bg text-ink">
-        <div className="text-ink-faint">Loading Lockdown…</div>
+      <div className="focus-loading" role="status">
+        Preparing your focus space…
       </div>
     )
-  }
 
-  // ================= LANDING =================
-  if (phase === 'landing') {
-    return (
-      <div className="relative h-full overflow-y-auto bg-bg text-ink">
-        <div className="mx-auto max-w-4xl p-8 pb-24">
-          <div className="mb-8 flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-token bg-primary-soft text-primary">
-              <Lock size={22} />
-            </span>
-            <div>
-              <h1 className="text-[1.7em] font-bold tracking-tight">Lockdown Mode</h1>
-              <p className="text-[0.9em] text-ink-muted">
-                Full-screen focus. Pick a preset, set an objective, and lock in.
-              </p>
+  return (
+    <>
+      {active && activePreset ? (
+        <DndContext sensors={sensors} onDragEnd={onWidgetDragEnd}>
+          <div className="lockdown-stage">
+            <Wallpaper config={activePreset.wallpaper} />
+            <div className="wallpaper-shade" aria-hidden="true" />
+            <FocusTimerEngine preset={activePreset} />
+            <header className="focus-hud">
+              <div className="focus-state">
+                <StatusPill color="var(--ok)" label="Lockdown active" />
+                <span className="focus-preset-badge glass-panel">{activePreset.name}</span>
+              </div>
+              <div className="focus-hud-tools">
+                <IconBtn label="Enter fullscreen" onClick={() => void enterFullscreen()}>
+                  <Maximize size={16} />
+                </IconBtn>
+                <Button
+                  size="sm"
+                  icon={<Settings2 size={14} />}
+                  onClick={() => {
+                    if (customize) void updatePreset(activePreset.id, { layout: 'free' })
+                    setCustomize((v) => !v)
+                  }}
+                >
+                  {customize ? 'Save layout' : 'Customize widgets'}
+                </Button>
+              </div>
+            </header>
+            {!customize && activePreset.layout !== 'free' ? (
+              <>
+                <main className="focus-center">
+                  <FocusTimer preset={activePreset} objective={active.objective} />
+                  <div className="focus-music glass-panel">
+                    <MusicCard compact />
+                  </div>
+                </main>
+              </>
+            ) : (
+              <>
+                <WidgetLayer
+                  preset={activePreset}
+                  customize={customize}
+                  onAdd={(def) => {
+                    const widget: WidgetInstance = {
+                      id: uid(),
+                      type: def.type,
+                      x: Math.min(300, Math.max(0, window.innerWidth - def.w)),
+                      y: 100,
+                      w: def.w,
+                      h: def.h
+                    }
+                    void setWidget(activePreset.id, widget)
+                    setAdding(null)
+                  }}
+                  adding={adding}
+                  setAdding={setAdding}
+                  sessions={sessions}
+                />
+                <button
+                  className="restore-quiet-layout glass-panel"
+                  onClick={() => {
+                    void updatePreset(activePreset.id, { layout: 'centered' })
+                    setCustomize(false)
+                  }}
+                >
+                  Restore quiet layout
+                </button>
+              </>
+            )}
+            <div className="focus-exit">
+              <Button
+                size="sm"
+                icon={<LogOut size={13} />}
+                disabled={finishing}
+                onClick={() => void finish()}
+              >
+                {finishing ? 'Saving session…' : 'Exit Lockdown'}
+              </Button>
             </div>
-            <span className="flex-1" />
-            <Button variant="outline" icon={<History size={14} />} onClick={() => setHistoryOpen(true)}>
+            <Mixer preset={activePreset} />
+            {activePreset.ambientEmbedUrl && customize && (
+              <div className="focus-ambient glass-panel">
+                <iframe
+                  title="Ambient media"
+                  src={activePreset.ambientEmbedUrl}
+                  allow="autoplay; encrypted-media"
+                />
+              </div>
+            )}
+            {nudge && (
+              <div className="focus-nudge glass-panel" role="status">
+                <Shield size={18} />
+                <span>Ready to return to your objective?</span>
+                <Button size="sm" onClick={() => setNudge(false)}>
+                  Continue focus
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => void finish()}>
+                  Exit Lockdown
+                </Button>
+              </div>
+            )}
+          </div>
+        </DndContext>
+      ) : (
+        <div className="focus-landing">
+          <header className="focus-landing-header">
+            <button className="text-action" onClick={() => navigate('/')}>
+              <ArrowLeft size={15} />
+              Back to dashboard
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<History size={14} />}
+              onClick={() => setHistoryOpen(true)}
+            >
               Focus history
             </Button>
-          </div>
-
-          <label className="mb-6 block max-w-xl">
-            <span className="mb-1.5 block text-[0.8em] font-semibold text-ink-muted">What are you working on?</span>
-            <Input
-              placeholder="e.g. Draft the Q4 proposal, 25-minute deep work…"
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              aria-label="Session objective"
-            />
-          </label>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {presetsList.map((p) => (
-              <div key={p.id} className="elev-raised group relative rounded-token-lg border border-line bg-raised p-4">
-                <PresetPreview p={p} />
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="min-w-0">
-                    <div className="truncate text-[1em] font-semibold">{p.name}</div>
-                    <div className="text-[0.72em] text-ink-faint">
-                      {p.wallpaper.tier === 'scene3d' ? '3D scene' : p.wallpaper.tier === 'video' ? 'Video' : 'Wallpaper'} · {p.pomodoro.workMin}′ focus
-                    </div>
-                  </div>
-                  <Button variant="primary" size="sm" icon={<Play size={13} />} onClick={() => { setPresetId(p.id); void begin(p.id) }}>
-                    Start
-                  </Button>
-                </div>
-                <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Menu
-                    width={160}
-                    align="end"
-                    trigger={
-                      <span className="focus-ring flex h-7 w-7 items-center justify-center rounded-token-sm bg-sunken text-ink-faint hover:text-ink" aria-label={`Preset actions ${p.name}`}>
-                        ⋯
-                      </span>
-                    }
-                  >
-                    <MenuItem icon={<Copy size={13} />} label="Duplicate" onClick={() => void duplicatePreset(p.id)} />
-                    <MenuItem icon={<Settings2 size={13} />} label="Edit (in customize)" onClick={() => setPresetId(p.id)} />
-                    <MenuItem icon={<Trash2 size={13} />} label="Delete" danger onClick={() => void deletePreset(p.id)} />
-                  </Menu>
-                </div>
+          </header>
+          <div className="focus-setup-layout">
+            <div className="focus-setup">
+              <div className="focus-mark">
+                <Lock size={22} strokeWidth={1.5} />
               </div>
-            ))}
-            <button
-              className="focus-ring flex min-h-40 flex-col items-center justify-center gap-2 rounded-token-lg border border-dashed border-line text-ink-faint hover:border-primary hover:text-primary"
+              <h1>
+                Everything else
+                <br />
+                can wait.
+              </h1>
+              <p>
+                One objective. A quiet space.
+                <br />
+                Make some room for your best work.
+              </p>
+              <label className="focus-objective-field">
+                <span>What are you working on?</span>
+                <Input
+                  placeholder="Give this session a purpose"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  aria-label="Session objective"
+                  maxLength={180}
+                />
+              </label>
+              <div className="preset-selection">
+                <span className="setup-label">Choose your atmosphere</span>
+                {list.map((p) => (
+                  <div className={`preset-choice ${preset?.id === p.id ? 'is-selected' : ''}`} key={p.id}>
+                    <button
+                      className="preset-choice-main"
+                      aria-pressed={preset?.id === p.id}
+                      onClick={() => setPresetId(p.id)}
+                    >
+                      <span className="preset-thumbnail">
+                        <img src={assetUrl(`wallpapers/${p.wallpaper.builtin ?? 'nocturne'}.jpg`)} alt="" />
+                      </span>
+                      <span>
+                        <strong>{p.name}</strong>
+                        <small>
+                          {p.pomodoro.workMin} min focus, {p.pomodoro.breakMin} min break
+                        </small>
+                      </span>
+                      {preset?.id === p.id && <Check size={15} />}
+                    </button>
+                    <IconBtn
+                      label={`Edit ${p.name} preset`}
+                      onClick={() => {
+                        setPresetId(p.id)
+                        setEditorOpen(true)
+                      }}
+                    >
+                      <Settings2 size={14} />
+                    </IconBtn>
+                  </div>
+                ))}
+              </div>
+              {preset && (
+                <div className="focus-duration">
+                  <span className="setup-label">Focus interval</span>
+                  <div>
+                    {[25, 50, 90].map((duration) => (
+                      <button
+                        key={duration}
+                        aria-pressed={preset.pomodoro.workMin === duration}
+                        onClick={() =>
+                          void updatePreset(preset.id, {
+                            pomodoro: { ...preset.pomodoro, workMin: duration }
+                          })
+                        }
+                      >
+                        <b>{duration}</b> min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="focus-setup-actions">
+                <Button icon={<Lock size={14} />} disabled={!preset || entering} onClick={() => void begin()}>
+                  {entering ? 'Preparing session…' : 'Start focus session'}
+                </Button>
+                <button
+                  className="text-action"
+                  onClick={async () => {
+                    const p = await createPreset('My focus space')
+                    setPresetId(p.id)
+                    setEditorOpen(true)
+                  }}
+                >
+                  <Plus size={13} />
+                  New preset
+                </button>
+              </div>
+              <p className="guard-disclosure">
+                <Shield size={13} />
+                <span>
+                  The distraction guard is a gentle nudge, not an app or website blocker. You’re always in
+                  control.
+                </span>
+              </p>
+            </div>
+            <div className="focus-preview" aria-label="Preview of your focus space">
+              {preset ? (
+                <Wallpaper config={preset.wallpaper} />
+              ) : (
+                <img className="wallpaper-image" src={assetUrl('wallpapers/nocturne.jpg')} alt="" />
+              )}
+              <div className="wallpaper-shade" aria-hidden="true" />
+              <span className="focus-preview-label">Your quiet space</span>
+              <div className="preview-timer">
+                <span>Time to settle in</span>
+                <strong>{String(preset?.pomodoro.workMin ?? 25).padStart(2, '0')}:00</strong>
+                <p>{objective || 'One thing at a time.'}</p>
+                <span className="preview-rule" />
+              </div>
+              <div className="preview-caption">
+                <span>{preset?.name ?? 'Nocturne'}</span>
+                <span>
+                  {preset?.wallpaper.tier === 'scene3d'
+                    ? '3D atmosphere'
+                    : preset?.wallpaper.tier === 'video'
+                      ? 'Video wallpaper'
+                      : 'Still wallpaper'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {editorOpen && preset && (
+        <Modal open title="Customize focus preset" width={700} onClose={() => setEditorOpen(false)}>
+          <PresetEditor key={preset.id} preset={preset} onDone={() => setEditorOpen(false)} />
+          <div className="preset-management">
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Copy size={13} />}
               onClick={async () => {
-                const name = window.prompt('Preset name', 'New preset')
-                if (name?.trim()) {
-                  const p = await createPreset(name.trim())
-                  setPresetId(p.id)
+                const copy = await duplicatePreset(preset.id)
+                if (copy) setPresetId(copy.id)
+              }}
+            >
+              Duplicate preset
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={<Trash2 size={13} />}
+              onClick={() => {
+                if (window.confirm(`Delete “${preset.name}”?`)) {
+                  void deletePreset(preset.id)
+                  setEditorOpen(false)
+                  setPresetId(null)
                 }
               }}
             >
-              <Plus size={20} />
-              <span className="text-[0.85em]">New preset</span>
-            </button>
+              Delete preset
+            </Button>
           </div>
-
-          {preset && (
-            <PresetEditor preset={preset} onDone={() => setPresetId(null)} />
-          )}
-
-          <p className="mt-8 max-w-xl text-[0.78em] leading-relaxed text-ink-faint">
-            The optional distraction guard is a <strong>soft nudge</strong> — it cannot block other apps or websites at
-            the OS level (that would require elevated permissions this build does not request).
-          </p>
-        </div>
-        {historyOpen && <FocusHistory onClose={() => setHistoryOpen(false)} />}
-        <Toaster />
-      </div>
-    )
-  }
-
-  // ================= ACTIVE SESSION =================
-  if (!active || !activePreset) return null
-  return (
-    <DndContext sensors={sensors} onDragEnd={onWidgetDragEnd}>
-      <div className="relative h-full overflow-hidden bg-sunken text-ink" style={{ colorScheme: 'dark' }}>
-        <Wallpaper config={activePreset.wallpaper} />
-
-        {/* HUD top-right */}
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-          <SessionClock start={active.start} />
-          {active.objective && (
-            <span className="glass-panel max-w-60 truncate rounded-full border border-line px-3 py-1.5 text-[0.8em] text-ink-muted">
-              {active.objective}
-            </span>
-          )}
-          <IconBtn label="Customize widgets" active={customize} className="glass-panel" onClick={() => setCustomize((c) => !c)}>
-            <Settings2 size={16} />
-          </IconBtn>
-          <Button variant="outline" size="sm" className="glass-panel" icon={<LogOut size={13} />} onClick={() => void exit(true)}>
-            Exit Lockdown
-          </Button>
-        </div>
-
-        {/* widget layer */}
-        <WidgetLayer
-          preset={activePreset}
-          customize={customize}
-          onAdd={(def) => {
-            const w: WidgetInstance = {
-              id: uid(),
-              type: def.type,
-              x: 80 + (activePreset.widgets.length % 4) * 300,
-              y: 80 + (activePreset.widgets.length % 3) * 200,
-              w: def.w,
-              h: def.h
-            }
-            void setWidget(activePreset.id, w)
-            setAdding(null)
-          }}
-          adding={adding}
-          setAdding={setAdding}
-          sessions={sessions}
-        />
-
-        {/* mixer */}
-        <Mixer preset={activePreset} />
-
-        {/* ambient embed (degrades offline) */}
-        {activePreset.ambientEmbedUrl && (
-          <div className="glass-panel absolute bottom-3 left-3 z-30 w-80 overflow-hidden rounded-token border border-line">
-            <div className="flex items-center justify-between px-3 py-1.5 text-[0.78em] text-ink-muted">
-              Ambient
-              <button className="focus-ring rounded p-0.5 hover:text-ink" aria-label="Hide ambient embed" onClick={() => void updatePreset(activePreset.id, { ambientEmbedUrl: undefined })}>
-                <X size={12} />
-              </button>
-            </div>
-            <iframe
-              title="Ambient embed"
-              src={activePreset.ambientEmbedUrl}
-              className="h-36 w-full border-0"
-              allow="autoplay; encrypted-media"
-            />
-          </div>
-        )}
-
-        {/* guard nudge */}
-        {nudge && (
-          <div className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2">
-            <div className="elev-overlay flex items-center gap-3 rounded-token-lg border border-warn/50 bg-raised px-4 py-3">
-              <AlertTriangle size={18} className="text-warn" />
-              <span className="text-[0.92em]">Still locked down?</span>
-              <Button size="sm" variant="soft" onClick={() => setNudge(false)}>
-                Stay
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => void exit(false)}>
-                Exit
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* session summary */}
+        </Modal>
+      )}
       <Modal
         open={summary !== null}
-        onClose={() => void exit(false)}
-        title="Session complete"
+        title="Session saved"
+        onClose={() => {
+          setSummary(null)
+          navigate('/')
+        }}
         footer={
-          <Button variant="primary" onClick={() => void exit(false)}>
-            Back to Elion
+          <Button
+            onClick={() => {
+              setSummary(null)
+              navigate('/')
+            }}
+          >
+            Back to dashboard
           </Button>
         }
       >
         {summary && (
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-token bg-surface/50 p-4">
-              <div className="text-[1.8em] font-bold tabular-nums" style={{ fontSize: 'var(--metric-size, 1.8em)' }}>
-                {minutesLabel(summary.ms)}
-              </div>
-              <div className="text-[0.75em] text-ink-faint">focused</div>
+          <div className="session-summary">
+            <div>
+              <strong className="metric">{minutesLabel(summary.ms)}</strong>
+              <span>Session time</span>
             </div>
-            <div className="rounded-token bg-surface/50 p-4">
-              <div className="text-[1.8em] font-bold tabular-nums">{summary.cycles}</div>
-              <div className="text-[0.75em] text-ink-faint">pomodoro cycles</div>
+            <div>
+              <strong className="metric">{summary.cycles}</strong>
+              <span>Focus intervals</span>
             </div>
-            <div className="rounded-token bg-surface/50 p-4">
-              <div className="text-[1.8em] font-bold tabular-nums">{summary.interruptions}</div>
-              <div className="text-[0.75em] text-ink-faint">interruptions</div>
+            <div>
+              <strong className="metric">{summary.interruptions}</strong>
+              <span>Interruptions</span>
             </div>
           </div>
         )}
-        <p className="mt-3 text-center text-[0.8em] text-ink-faint">
-          Saved to Focus history and your Profile stats.
+        <p className="summary-note">
+          Saved to Focus history and your Profile. A little progress is still progress.
         </p>
       </Modal>
-      <Toaster position="top" />
-    </DndContext>
-  )
-}
-
-function SessionClock({ start }: { start: string }) {
-  const [, force] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => force((x) => x + 1), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const ms = Date.now() - new Date(start).getTime()
-  const m = Math.floor(ms / 60000)
-  const s = Math.floor((ms % 60000) / 1000)
-  return (
-    <span className="glass-panel flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[0.85em] tabular-nums">
-      <Clock3 size={13} className="text-primary" />
-      {`${Math.floor(m / 60) > 0 ? Math.floor(m / 60) + ':' : ''}${`${m % 60}`.padStart(2, '0')}:${`${s}`.padStart(2, '0')}`}
-    </span>
-  )
-}
-
-function PresetPreview({ p }: { p: LockdownPreset }) {
-  const theme = useThemeStore((s) => s.theme)
-  const reduced = useThemeStore((s) => s.reducedMotion)
-  const [url, setUrl] = useState<string | null>(null)
-  const blobId = p.wallpaper.tier === 'static' || p.wallpaper.tier === 'video' ? p.wallpaper.blobId : undefined
-  useEffect(() => {
-    let alive = true
-    let u: string | null = null
-    if (blobId) {
-      void useLockdownStore.getState().getBlob(blobId).then((b) => {
-        if (!alive || !b) return
-        u = URL.createObjectURL(b.data)
-        if (alive) setUrl(u)
-      })
-    }
-    return () => {
-      alive = false
-      if (u) URL.revokeObjectURL(u)
-    }
-  }, [blobId])
-
-  if (p.wallpaper.tier === 'scene3d') {
-    return (
-      <div
-        className="relative h-24 overflow-hidden rounded-token"
-        style={{ background: 'linear-gradient(135deg, var(--c1), var(--c2) 55%, var(--c5))', opacity: 0.85 }}
-      >
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 30% 40%, rgba(255,255,255,0.25), transparent 45%)' }} />
-        <span className="absolute bottom-1.5 right-2 rounded-sm bg-black/30 px-1.5 py-0.5 text-[0.62em] font-semibold text-white">
-          3D · {p.wallpaper.scene ?? 'particles'}
-        </span>
-        {reduced && (
-          <span className="absolute bottom-1.5 left-2 rounded-sm bg-black/30 px-1.5 py-0.5 text-[0.62em] text-white">static fallback</span>
-        )}
-      </div>
-    )
-  }
-  return (
-    <div className="relative h-24 overflow-hidden rounded-token bg-sunken">
-      {url ? (
-        p.wallpaper.tier === 'video' ? (
-          <video src={url} muted loop autoPlay className="h-full w-full object-cover" />
-        ) : (
-          <img src={url} alt="" className="h-full w-full object-cover" />
-        )
-      ) : (
-        <div
-          className="h-full w-full"
-          style={{
-            background: `linear-gradient(120deg, ${theme.seed.h} 30%, hsl(${theme.seed.h} 50% 20%) 60%, hsl(${(theme.seed.h + 40) % 360} 45% 30%))`,
-            filter: 'hue-rotate(0deg)'
-          }}
-        />
-      )}
-      {!url && (
-        <span className="absolute bottom-1.5 right-2 rounded-sm bg-black/30 px-1.5 py-0.5 text-[0.62em] font-semibold text-white">
-          Built-in wallpaper
-        </span>
-      )}
-    </div>
+      {historyOpen && <FocusHistory onClose={() => setHistoryOpen(false)} />}
+      <Toaster position={active ? 'top' : 'bottom'} />
+    </>
   )
 }
 
@@ -444,15 +518,10 @@ function PresetEditor({ preset, onDone }: { preset: LockdownPreset; onDone: () =
   const [scene, setScene] = useState(preset.wallpaper.scene ?? 'particles')
   const [embed, setEmbed] = useState(preset.ambientEmbedUrl ?? '')
   const [themeOverride, setThemeOverride] = useState(preset.themeOverride ?? '')
+  const [pomodoro, setPomodoro] = useState(preset.pomodoro)
 
   return (
-    <div className="elev-raised mt-6 rounded-token-lg border border-line bg-raised p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-[1.1em] font-semibold">Edit preset</h2>
-        <Button size="sm" variant="ghost" onClick={onDone}>
-          Done
-        </Button>
-      </div>
+    <div className="preset-editor">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-[0.8em] text-ink-muted">Name</span>
@@ -510,17 +579,54 @@ function PresetEditor({ preset, onDone }: { preset: LockdownPreset; onDone: () =
                     const f = e.target.files?.[0]
                     if (!f) return
                     const id = uid()
-                    await putBlob({ id, kind: tier === 'video' ? 'video' : 'wallpaper', name: f.name, data: f })
-                    void updatePreset(preset.id, { wallpaper: { ...preset.wallpaper, tier, blobId: id, videoMuted: true } })
+                    await putBlob({
+                      id,
+                      kind: tier === 'video' ? 'video' : 'wallpaper',
+                      name: f.name,
+                      data: f
+                    })
+                    void updatePreset(preset.id, {
+                      wallpaper: { ...preset.wallpaper, tier, blobId: id, videoMuted: true }
+                    })
                   }}
                 />
               </label>
             )}
           </div>
         </div>
+        <div className="grid grid-cols-3 gap-2 md:col-span-2">
+          {(
+            [
+              { key: 'workMin', label: 'Focus minutes', max: 180 },
+              { key: 'breakMin', label: 'Break minutes', max: 60 },
+              { key: 'goalCycles', label: 'Intervals', max: 12 }
+            ] as const
+          ).map(({ key, label, max }) => (
+            <label key={key}>
+              <span className="text-xs text-ink-muted">{label}</span>
+              <Input
+                type="number"
+                min={1}
+                max={max}
+                value={pomodoro[key]}
+                aria-label={label}
+                onChange={(e) =>
+                  setPomodoro({ ...pomodoro, [key]: Math.min(max, Math.max(1, Number(e.target.value) || 1)) })
+                }
+              />
+            </label>
+          ))}
+        </div>
         <label className="block">
-          <span className="mb-1 block text-[0.8em] text-ink-muted">Ambient embed URL (YouTube/Spotify embed)</span>
-          <Input value={embed} onChange={(e) => setEmbed(e.target.value)} placeholder="https://www.youtube.com/embed/…" aria-label="Ambient embed URL" />
+          <span className="mb-1 block text-[0.8em] text-ink-muted">
+            Ambient embed URL (YouTube/Spotify embed)
+          </span>
+          <Input
+            value={embed}
+            onChange={(e) => setEmbed(e.target.value)}
+            placeholder="https://www.youtube.com/embed/…"
+            aria-label="Ambient embed URL"
+          />
         </label>
       </div>
       <div className="mt-4 flex justify-end">
@@ -529,17 +635,22 @@ function PresetEditor({ preset, onDone }: { preset: LockdownPreset; onDone: () =
           onClick={() => {
             void updatePreset(preset.id, {
               name: name.trim() || preset.name,
-              wallpaper: { ...preset.wallpaper, tier, scene: tier === 'scene3d' ? scene : preset.wallpaper.scene },
+              pomodoro,
+              wallpaper: {
+                ...preset.wallpaper,
+                tier,
+                scene: tier === 'scene3d' ? scene : preset.wallpaper.scene
+              },
               ambientEmbedUrl: embed.trim() || undefined,
               themeOverride: themeOverride || undefined
             })
+            useToasts.getState().push('Changes saved', 'success')
             onDone()
           }}
         >
-          Save preset
+          Save changes
         </Button>
       </div>
     </div>
   )
 }
-

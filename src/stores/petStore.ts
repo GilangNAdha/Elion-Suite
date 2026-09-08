@@ -14,7 +14,12 @@ export const usePetStore = create<PetState>()((set, get) => ({
   mood: 'idle',
   since: new Date().toISOString(),
   happyUntil: 0,
-  bumpHappy: () => set({ happyUntil: Date.now() + 10 * 60 * 1000 }),
+  bumpHappy: () =>
+    set((s) => ({
+      happyUntil: Date.now() + 10 * 60 * 1000,
+      mood: s.mood === 'focused' ? 'focused' : 'happy',
+      since: new Date().toISOString()
+    })),
   tick: ({ focusActive, overdueCount, doneToday, hour }) => {
     const current = get().mood
     let mood: PetMoodState['mood'] = 'idle'

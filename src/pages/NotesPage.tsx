@@ -37,7 +37,12 @@ export function NotesPage() {
               ← All notes
             </button>
             <span className="flex-1" />
-            <Button size="sm" variant="primary" icon={<Pencil size={13} />} onClick={() => navigate(`/notes/${current.id}/edit`)}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Pencil size={13} />}
+              onClick={() => navigate(`/notes/${current.id}/edit`)}
+            >
               Edit
             </Button>
           </div>
@@ -56,7 +61,8 @@ export function NotesPage() {
             Notes
           </h1>
           <p className="text-[0.88em] text-ink-muted">
-            Your personal branch of the Workspace tree — one editor, one store, synced with Lockdown’s notes widget.
+            Your personal branch of the Workspace tree — one editor, one store, synced with Lockdown’s notes
+            widget.
           </p>
         </div>
         <span className="flex-1" />
@@ -64,7 +70,9 @@ export function NotesPage() {
           variant="primary"
           icon={<Plus size={14} />}
           onClick={async () => {
-            const p = await usePagesStore.getState().createPage({ title: 'Untitled note', branch: 'personal' })
+            const p = await usePagesStore
+              .getState()
+              .createPage({ title: 'Untitled note', branch: 'personal' })
             navigate(`/notes/${p.id}/edit`)
           }}
         >
@@ -79,7 +87,7 @@ export function NotesPage() {
           {personal.map((p) => (
             <button
               key={p.id}
-              className="focus-ring elev-raised group rounded-token border border-line bg-raised p-4 text-left transition-transform hover:-translate-y-0.5"
+              className="focus-ring elev-raised group rounded-token border border-line bg-raised p-4 text-left transition-transform "
               onClick={() => navigate(`/notes/${p.id}`)}
             >
               <div className="truncate text-[0.98em] font-semibold group-hover:text-primary">{p.title}</div>

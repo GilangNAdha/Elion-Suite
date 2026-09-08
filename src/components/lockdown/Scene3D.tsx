@@ -2,7 +2,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useThemeStore } from '../../stores/themeStore'
-import { deriveTheme } from '../../tokens/theme'
+import { deriveTheme, colorRgb } from '../../tokens/theme'
 
 /**
  * 3D wallpaper engine (R3F). Theme-tinted particle field, animated gradient
@@ -18,7 +18,11 @@ export function Scene3D({ kind }: { kind?: string }) {
 
   return (
     <div className="absolute inset-0" style={{ background: 'var(--bg)' }} aria-hidden>
-      <Canvas camera={{ position: [0, 0, 10], fov: 55 }} dpr={[1, 1.5]} gl={{ antialias: false, powerPreference: 'low-power' }}>
+      <Canvas
+        camera={{ position: [0, 0, 10], fov: 55 }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: false, powerPreference: 'low-power' }}
+      >
         <ambientLight intensity={0.6} />
         <pointLight position={[6, 4, 8]} intensity={40} color={accent} />
         <pointLight position={[-6, -3, 4]} intensity={30} color={primary} />
@@ -71,7 +75,14 @@ function Particles({ count, color, color2 }: { count: number; color: string; col
   })
   return (
     <points ref={ref} geometry={geo}>
-      <pointsMaterial size={0.07} vertexColors transparent opacity={0.85} sizeAttenuation depthWrite={false} />
+      <pointsMaterial
+        size={0.07}
+        vertexColors
+        transparent
+        opacity={0.85}
+        sizeAttenuation
+        depthWrite={false}
+      />
     </points>
   )
 }
@@ -138,24 +149,7 @@ function OrbitShape({ color, wire }: { color: string; wire: string }) {
 }
 
 function hexFromCss(css: string): string {
-  const m = css.match(/hsl\(([\d.]+) ([\d.]+)% ([\d.]+)%/)
-  if (!m) return '#8888ff'
-  const h = Number(m[1]) / 360
-  const s = Number(m[2]) / 100
-  const l = Number(m[3]) / 100
-  const c = (1 - Math.abs(2 * l - 1)) * s
-  const hp = h * 6
-  const x = c * (1 - Math.abs((hp % 2) - 1))
-  let r = 0
-  let g = 0
-  let b = 0
-  if (hp < 1) [r, g, b] = [c, x, 0]
-  else if (hp < 2) [r, g, b] = [x, c, 0]
-  else if (hp < 3) [r, g, b] = [0, c, x]
-  else if (hp < 4) [r, g, b] = [0, x, c]
-  else if (hp < 5) [r, g, b] = [x, 0, c]
-  else [r, g, b] = [c, 0, x]
-  const mm = l - c / 2
-  const to = (v: number) => Math.round((v + mm) * 255).toString(16).padStart(2, '0')
-  return `#${to(r)}${to(g)}${to(b)}`
+  return `#${colorRgb(css)
+    .map((channel) => Math.round(channel).toString(16).padStart(2, '0'))
+    .join('')}`
 }

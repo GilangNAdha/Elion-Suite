@@ -1,10 +1,34 @@
+import { DictationButton } from '../Dictation'
+import { voiceDictation } from '../../lib/voice/VoiceDictationService'
+import { captureVoiceTarget, registerDictationEditor } from '../../lib/voice/textTarget'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import {
-  Type, Heading1, Heading2, Heading3, List, ListOrdered, ListTodo,
-  Quote, Code, AlertTriangle, Minus, Image, Images, Columns2, Table2,
-  GripVertical, MessageSquare, Trash2, ChevronDown, Mic, Upload,
-  Frame, GitBranch, Swords, Copy
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  ListTodo,
+  Quote,
+  Code,
+  AlertTriangle,
+  Minus,
+  Image,
+  Images,
+  Columns2,
+  Table2,
+  GripVertical,
+  MessageSquare,
+  Trash2,
+  ChevronDown,
+  Mic,
+  Upload,
+  Frame,
+  GitBranch,
+  Swords,
+  Copy
 } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Block, BlockType } from '../../lib/types'
@@ -44,8 +68,22 @@ export const BLOCK_ICON: Record<BlockType, ReactNode> = {
 
 /** Slash menu (§15.2) — content block types, in insertion order. */
 const SLASH_TYPES: BlockType[] = [
-  'paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'numbered', 'todo',
-  'quote', 'code', 'callout', 'divider', 'image', 'gallery', 'columns', 'frame', 'duel'
+  'paragraph',
+  'heading1',
+  'heading2',
+  'heading3',
+  'bullet',
+  'numbered',
+  'todo',
+  'quote',
+  'code',
+  'callout',
+  'divider',
+  'image',
+  'gallery',
+  'columns',
+  'frame',
+  'duel'
 ]
 
 const TYPE_CLASS: Record<BlockType, string> = {
@@ -57,7 +95,7 @@ const TYPE_CLASS: Record<BlockType, string> = {
   numbered: 'text-[1em] leading-relaxed',
   todo: 'text-[1em] leading-relaxed',
   quote: 'text-[1.02em] italic leading-relaxed',
-  code: 'font-mono text-[0.85em] leading-relaxed whitespace-pre-wrap',
+  code: 'elion-code whitespace-pre-wrap',
   callout: 'text-[0.95em] leading-relaxed',
   divider: '',
   image: 'text-[0.8em] text-ink-muted',
@@ -128,10 +166,24 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (document.activeElement !== el && (el.textContent ?? '') !== block.content) {
+    if ((el.textContent ?? '') !== block.content) {
       el.textContent = block.content
     }
   }, [block.content, block.id])
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element || readOnly) return
+    return registerDictationEditor(element, {
+      beforeCapture: () => session.commitTextEdit(block.id),
+      commit: (content) => {
+        session.commit(`Dictated into ${BLOCK_LABEL[block.type].toLowerCase()}`, (cur) =>
+          cur.map((b) => (b.id === block.id ? { ...b, content } : b))
+        )
+        session.focusContent.current.set(block.id, content)
+      }
+    })
+  }, [block.id, block.type, readOnly, session.commit, session.commitTextEdit, session.focusContent])
 
   useEffect(() => setSlashIndex(0), [slashQuery])
 
@@ -168,7 +220,10 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
           block.type === 'todo' && block.checked ? 'line-through opacity-60' : ''
         } ${slashOpen ? 'opacity-40' : ''}`}
         style={{ whiteSpace: 'pre-wrap' }}
-        onInput={(e) => session.setBlockContent(block.id, e.currentTarget.textContent ?? '')}
+        onInput={(e) => {
+          delete e.currentTarget.dataset.dictationEdit
+          session.setBlockContent(block.id, e.currentTarget.textContent ?? '')
+        }}
         onFocus={() => {
           session.focusContent.current.set(block.id, block.content)
         }}
@@ -199,7 +254,10 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
           if (e.key === 'Enter' && !e.shiftKey && onEnter) {
             e.preventDefault()
             onEnter()
-          } else if ((e.key === 'Delete' || e.key === 'Backspace') && (e.currentTarget.textContent ?? '') === '') {
+          } else if (
+            (e.key === 'Delete' || e.key === 'Backspace') &&
+            (e.currentTarget.textContent ?? '') === ''
+          ) {
             e.preventDefault()
             session.remove([block.id])
           }
@@ -209,6 +267,11 @@ export function Editable({ block, session, onEnter, readOnly = false }: Editable
           const t = e.clipboardData.getData('text/plain')
           document.execCommand('insertText', false, t)
         }}
+      />
+      <DictationButton
+        className="block-dictation"
+        label={`Dictate into ${BLOCK_LABEL[block.type].toLowerCase()}`}
+        getTarget={() => ref.current}
       />
       {slashOpen && (
         <div
@@ -271,7 +334,11 @@ export function BlockView({
       body = (
         <div className="w-full">
           {src ? (
-            <img src={src} alt={block.content || 'image'} className="max-h-96 w-full rounded-token object-cover" />
+            <img
+              src={src}
+              alt={block.content || 'image'}
+              className="max-h-96 w-full rounded-token object-cover"
+            />
           ) : (
             <div className="flex h-32 items-center justify-center rounded-token border border-dashed border-line text-ink-faint">
               <Image size={22} />
@@ -297,9 +364,13 @@ export function BlockView({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {items.map((it, i) => (
             <figure key={i} className="overflow-hidden rounded-token border border-line">
-              {it.src && <img src={it.src} alt={it.caption || 'gallery image'} className="h-28 w-full object-cover" />}
+              {it.src && (
+                <img src={it.src} alt={it.caption || 'gallery image'} className="h-28 w-full object-cover" />
+              )}
               {it.caption && (
-                <figcaption className="truncate px-2 py-1 text-[0.75em] text-ink-muted">{it.caption}</figcaption>
+                <figcaption className="truncate px-2 py-1 text-[0.75em] text-ink-muted">
+                  {it.caption}
+                </figcaption>
               )}
             </figure>
           ))}
@@ -337,7 +408,12 @@ export function BlockView({
                 .filter((b): b is Block => !!b)
                 .sort((a, b) => a.order - b.order)
                 .map((c) => (
-                  <BlockView key={c.id} block={c} session={session} selected={session.selection.includes(c.id)} />
+                  <BlockView
+                    key={c.id}
+                    block={c}
+                    session={session}
+                    selected={session.selection.includes(c.id)}
+                  />
                 ))}
             </div>
           ))}
@@ -364,9 +440,7 @@ export function BlockView({
           }}
         />
       )
-      const kids = session.blocks
-        .filter((b) => b.parentId === block.id)
-        .sort((a, b) => a.order - b.order)
+      const kids = session.blocks.filter((b) => b.parentId === block.id).sort((a, b) => a.order - b.order)
       // Both modes show the children — in Edgeless they are stacked inside the
       // frame chrome (free-positioned blocks that land on the frame are
       // re-parented via drag-drop instead).
@@ -381,7 +455,9 @@ export function BlockView({
             ))}
             {kids.length === 0 && (
               <p className="text-[0.8em] text-ink-faint">
-                {edgeless ? 'Drop blocks onto this frame to group them.' : 'Drag blocks here (or insert inside) to group them.'}
+                {edgeless
+                  ? 'Drop blocks onto this frame to group them.'
+                  : 'Drag blocks here (or insert inside) to group them.'}
               </p>
             )}
           </div>
@@ -394,7 +470,11 @@ export function BlockView({
       body = (
         <DuelPet
           compact
-          mood={moodProp === 'idle' || moodProp === 'happy' || moodProp === 'worried' ? (moodProp as 'idle' | 'happy' | 'worried') : undefined}
+          mood={
+            moodProp === 'idle' || moodProp === 'happy' || moodProp === 'worried'
+              ? (moodProp as 'idle' | 'happy' | 'worried')
+              : undefined
+          }
         />
       )
       break
@@ -424,13 +504,21 @@ export function BlockView({
     case 'shape': {
       const kind = String(block.props.kind ?? 'rect')
       const fill = String(block.props.fill ?? 'var(--primary-soft)')
-      const h = edgeless ? Math.max(60, (block.pos?.h ?? 100)) : 90
+      const h = edgeless ? Math.max(60, block.pos?.h ?? 100) : 90
       body = (
         <svg viewBox={`0 0 200 ${h}`} className="h-auto w-full" aria-label="Shape">
-          {kind === 'rect' && <rect x="2" y="2" width="196" height={h - 4} rx="10" fill={fill} stroke="var(--line-strong)" />}
-          {kind === 'ellipse' && <ellipse cx="100" cy={h / 2} rx="98" ry={h / 2 - 2} fill={fill} stroke="var(--line-strong)" />}
+          {kind === 'rect' && (
+            <rect x="2" y="2" width="196" height={h - 4} rx="10" fill={fill} stroke="var(--line-strong)" />
+          )}
+          {kind === 'ellipse' && (
+            <ellipse cx="100" cy={h / 2} rx="98" ry={h / 2 - 2} fill={fill} stroke="var(--line-strong)" />
+          )}
           {kind === 'diamond' && (
-            <polygon points={`100,2 ${198},${h / 2} 100,${h - 2} 2,${h / 2}`} fill={fill} stroke="var(--line-strong)" />
+            <polygon
+              points={`100,2 ${198},${h / 2} 100,${h - 2} 2,${h / 2}`}
+              fill={fill}
+              stroke="var(--line-strong)"
+            />
           )}
         </svg>
       )
@@ -441,7 +529,14 @@ export function BlockView({
       const to = (block.props.to as { x: number; y: number } | undefined) ?? { x: 200, y: 60 }
       body = (
         <svg viewBox="0 0 200 100" className="h-auto w-full overflow-visible" aria-label="Arrow">
-          <line x1={from.x / 2} y1={from.y / 2} x2={to.x / 2} y2={to.y / 2} stroke="var(--ink-muted)" strokeWidth="2" />
+          <line
+            x1={from.x / 2}
+            y1={from.y / 2}
+            x2={to.x / 2}
+            y2={to.y / 2}
+            stroke="var(--ink-muted)"
+            strokeWidth="2"
+          />
           <polygon
             points={`${to.x / 2},${to.y / 2} ${to.x / 2 - 8},${to.y / 2 - 5} ${to.x / 2 - 8},${to.y / 2 + 5}`}
             fill="var(--ink-muted)"
@@ -452,10 +547,19 @@ export function BlockView({
     }
     case 'pen': {
       const pts = (block.props.points as number[] | undefined) ?? []
-      const str = pts.map((v, i) => `${(i % 2 === 0 ? v : v / 2) / 2},${(i % 2 === 1 ? v : v / 2) / 2}`).join(' ')
+      const str = pts
+        .map((v, i) => `${(i % 2 === 0 ? v : v / 2) / 2},${(i % 2 === 1 ? v : v / 2) / 2}`)
+        .join(' ')
       body = (
         <svg viewBox="0 0 200 100" className="h-auto w-full overflow-visible" aria-label="Pen stroke">
-          <polyline points={str} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline
+            points={str}
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )
       break
@@ -526,7 +630,13 @@ export function BlockView({
       ) : block.type === 'divider' ? (
         body
       ) : (
-        <div className={block.type === 'todo' || block.type === 'bullet' || block.type === 'numbered' ? 'flex items-start gap-2' : ''}>
+        <div
+          className={
+            block.type === 'todo' || block.type === 'bullet' || block.type === 'numbered'
+              ? 'flex items-start gap-2'
+              : ''
+          }
+        >
           {listMarker}
           {body}
         </div>
@@ -536,17 +646,13 @@ export function BlockView({
 }
 
 export function nullAfter(block: Block, session: EditorSession): string | null {
-  const sibs = session.blocks
-    .filter((b) => b.parentId === block.parentId)
-    .sort((a, b) => a.order - b.order)
+  const sibs = session.blocks.filter((b) => b.parentId === block.parentId).sort((a, b) => a.order - b.order)
   const next = sibs.find((b) => b.order > block.order)
   return next?.id ?? null
 }
 
 function nullBefore(block: Block, session: EditorSession): string | null {
-  const sibs = session.blocks
-    .filter((b) => b.parentId === block.parentId)
-    .sort((a, b) => b.order - a.order)
+  const sibs = session.blocks.filter((b) => b.parentId === block.parentId).sort((a, b) => b.order - a.order)
   const prev = sibs.find((b) => b.order < block.order)
   return prev?.id ?? null
 }
@@ -576,7 +682,11 @@ export function BlockToolbar({
   return (
     <div
       className={`absolute -top-3 right-2 z-20 flex items-center gap-0.5 rounded-token-sm border border-line bg-raised p-0.5 shadow-sm transition-opacity ${
-        isDragging ? 'opacity-30' : session.selection.includes(block.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        isDragging
+          ? 'opacity-30'
+          : session.selection.includes(block.id)
+            ? 'opacity-100'
+            : 'opacity-0 group-hover:opacity-100'
       }`}
     >
       <span
@@ -617,16 +727,43 @@ export function BlockToolbar({
         />
         <MenuSep />
         <MenuLabel>Convert to…</MenuLabel>
-        {(['heading1', 'heading2', 'heading3', 'paragraph', 'todo', 'bullet', 'numbered', 'quote', 'code', 'callout', 'text'] as BlockType[])
+        {(
+          [
+            'heading1',
+            'heading2',
+            'heading3',
+            'paragraph',
+            'todo',
+            'bullet',
+            'numbered',
+            'quote',
+            'code',
+            'callout',
+            'text'
+          ] as BlockType[]
+        )
           .filter((t) => t !== block.type)
           .map((t) => (
-            <MenuItem key={t} icon={BLOCK_ICON[t]} label={BLOCK_LABEL[t]} onClick={() => session.convert(block.id, t)} />
+            <MenuItem
+              key={t}
+              icon={BLOCK_ICON[t]}
+              label={BLOCK_LABEL[t]}
+              onClick={() => session.convert(block.id, t)}
+            />
           ))}
         {block.type === 'image' && (
-          <MenuItem icon={BLOCK_ICON.gallery} label="Gallery" onClick={() => session.convert(block.id, 'gallery')} />
+          <MenuItem
+            icon={BLOCK_ICON.gallery}
+            label="Gallery"
+            onClick={() => session.convert(block.id, 'gallery')}
+          />
         )}
         {block.type === 'gallery' && (
-          <MenuItem icon={BLOCK_ICON.image} label="Single image" onClick={() => session.convert(block.id, 'image')} />
+          <MenuItem
+            icon={BLOCK_ICON.image}
+            label="Single image"
+            onClick={() => session.convert(block.id, 'image')}
+          />
         )}
         <MenuSep />
         <MenuLabel>Background</MenuLabel>
@@ -635,17 +772,29 @@ export function BlockToolbar({
             key={b}
             label={b === 'surface' ? 'Surface' : b === 'raised' ? 'Raised' : b}
             active={String(block.props.bg ?? '') === b}
-            onClick={() => session.patchBlock(block.id, { props: { ...block.props, bg: String(block.props.bg ?? '') === b ? '' : b } })}
+            onClick={() =>
+              session.patchBlock(block.id, {
+                props: { ...block.props, bg: String(block.props.bg ?? '') === b ? '' : b }
+              })
+            }
           />
         ))}
         <MenuItem
           label="Border"
           active={!!block.props.border}
-          onClick={() => session.patchBlock(block.id, { props: { ...block.props, border: !block.props.border ? true : undefined } })}
+          onClick={() =>
+            session.patchBlock(block.id, {
+              props: { ...block.props, border: !block.props.border ? true : undefined }
+            })
+          }
         />
         <MenuSep />
         <MenuItem icon={<MessageSquare size={14} />} label="Comments" onClick={onOpenComments} />
-        <MenuItem icon={<Mic size={14} />} label="Dictate (voice)" onClick={() => void dictation(block, session)} />
+        <MenuItem
+          icon={<Mic size={14} />}
+          label="Dictate (voice)"
+          onClick={() => void dictation(block, session)}
+        />
         <MenuSep />
         <MenuItem
           icon={<Trash2 size={14} />}
@@ -660,32 +809,6 @@ export function BlockToolbar({
 }
 
 async function dictation(block: Block, session: EditorSession): Promise<void> {
-  const settings = useSettingsStore.getState()
-  const push = useToasts.getState().push
-  if (!settings.stt.enabled) {
-    push('Speech-to-text is disabled in Settings', 'error')
-    return
-  }
-  // lazy: the Whisper WASM runtime (~0.8 MB chunk) only loads on first use
-  const { sttSupported, transcribe, startRecording } = await import('../../lib/stt')
-  if (!sttSupported()) {
-    push('Microphone not available in this browser', 'error')
-    return
-  }
-  try {
-    const rec = await startRecording()
-    const audio = await rec.stop()
-    const text = await transcribe(audio, settings.stt.model)
-    if (text) {
-      session.commit(`Dictated into ${BLOCK_LABEL[block.type].toLowerCase()}`, (cur) =>
-        cur.map((b) => (b.id === block.id ? { ...b, content: (b.content ? b.content + ' ' : '') + text } : b))
-      )
-      session.requestFocus(block.id)
-      push('Transcription inserted', 'success')
-    } else {
-      push('No speech detected')
-    }
-  } catch {
-    push('Microphone unavailable or permission denied', 'error')
-  }
+  const element = document.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`)
+  await voiceDictation.toggle(captureVoiceTarget(element))
 }

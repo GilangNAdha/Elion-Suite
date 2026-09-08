@@ -26,45 +26,28 @@ export function AppShell() {
     return () => clearInterval(t)
   }, [itemsReady])
 
-  // Pet mood heartbeat (shared with Lockdown pet widget)
-  useEffect(() => {
-    const compute = () => {
-      const s = useItemsStore.getState()
-      const overdue = Object.values(s.items).filter((i) => {
-        if (!i.dueDate || i.dueDate >= new Date().toISOString().slice(0, 10)) return false
-        const db = s.databases[i.databaseId ?? '']
-        return !db?.statuses.find((st) => st.id === i.status)?.isDone
-      }).length
-      const doneToday = new Date().toISOString().slice(0, 10)
-      const done = Object.values(s.items).some(
-        (i) => i.type === 'habit' && (i.completions ?? []).includes(doneToday)
-      )
-      tickPet({
-        focusActive: !!useLockdownStore.getState().active,
-        overdueCount: overdue,
-        doneToday: done,
-        hour: new Date().getHours()
-      })
-    }
-    compute()
-    const t = setInterval(compute, 30000)
-    return () => clearInterval(t)
-  }, [tickPet])
-
   const onToggle = (v: boolean) => {
     setCollapsed(v)
     localStorage.setItem('elion-sidebar', v ? '1' : '0')
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-bg text-ink">
+    <div className="app-shell flex h-full min-h-0 bg-bg text-ink">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <Sidebar collapsed={collapsed} onToggle={onToggle} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar />
-        <main key={location.pathname} className="shell-page min-h-0 flex-1 overflow-y-auto">
+        {!location.pathname.startsWith('/workspace') && <TopBar />}
+        <main
+          key={location.pathname}
+          id="main-content"
+          tabIndex={-1}
+          className={`shell-page min-h-0 flex-1 overflow-y-auto ${location.pathname.startsWith('/workspace') ? 'studio-shell-page' : ''}`}
+        >
           <Outlet />
         </main>
-        <BottomDock />
+        {!location.pathname.startsWith('/workspace') && <BottomDock />}
       </div>
       <Toaster />
     </div>

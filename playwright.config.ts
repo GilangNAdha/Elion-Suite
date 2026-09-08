@@ -1,0 +1,31 @@
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  timeout: 45000,
+  expect: { timeout: 10000 },
+  fullyParallel: false,
+  workers: 1,
+  reporter: 'list',
+  use: {
+    baseURL: process.env.ELION_BASE_URL ?? 'http://localhost:5173',
+    viewport: { width: 1440, height: 960 },
+    timezoneId: 'Asia/Jakarta',
+    locale: 'en-GB',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: [
+        '--no-sandbox',
+        '--no-zygote',
+        '--disable-dev-shm-usage',
+        '--use-gl=angle',
+        '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
+        '--use-fake-device-for-media-stream',
+        '--use-fake-ui-for-media-stream'
+      ]
+    }
+  }
+})

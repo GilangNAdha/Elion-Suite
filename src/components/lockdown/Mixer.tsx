@@ -15,6 +15,7 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
   const setMix = useLockdownStore((s) => s.setMix)
   const [open, setOpen] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [playing, setPlaying] = useState(false)
   const [master, setMaster] = useState(0.8)
   const howls = useRef<Map<SoundscapeLayerId, Howl>>(new Map())
 
@@ -28,7 +29,10 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
         src: [soundscapeLoopUrl(layer)],
         loop: true,
         volume: 0,
-        html5: true
+        html5: true,
+        onplay: () => setPlaying(true),
+        onplayerror: () => setPlaying(false),
+        onloaderror: () => setPlaying(false)
       })
       howls.current.set(layer, h)
     }
@@ -39,7 +43,7 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
     // sync layer volumes to the preset mix
     for (const layer of Object.keys(SOUNDSCAPE_LAYERS) as SoundscapeLayerId[]) {
       const target = muted ? 0 : Math.min(1, (mix[layer] ?? 0) * master)
-      const h = howls.current.get(layer)
+      const h = target > 0 ? ensure(layer) : howls.current.get(layer)
       if (h) {
         h.volume(target)
         if (target > 0 && !h.playing()) h.play()
@@ -78,13 +82,19 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
     <div className="absolute bottom-3 right-3 z-30">
       {!open ? (
         <div className="flex items-center gap-1">
-          {anyOn && !muted && (
+          {anyOn && !muted && playing && (
             <span className="glass-panel flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[0.78em] text-ink-muted">
               <Volume2 size={13} className="text-primary" />
-              mix on
+              Soundscape on
             </span>
           )}
-          <Button variant="outline" size="sm" className="glass-panel" icon={<SlidersHorizontal size={13} />} onClick={() => setOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="glass-panel"
+            icon={<SlidersHorizontal size={13} />}
+            onClick={() => setOpen(true)}
+          >
             Soundscape
           </Button>
         </div>
@@ -100,7 +110,11 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
               >
                 <Volume2 size={14} style={{ opacity: muted ? 0.4 : 1 }} />
               </button>
-              <button className="focus-ring rounded p-1 text-ink-muted hover:text-ink" aria-label="Close mixer" onClick={() => setOpen(false)}>
+              <button
+                className="focus-ring rounded p-1 text-ink-muted hover:text-ink"
+                aria-label="Close mixer"
+                onClick={() => setOpen(false)}
+              >
                 <X size={14} />
               </button>
             </div>
@@ -120,7 +134,8 @@ export function Mixer({ preset }: { preset: LockdownPreset }) {
             ))}
           </div>
           <p className="mt-2 text-[0.68em] leading-relaxed text-ink-faint">
-            Layers are generated on-device — no audio files, fully offline. Your mix is saved with this preset.
+            Layers are generated on-device — no audio files, fully offline. Your mix is saved with this
+            preset.
           </p>
         </div>
       )}

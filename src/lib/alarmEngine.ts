@@ -13,7 +13,7 @@ export function useAlarmEngine(): void {
     const tick = async () => {
       const now = new Date()
       const nowISO = now.toISOString()
-      const alarms = await db.alarms.where({ enabled: true }).toArray()
+      const alarms = await db.alarms.filter((alarm) => alarm.enabled).toArray()
       const notify = useNotifyStore.getState()
       for (const a of alarms) {
         const fired = a.lastFired ? new Date(a.lastFired) : null
@@ -28,7 +28,7 @@ export function useAlarmEngine(): void {
         } else if (a.repeat === 'weekly') {
           const d = new Date(now)
           d.setHours(due.getHours(), due.getMinutes(), 0, 0)
-          while (d.getDay() !== due.getDay() && d > now) d.setDate(d.getDate() - 1)
+          while (d.getDay() !== due.getDay() || d > now) d.setDate(d.getDate() - 1)
           dueISO = d.toISOString()
         } else {
           dueISO = a.at
@@ -42,7 +42,12 @@ export function useAlarmEngine(): void {
         if (shouldFire) {
           await db.alarms.update(a.id, { lastFired: nowISO })
           if (a.repeat === 'none') await db.alarms.update(a.id, { enabled: false })
-          void notify.push({ kind: 'alarm', title: `Alarm: ${a.title}`, body: 'Ringing now', link: '/alarms' })
+          void notify.push({
+            kind: 'alarm',
+            title: `Alarm: ${a.title}`,
+            body: 'Ringing now',
+            link: '/alarms'
+          })
         }
       }
     }

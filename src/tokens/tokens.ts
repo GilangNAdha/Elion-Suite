@@ -1,7 +1,6 @@
-// §4 — Static design-token foundation (8px grid, 4-layer elevation, type scale)
-// Theme-aware values are resolved in tokens/theme.ts; these are the fixed
-// structural scales that never change with a theme.
-
+// Elion's fixed structural scale; CSS equivalents live in foundation.css.
+// Theme-aware values are resolved by theme.ts. Art coordinates (sprites, SVG,
+// canvas geometry) are not UI spacing and intentionally stay in source pixels.
 export const SPACE = {
   0: 0,
   25: 1,
@@ -17,40 +16,54 @@ export const SPACE = {
   1600: 96,
   2400: 144
 } as const
-
 export const ELEVATION = ['sunken', 'default', 'raised', 'overlay'] as const
 export type Elevation = (typeof ELEVATION)[number]
-
 export const TYPE_SCALE = {
-  h1: 30,
-  h2: 24,
-  h3: 19,
-  body: 15,
-  small: 13,
-  metric: 44 // big dashboard numbers
+  h1: 32,
+  h2: 28,
+  h3: 24,
+  h4: 20,
+  h5: 16,
+  h6: 14,
+  h7: 12,
+  bodyLarge: 16,
+  body: 14,
+  small: 12,
+  metric: 28,
+  metricMedium: 24,
+  metricSmall: 16,
+  displayMin: 72,
+  displayMax: 96,
+  code: 12,
+  codeLine: 20
 } as const
-
 export const BREAKPOINTS = [375, 768, 1024, 1440] as const
-
-// Easing / timing scale shared by the motion layer (§10)
 export const EASE = {
-  standard: 'cubic-bezier(0.2, 0, 0, 1)',
-  enter: 'cubic-bezier(0, 0, 0.2, 1)',
-  exit: 'cubic-bezier(0.4, 0, 1, 1)',
+  standard: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  enter: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  exit: 'cubic-bezier(0.16, 1, 0.3, 1)',
   t150: 150,
   t200: 200,
-  t300: 300
+  t400: 400
 } as const
-
 export function elevationClass(level: Elevation): string {
-  switch (level) {
-    case 'sunken':
-      return 'elev-sunken'
-    case 'raised':
-      return 'elev-raised'
-    case 'overlay':
-      return 'elev-overlay'
-    case 'default':
-      return ''
-  }
+  return level === 'default' ? '' : `elev-${level}`
 }
+
+// Floating companion dimensions (CSS pixels; normalized positions are persisted).
+export const PET_LAYOUT = {
+  desktopSize: 112,
+  compactSize: 88,
+  focusSize: 80,
+  compactBreakpoint: 600,
+  chromeHeight: 42,
+  inset: 16,
+  topInset: 56,
+  bottomInset: 80,
+  gap: 12,
+  actionsWidth: 232,
+  actionsHeight: 216,
+  chatWidth: 352,
+  chatHeight: 512,
+  keyboardStep: 20
+} as const

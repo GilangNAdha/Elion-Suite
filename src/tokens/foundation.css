@@ -1,0 +1,196 @@
+/* Elion — structural tokens. Color recipes are resolved by theme.ts.
+   This is the only CSS file that defines literal UI lengths and colors. */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-sans.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --void: #0a0e16;
+  --depth: #141b27;
+  --hairline: #232c3d;
+  --fog: #8b93a8;
+  --paper: #edeff6;
+  --wallpaper-ink: #edeff6;
+  --current: #45e0c2;
+  --dusk: #9c87f7;
+  --ember: #f2a65a;
+  --bg: var(--void);
+  --surface: var(--depth);
+  --raised: var(--depth);
+  --sunken: var(--void);
+  --overlay: var(--depth);
+  --ink: var(--paper);
+  --ink-muted: var(--fog);
+  --ink-faint: var(--fog);
+  --line: var(--hairline);
+  --line-strong: #47546c;
+  --primary: var(--current);
+  --primary-soft: color-mix(in srgb, var(--current) 10%, transparent);
+  --on-primary: var(--void);
+  --accent: var(--current);
+  --on-accent: var(--void);
+  --ok: #9bce8c;
+  --warn: #e8c875;
+  --bad: #f58b99;
+  --info: #8bb9ed;
+  --surface-glass: rgba(20, 27, 39, 0.6);
+  --surface-alpha: var(--surface-glass);
+  --glass-blur: 20px;
+  --glass-ink-muted: #c0c6d3;
+  --wallpaper-scrim: rgba(10, 14, 22, 0.68);
+  --shadow-raised: 0 4px 16px rgba(3, 7, 14, 0.16);
+  --shadow-overlay: 0 16px 48px rgba(3, 7, 14, 0.5);
+  --shadow-sunken: none;
+  --shadow-color: rgba(3, 7, 14, 0.45);
+  --backdrop: rgba(3, 7, 14, 0.7);
+  --signature: linear-gradient(135deg, var(--current), var(--dusk));
+  --radius: 12px;
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+  --radius-round: 50%;
+  --radius-pill: 999px;
+  --hairline-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 3px;
+
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --type-xxl: 2rem;
+  --type-xl: 1.75rem;
+  --type-l: 1.5rem;
+  --type-m: 1.25rem;
+  --type-s: 1rem;
+  --type-xs: 0.875rem;
+  --type-xxs: 0.75rem;
+  --type-body-l: 1rem;
+  --type-body: 0.875rem;
+  --type-body-s: 0.75rem;
+  --type-caption: 0.6875rem;
+  --type-metric-l: 1.75rem;
+  --type-metric-m: 1.5rem;
+  --type-metric-s: 1rem;
+  --type-display: clamp(4.5rem, 8vw, 6rem);
+  --leading-heading: 1.2;
+  --leading-body: 1.65;
+  --leading-code: 1.6667;
+  --tracking-heading: -0.035em;
+  --tracking-lozenge: 0.055em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --prose-width: 76ch;
+
+  --space-px: 1px;
+  --space-0: 0px;
+  --space-0_5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1_5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-2_5: 0.625rem;
+  --space-3: 0.75rem;
+  --space-3_5: 0.875rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-9: 2.25rem;
+  --space-10: 2.5rem;
+  --space-11: 2.75rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-28: 7rem;
+  --space-32: 8rem;
+  --space-36: 9rem;
+  --space-40: 10rem;
+  --space-44: 11rem;
+  --space-48: 12rem;
+  --space-52: 13rem;
+  --space-56: 14rem;
+  --space-60: 15rem;
+  --space-64: 16rem;
+  --space-72: 18rem;
+  --space-80: 20rem;
+  --space-96: 24rem;
+  --density: 1;
+  --panel-space: calc(var(--space-6) * var(--density));
+  --cell-space: calc(var(--space-3) * var(--density));
+  --control-height: calc(var(--space-9) * var(--density));
+  --control-height-sm: calc(var(--space-7) * var(--density));
+  --sidebar-width: 13.75rem;
+  --sidebar-collapsed: 4rem;
+  --tree-width: 13rem;
+  --topbar-height: 4rem;
+  --page-width: 90rem;
+  --page-inset: clamp(1rem, 2.6vw, 2.75rem);
+  --dashboard-gap: 1.25rem;
+  --dashboard-aside: 18.5rem;
+  --today-min-height: 21rem;
+  --board-column: 17rem;
+  --board-min-height: 28rem;
+  --focus-ring-size: 23rem;
+  --focus-content-width: 34rem;
+  --dock-height: 3rem;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-micro: 150ms;
+  --duration-page: 400ms;
+  --duration-shell: 200ms;
+  --duration-pulse: 1400ms;
+  /* Mechanical / sprite clocks, not UI transition durations. */
+  --record-period: 8s;
+  --sprite-period: 1s;
+  --pixel-unit: 1px;
+  --pixel-sprite-size: 96px;
+  --pixel-stage-width: 512px;
+  --pixel-stage-height: 256px;
+
+  /* Material tokens: the turntable is a physical illustration, not brand chrome. */
+  --vinyl-edge: #07090c;
+  --vinyl-groove: #24272c;
+  --vinyl-shine: #4a4d53;
+  --vinyl-label: #c9d0d2;
+  --metal-dark: #515963;
+  --metal-mid: #939ca5;
+  --metal-light: #dbe0e3;
+  --metal-plinth: #68717b;
+  --metal-shadow: rgba(0, 0, 0, 0.4);
+  --metal-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.2' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Studio revision: purposeful glow and lighter document chrome. */
+:root {
+  --glow-current: color-mix(in srgb, var(--current) 9%, transparent);
+  --glow-edge: color-mix(in srgb, var(--current) 44%, transparent);
+  --glow-soft: 0 0 24px color-mix(in srgb, var(--current) 13%, transparent);
+  --line-subtle: color-mix(in srgb, var(--line) 62%, transparent);
+  --chrome-hover: color-mix(in srgb, var(--ink) 4%, transparent);
+  --studio-tree-width: 14rem;
+  --studio-rail-width: 3.75rem;
+  --studio-toolbar-height: 3.25rem;
+  --studio-prose-width: 50rem;
+  --studio-canvas-note: 50rem;
+  --glow-period: 6s;
+  --nova-frame-size: 64px;
+  --nova-soft-shadow: 0 12px 32px rgba(4, 10, 20, 0.24);
+  --chat-width: 22rem;
+}
+
+:root {
+  --pet-hover-period: 3s;
+}

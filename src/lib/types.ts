@@ -160,6 +160,12 @@ export interface Block {
   pos?: EdgelessPos
 }
 
+export interface BlockSuiteState {
+  version: 1
+  update: string // base64-encoded Yjs state; media lives in the shared blob table
+  projectionDirty: boolean
+}
+
 export interface PageRecord {
   id: string
   parentId: string | null
@@ -168,6 +174,9 @@ export interface PageRecord {
   branch: 'workspace' | 'personal' // personal = Notes (§7)
   blocks: Block[]
   databaseId: string | null
+  native?: BlockSuiteState
+  editorMode?: 'page' | 'edgeless'
+  favorite?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -180,6 +189,7 @@ export interface PageSnapshot {
   label: string
   auto: boolean
   blocks: Block[]
+  native?: BlockSuiteState
 }
 
 export interface Template {
@@ -252,6 +262,7 @@ export interface WallpaperConfig {
   blobId?: string
   scene?: Scene3DKind
   videoMuted?: boolean
+  builtin?: 'nocturne' | 'forest'
 }
 
 export type WidgetId = 'clock' | 'timer' | 'music' | 'notes' | 'pet' | 'weather'
@@ -274,6 +285,7 @@ export interface LockdownPreset {
   soundscape: SoundscapeMix
   pomodoro: PomodoroConfig
   widgets: WidgetInstance[]
+  layout?: 'centered' | 'free'
   themeOverride?: string
   createdAt: string
   updatedAt: string
@@ -318,12 +330,7 @@ export interface SavedFilter {
 
 // ---------------- Theme ----------------
 
-export type Harmony =
-  | 'complementary'
-  | 'analogous'
-  | 'triadic'
-  | 'split-complementary'
-  | 'monochromatic'
+export type Harmony = 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'monochromatic'
 
 export interface AuroraTheme {
   id: string

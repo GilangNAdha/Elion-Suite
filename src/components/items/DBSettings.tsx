@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { Plus, Trash2, CopyPlus, X } from 'lucide-react'
-import type { Automation, AutomationAction, Priority, PropertyDef, StatusDef, ViewKind, WorkspaceDatabase } from '../../lib/types'
+import type {
+  Automation,
+  AutomationAction,
+  Priority,
+  PropertyDef,
+  StatusDef,
+  ViewKind,
+  WorkspaceDatabase
+} from '../../lib/types'
 import { uid } from '../../lib/types'
 
 function makeAction(kind: string, value: unknown): AutomationAction {
@@ -15,8 +23,25 @@ import { useItemsStore } from '../../stores/itemsStore'
 import { usePagesStore } from '../../stores/pagesStore'
 import { useToasts } from '../ui'
 
-const STATUS_COLORS = ['var(--ink-faint)', 'var(--info)', 'var(--warn)', 'var(--ok)', 'var(--bad)', 'var(--accent)']
-const PROP_TYPES: PropertyDef['type'][] = ['select', 'multiSelect', 'number', 'date', 'checkbox', 'person', 'url', 'relation', 'rollup']
+const STATUS_COLORS = [
+  'var(--ink-faint)',
+  'var(--info)',
+  'var(--warn)',
+  'var(--ok)',
+  'var(--bad)',
+  'var(--accent)'
+]
+const PROP_TYPES: PropertyDef['type'][] = [
+  'select',
+  'multiSelect',
+  'number',
+  'date',
+  'checkbox',
+  'person',
+  'url',
+  'relation',
+  'rollup'
+]
 
 export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: () => void }) {
   const upsertDatabase = useItemsStore((s) => s.upsertDatabase)
@@ -55,14 +80,12 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
     >
       <div className="space-y-5 p-1">
         <div>
-          <label className="mb-1 block text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">Name</label>
+          <label className="mb-1 block text-[0.75em] font-semibold  text-ink-faint">Name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Database name" />
         </div>
 
         <div>
-          <div className="mb-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">
-            Workflow (statuses)
-          </div>
+          <div className="mb-1.5 text-[0.75em] font-semibold  text-ink-faint">Workflow (statuses)</div>
           <div className="space-y-1.5">
             {statuses.map((s, i) => (
               <div key={s.id} className="flex items-center gap-1.5">
@@ -84,14 +107,20 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                   value={s.name}
                   className="h-8"
                   aria-label="Status name"
-                  onChange={(e) => setStatuses((ss) => ss.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                  onChange={(e) =>
+                    setStatuses((ss) => ss.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))
+                  }
                 />
                 <label className="flex items-center gap-1 text-[0.7em] text-ink-muted">
                   <input
                     type="checkbox"
                     className="accent-[var(--primary)]"
                     checked={!!s.isDone}
-                    onChange={(e) => setStatuses((ss) => ss.map((x, xi) => (xi === i ? { ...x, isDone: e.target.checked } : x)))}
+                    onChange={(e) =>
+                      setStatuses((ss) =>
+                        ss.map((x, xi) => (xi === i ? { ...x, isDone: e.target.checked } : x))
+                      )
+                    }
                   />
                   done
                 </label>
@@ -111,16 +140,19 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
             variant="ghost"
             className="mt-1.5"
             icon={<Plus size={13} />}
-            onClick={() => setStatuses((ss) => [...ss, { id: uid(), name: `Stage ${ss.length + 1}`, color: 'var(--info)' }])}
+            onClick={() =>
+              setStatuses((ss) => [
+                ...ss,
+                { id: uid(), name: `Stage ${ss.length + 1}`, color: 'var(--info)' }
+              ])
+            }
           >
             Add status
           </Button>
         </div>
 
         <div>
-          <div className="mb-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">
-            Properties (Notion-style)
-          </div>
+          <div className="mb-1.5 text-[0.75em] font-semibold  text-ink-faint">Properties (Notion-style)</div>
           <div className="space-y-1.5">
             {properties.map((p, i) => (
               <div key={p.id} className="rounded-token border border-line bg-surface/40 p-2">
@@ -129,7 +161,11 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     value={p.name}
                     className="h-8"
                     aria-label="Property name"
-                    onChange={(e) => setProperties((ps) => ps.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                    onChange={(e) =>
+                      setProperties((ps) =>
+                        ps.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x))
+                      )
+                    }
                   />
                   <Select
                     value={p.type}
@@ -137,7 +173,9 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     aria-label="Property type"
                     onChange={(e) =>
                       setProperties((ps) =>
-                        ps.map((x, xi) => (xi === i ? { ...x, type: e.target.value as PropertyDef['type'] } : x))
+                        ps.map((x, xi) =>
+                          xi === i ? { ...x, type: e.target.value as PropertyDef['type'] } : x
+                        )
                       )
                     }
                   >
@@ -165,7 +203,13 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                       setProperties((ps) =>
                         ps.map((x, xi) =>
                           xi === i
-                            ? { ...x, options: e.target.value.split(',').map((o) => o.trim()).filter(Boolean) }
+                            ? {
+                                ...x,
+                                options: e.target.value
+                                  .split(',')
+                                  .map((o) => o.trim())
+                                  .filter(Boolean)
+                              }
                             : x
                         )
                       )
@@ -178,7 +222,9 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     aria-label="Related database"
                     onChange={(e) =>
                       setProperties((ps) =>
-                        ps.map((x, xi) => (xi === i ? { ...x, relationDbId: e.target.value || undefined } : x))
+                        ps.map((x, xi) =>
+                          xi === i ? { ...x, relationDbId: e.target.value || undefined } : x
+                        )
                       )
                     }
                   >
@@ -201,7 +247,14 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                         setProperties((ps) =>
                           ps.map((x, xi) =>
                             xi === i
-                              ? { ...x, rollup: { dbId: e.target.value, field: p.rollup?.field ?? 'storyPoints', op: p.rollup?.op ?? 'sum' } }
+                              ? {
+                                  ...x,
+                                  rollup: {
+                                    dbId: e.target.value,
+                                    field: p.rollup?.field ?? 'storyPoints',
+                                    op: p.rollup?.op ?? 'sum'
+                                  }
+                                }
                               : x
                           )
                         )
@@ -222,7 +275,9 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                       aria-label="Rollup field"
                       onChange={(e) =>
                         setProperties((ps) =>
-                          ps.map((x, xi) => (xi === i ? { ...x, rollup: { ...p.rollup!, field: e.target.value } } : x))
+                          ps.map((x, xi) =>
+                            xi === i ? { ...x, rollup: { ...p.rollup!, field: e.target.value } } : x
+                          )
                         )
                       }
                     >
@@ -239,9 +294,7 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                       onChange={(e) =>
                         setProperties((ps) =>
                           ps.map((x, xi) =>
-                            xi === i
-                              ? { ...x, rollup: { ...p.rollup!, op: e.target.value as 'sum' } }
-                              : x
+                            xi === i ? { ...x, rollup: { ...p.rollup!, op: e.target.value as 'sum' } } : x
                           )
                         )
                       }
@@ -262,27 +315,31 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
             variant="ghost"
             className="mt-1.5"
             icon={<Plus size={13} />}
-            onClick={() => setProperties((ps) => [...ps, { id: uid(), name: `Property ${ps.length + 1}`, type: 'select' }])}
+            onClick={() =>
+              setProperties((ps) => [...ps, { id: uid(), name: `Property ${ps.length + 1}`, type: 'select' }])
+            }
           >
             Add property
           </Button>
         </div>
 
         <div>
-          <div className="mb-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">
+          <div className="mb-1.5 text-[0.75em] font-semibold  text-ink-faint">
             Automations (transition-triggered)
           </div>
           <div className="space-y-1.5">
             {automations.map((a, i) => (
               <div key={a.id} className="rounded-token border border-line bg-surface/40 p-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[0.75em] text-ink-muted">when →</span>
+                  <span className="text-[0.75em] text-ink-muted">When status changes</span>
                   <Select
                     value={a.onStatus}
                     className="h-8 flex-1"
                     aria-label="Trigger status"
                     onChange={(e) =>
-                      setAutomations((as) => as.map((x, xi) => (xi === i ? { ...x, onStatus: e.target.value } : x)))
+                      setAutomations((as) =>
+                        as.map((x, xi) => (xi === i ? { ...x, onStatus: e.target.value } : x))
+                      )
                     }
                   >
                     {statuses.map((s) => (
@@ -314,7 +371,14 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                                     ...x,
                                     actions: x.actions.map((yy, yi) =>
                                       yi === ai
-                                        ? makeAction(e.target.value, e.target.value === 'set-priority' ? 'medium' : e.target.value === 'set-due-days' ? 3 : '')
+                                        ? makeAction(
+                                            e.target.value,
+                                            e.target.value === 'set-priority'
+                                              ? 'medium'
+                                              : e.target.value === 'set-due-days'
+                                                ? 3
+                                                : ''
+                                          )
                                         : yy
                                     )
                                   }
@@ -339,9 +403,7 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                                 ? {
                                     ...x,
                                     actions: x.actions.map((yy, yi) =>
-                                      yi === ai
-                                        ? makeAction(act.kind, e.target.value)
-                                        : yy
+                                      yi === ai ? makeAction(act.kind, e.target.value) : yy
                                     )
                                   }
                                 : x
@@ -358,7 +420,9 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     onClick={() =>
                       setAutomations((as) =>
                         as.map((x, xi) =>
-                          xi === i ? { ...x, actions: [...x.actions, { kind: 'add-label', value: 'flagged' }] } : x
+                          xi === i
+                            ? { ...x, actions: [...x.actions, { kind: 'add-label', value: 'flagged' }] }
+                            : x
                         )
                       )
                     }
@@ -377,7 +441,11 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
             onClick={() =>
               setAutomations((as) => [
                 ...as,
-                { id: uid(), onStatus: statuses[1]?.id ?? statuses[0].id, actions: [{ kind: 'notify', value: 'Moved to new status' }] }
+                {
+                  id: uid(),
+                  onStatus: statuses[1]?.id ?? statuses[0].id,
+                  actions: [{ kind: 'notify', value: 'Moved to new status' }]
+                }
               ])
             }
           >
@@ -386,7 +454,7 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
         </div>
 
         <div>
-          <div className="mb-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">Views</div>
+          <div className="mb-1.5 text-[0.75em] font-semibold  text-ink-faint">Views</div>
           <div className="space-y-1.5">
             {views.map((v, i) => (
               <div key={v.id} className="rounded-token border border-line bg-surface/40 p-2">
@@ -395,14 +463,18 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     value={v.name}
                     className="h-8"
                     aria-label="View name"
-                    onChange={(e) => setViews((vs) => vs.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                    onChange={(e) =>
+                      setViews((vs) => vs.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))
+                    }
                   />
                   <Select
                     value={v.swimlane ?? 'none'}
                     className="h-8 w-28 text-[0.8em]"
                     aria-label="Swimlanes"
                     onChange={(e) =>
-                      setViews((vs) => vs.map((x, xi) => (xi === i ? { ...x, swimlane: e.target.value as 'none' } : x)))
+                      setViews((vs) =>
+                        vs.map((x, xi) => (xi === i ? { ...x, swimlane: e.target.value as 'none' } : x))
+                      )
                     }
                   >
                     <option value="none">No lanes</option>
@@ -429,7 +501,11 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                         value={v.wipLimit ?? ''}
                         onChange={(e) =>
                           setViews((vs) =>
-                            vs.map((x, xi) => (xi === i ? { ...x, wipLimit: e.target.value ? Number(e.target.value) : undefined } : x))
+                            vs.map((x, xi) =>
+                              xi === i
+                                ? { ...x, wipLimit: e.target.value ? Number(e.target.value) : undefined }
+                                : x
+                            )
                           )
                         }
                       />
@@ -437,7 +513,9 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
                     <Toggle
                       label="Sprint only"
                       checked={!!(v as { sprintOnly?: boolean }).sprintOnly}
-                      onChange={(on) => setViews((vs) => vs.map((x, xi) => (xi === i ? { ...x, sprintOnly: on } : x)))}
+                      onChange={(on) =>
+                        setViews((vs) => vs.map((x, xi) => (xi === i ? { ...x, sprintOnly: on } : x)))
+                      }
                     />
                   </div>
                 )}
@@ -467,9 +545,14 @@ export function DBSettings({ db, onClose }: { db: WorkspaceDatabase; onClose: ()
         </div>
 
         <div>
-          <div className="mb-1.5 text-[0.75em] font-semibold uppercase tracking-wider text-ink-faint">Template</div>
+          <div className="mb-1.5 text-[0.75em] font-semibold  text-ink-faint">Template</div>
           <div className="flex gap-1.5">
-            <Input placeholder="Template name" value={tplName} onChange={(e) => setTplName(e.target.value)} aria-label="Database template name" />
+            <Input
+              placeholder="Template name"
+              value={tplName}
+              onChange={(e) => setTplName(e.target.value)}
+              aria-label="Database template name"
+            />
             <Button
               size="sm"
               variant="outline"

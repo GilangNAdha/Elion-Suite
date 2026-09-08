@@ -37,10 +37,11 @@ describe('App boots to Dashboard', () => {
 
     render(React.createElement(App))
 
-    // Store init + seeding is async; real content (not just the splash) must appear.
+    // Wait for a real dashboard heading. The product name also exists on the
+    // splash and is not evidence that the router / async boot completed.
     await waitFor(
       () => {
-        expect(screen.queryByText(/Welcome to Elion|Elion Suite|Project Aurora|Scratchpad|Dashboard/)).not.toBeNull()
+        expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument()
       },
       { timeout: 20000 }
     )
