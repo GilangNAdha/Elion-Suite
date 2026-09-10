@@ -1,5 +1,6 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
 import { AgentPanel } from '../components/settings/AgentPanel'
+import { MonitoringDashboard } from '../components/settings/MonitoringDashboard'
 import { assetUrl } from '../lib/assets'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { useMemo, useRef, useState } from 'react'
@@ -303,6 +304,7 @@ export function SettingsPage() {
       {/* ---------------- agent runtime ---------------- */}
       <Section title="ELION runtime" icon={<Cpu size={15} />} id="runtime">
         <AgentPanel />
+        <MonitoringDashboard />
       </Section>
 
       {/* ---------------- distraction guard ---------------- */}

@@ -17,6 +17,13 @@ export interface AgentEventRecord {
   taskId?: string
   /** data kecil untuk display; JANGAN taruh isi dokumen/credential di sini */
   detail?: string
+  /**
+   * Durasi eksekusi dalam ms — hanya untuk event `tool.completed` /
+   * `tool.failed`, diisi lapisan eksekusi (bukan tebakan UI). Sumber tunggal
+   * metrik latensi di dashboard Monitoring (§13 spek v4.3). Properti baru
+   * TANPA index → tidak butuh migrasi Dexie, DB lama tetap valid.
+   */
+  elapsedMs?: number
 }
 
 interface ActivityState {
@@ -41,7 +48,7 @@ export const useActivityFeed = create<ActivityState>()((set, get) => ({
 
 /** Tulis event sungguhan: persist dulu, baru cermin ke store. Kalau DB gagal,
  * fungsi ini reject — pemanggil tidak boleh pura-pura berhasil (§68). */
-export async function logActivity(kind: string, opts: { taskId?: string; detail?: string } = {}): Promise<AgentEventRecord> {
+export async function logActivity(kind: string, opts: { taskId?: string; detail?: string; elapsedMs?: number } = {}): Promise<AgentEventRecord> {
   const rec: AgentEventRecord = { id: uid(), at: new Date().toISOString(), kind, ...opts }
   await db.agentEvents.add(rec)
   // buffer panjang-umur di luar layar tidak berguna — cukup feed 500 terakhir

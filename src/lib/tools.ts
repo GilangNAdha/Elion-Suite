@@ -56,16 +56,22 @@ export async function runTool(
     }
   }
   await logActivity('tool.started', { taskId: ctx.taskId, detail: id })
+  const startedAt = Date.now()
   try {
     const result = await tool.run(args)
     await logActivity(result.ok ? 'tool.completed' : 'tool.failed', {
       taskId: ctx.taskId,
-      detail: `${id}${result.error ? ` — ${result.error.slice(0, 120)}` : ''}`
+      detail: `${id}${result.error ? ` — ${result.error.slice(0, 120)}` : ''}`,
+      elapsedMs: Date.now() - startedAt
     })
     return result
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    await logActivity('tool.failed', { taskId: ctx.taskId, detail: `${id} — ${message.slice(0, 120)}` })
+    await logActivity('tool.failed', {
+      taskId: ctx.taskId,
+      detail: `${id} — ${message.slice(0, 120)}`,
+      elapsedMs: Date.now() - startedAt
+    })
     return { ok: false, error: message }
   }
 }
