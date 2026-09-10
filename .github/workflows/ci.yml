@@ -54,9 +54,10 @@ jobs:
             echo ''
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          # Annotation per baris penting — bisa dibaca via API walau log/blob diblokir
+          # Annotation per baris penting — bisa dibaca via API walau log/blob diblokir.
+          # '|| true' wajib: GH menjalankan bash dengan -e dan grep tanpa match exit 1.
           grep -aE '✘|Error:|Timed out' pw-e2e.log | head -12 \
-            | while IFS= read -r l; do echo "::error::${l:0:180}"; done
+            | while IFS= read -r l; do echo "::error::${l:0:180}"; done || true
           exit $status
       - uses: actions/upload-artifact@v4
         if: failure()
