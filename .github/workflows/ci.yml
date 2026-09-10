@@ -43,7 +43,10 @@ jobs:
           set -o pipefail
           status=0
           PLAYWRIGHT_JSON_OUTPUT_NAME=pw-e2e.json npx playwright test --reporter=line,json 2>&1 | tee pw-e2e.log || status=$?
-          node scripts/ci-e2e-report.mjs pw-e2e.json || true
+          # Vonis dari JSON laporan; exit code CLI Playwright tidak dipercaya
+          # (flaky-only run tetap bisa exit 1). Kalau JSON tidak ketulis,
+          # fallback ke exit code tadi.
+          if node scripts/ci-e2e-report.mjs pw-e2e.json; then status=0; fi
           {
             echo "### Playwright e2e (exit $status)"
             echo '```'
