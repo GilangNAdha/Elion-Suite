@@ -2,6 +2,13 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Server dev otomatis: lokal yang sudah jalan dipakai ulang, CI start sendiri.
+  webServer: {
+    command: 'npm run dev -- --port 5173 --strictPort',
+    url: process.env.ELION_BASE_URL ?? 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000
+  },
   timeout: 45000,
   expect: { timeout: 10000 },
   fullyParallel: false,
