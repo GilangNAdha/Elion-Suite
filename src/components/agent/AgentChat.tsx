@@ -9,7 +9,7 @@ import { timeAgo } from '../../lib/time'
 import { Button } from '../ui'
 
 /**
- * Chat agent (dipakai /elion dan /agent) — satu store, satu UI: pesan,
+ * Chat agent (dipakai di tab Chat /agent) — satu store, satu UI: pesan,
  * tool activity, composer. Tidak ada logika agent di sini (§9): semua
  * eksekusi ada di agentChat/agentRuntime.
  */

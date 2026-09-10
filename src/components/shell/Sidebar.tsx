@@ -15,7 +15,6 @@ import {
   PanelLeftOpen,
   ChevronDown,
   HardDrive,
-  Sparkles,
   Bot
 } from 'lucide-react'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -26,7 +25,6 @@ const GROUPS = [
     label: 'Your space',
     links: [
       { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/elion', label: 'Elion chat', icon: Sparkles },
       { to: '/agent', label: 'Agent', icon: Bot },
       { to: '/workspace', label: 'Workspace', icon: Blocks },
       { to: '/tasks', label: 'Tasks', icon: CheckSquare },

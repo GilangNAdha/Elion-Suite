@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AgentChat } from '../components/agent/AgentChat'
 import { ConnectPanel } from '../components/agent/ConnectPanel'
 import { SentientPanel } from '../components/agent/SentientPanel'
+import { WhileAway } from '../components/agent/WhileAway'
 import { ActiveTasks, CurrentActivity, LiveActivity, agentStateLabel, useMonitorData } from '../components/agent/Monitor'
 import { MemoryView } from '../components/agent/MemoryView'
 import { MonitoringDashboard } from '../components/agent/MonitoringDashboard'
@@ -31,7 +33,16 @@ export function AgentPage() {
   const runtime = useRuntimeStore()
   const feed = useActivityFeed()
   const data = useMonitorData()
-  const [tab, setTab] = useState<Tab>('monitor')
+  // Tab bisa di-deep-link: /agent?tab=chat (dipakai redirect /elion lama).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [tab, setTab] = useState<Tab>(() =>
+    TABS.some(([id]) => id === tabParam) ? (tabParam as Tab) : 'monitor'
+  )
+  const switchTab = (t: Tab) => {
+    setTab(t)
+    setSearchParams(t === 'monitor' ? {} : { tab: t }, { replace: true })
+  }
   const state = agentStateLabel(runtime.enabled, runtime.phase, runtime.activeTask)
 
   useEffect(() => {
@@ -62,7 +73,7 @@ export function AgentPage() {
 
       <nav className="agent-tabs" role="tablist" aria-label="Agent sections">
         {TABS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={tab === id} className={`agent-tab ${tab === id ? 'is-active' : ''}`} onClick={() => setTab(id)}>
+          <button key={id} type="button" role="tab" aria-selected={tab === id} className={`agent-tab ${tab === id ? 'is-active' : ''}`} onClick={() => switchTab(id)}>
             {label}
           </button>
         ))}
@@ -76,6 +87,7 @@ export function AgentPage() {
             <ActiveTasks data={data} />
           </div>
           <aside className="agent-monitor-rail">
+            <WhileAway />
             <SentientPanel />
           </aside>
         </div>

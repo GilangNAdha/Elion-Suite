@@ -126,11 +126,11 @@ export function usePaletteActions(
       },
       {
         id: 'nav-elion',
-        label: 'Open Elion agent chat',
-        hint: 'Tools + Sentient Mode',
+        label: 'Open ELION agent chat',
+        hint: 'Monitor · chat · jobs',
         icon: <Sparkles size={15} />,
-        keywords: 'elion agent sentient autonomous tools',
-        perform: () => navigate('/elion')
+        keywords: 'elion agent sentient autonomous tools chat',
+        perform: () => navigate('/agent?tab=chat')
       },
       {
         id: 'nav-lockdown',

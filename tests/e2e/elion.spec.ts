@@ -45,15 +45,24 @@ test('exact default tokens and a content-weighted dashboard', async ({ page }) =
   expect(tokens.button).toBe('none')
 })
 
-test('dock is centered and pages do not overflow at the four target widths', async ({ page }) => {
+test('dock is centered on the content column, clear of content, at four widths', async ({ page }) => {
   await boot(page)
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     const geometry = await page.evaluate(() => {
       const dock = document.querySelector('.quick-dock')!.getBoundingClientRect()
-      return { center: dock.x + dock.width / 2, overflow: document.documentElement.scrollWidth > innerWidth }
+      const main = document.querySelector('main')!.getBoundingClientRect()
+      return {
+        dockCenter: dock.x + dock.width / 2,
+        mainCenter: main.x + main.width / 2,
+        clearance: dock.top - main.bottom,
+        overflow: document.documentElement.scrollWidth > innerWidth
+      }
     })
-    expect(geometry.center).toBeCloseTo(width / 2, 0)
+    // Centered terhadap kolom konten (kanan sidebar), bukan viewport.
+    expect(geometry.dockCenter).toBeCloseTo(geometry.mainCenter, 0)
+    // Tidak pernah menimpa konten.
+    expect(geometry.clearance).toBeGreaterThanOrEqual(0)
     expect(geometry.overflow).toBe(false)
   }
 })

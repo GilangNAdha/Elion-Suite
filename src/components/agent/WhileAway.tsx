@@ -5,7 +5,7 @@ import { useActivityFeed, type AgentEventRecord } from '../../lib/activity'
 const LAST_SEEN_KEY = 'elion-last-seen'
 
 /** Ringkas event menjadi baris "while you were away" (§27/§80) — dari event
- * nyata, tidak pernah dikarang. Diekspor supaya /elion dan /agent memakai
+ * nyata, tidak pernah dikarang. Diekspor supaya halaman agent memakai
  * satu implementasi. */
 export function summarizeAway(events: AgentEventRecord[], lastSeen: string): string[] {
   const fresh = events.filter((e) => e.at > lastSeen)

@@ -224,11 +224,13 @@
   font-size: var(--type-body-s);
 }
 .quick-dock {
-  position: fixed;
-  left: 50%;
-  bottom: var(--space-4);
-  transform: translateX(-50%);
+  /* Mengalir di kolom konten (setelah <main>) — selalu tepat di bawah area
+     konten, ter-center terhadap kolom (bukan viewport), dan tidak pernah
+     menimpa konten saat scroll. */
+  position: relative;
   z-index: 40;
+  flex-shrink: 0;
+  margin: var(--space-2) auto var(--space-3);
   display: flex;
   align-items: center;
   padding: var(--space-1);

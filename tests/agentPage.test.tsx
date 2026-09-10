@@ -56,6 +56,18 @@ describe('AgentPage (/agent — permukaan operasi ELION)', () => {
     expect(screen.getByRole('button', { name: 'Connect' })).toBeTruthy()
     expect(screen.getByText('Not connected yet')).toBeTruthy()
     expect(screen.getByLabelText('Message Elion')).toBeTruthy()
+    // Chat tanpa provider tetap jujur (warma state lama /elion).
+    expect(screen.getByText(/needs a provider/)).toBeTruthy()
+  })
+
+  it('?tab=chat deep-link langsung membuka tab Chat (redirect /elion lama)', () => {
+    render(
+      <MemoryRouter initialEntries={['/agent?tab=chat']}>
+        <AgentPage />
+      </MemoryRouter>
+    )
+    expect(screen.getByLabelText('Message Elion')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Chat' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('live activity menampilkan event nyata, terbaru di atas', () => {

@@ -9,7 +9,6 @@ import { LockdownPage } from './pages/LockdownPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { StudioWorkspacePage } from './pages/StudioWorkspacePage'
 import { WorkspacePage, DatabaseRoutePage } from './pages/WorkspacePage'
-import { ElionPage } from './pages/ElionPage'
 import { AgentPage } from './pages/AgentPage'
 import { TasksPage } from './pages/TasksPage'
 import { HabitsPage } from './pages/HabitsPage'
@@ -144,7 +143,7 @@ export default function App() {
 
             <Route element={<AppShell />}>
               <Route path="/" element={<DashboardPage />} />
-            <Route path="/elion" element={<ElionPage />} />
+            <Route path="/elion" element={<Navigate to="/agent?tab=chat" replace />} />
             <Route path="/agent" element={<AgentPage />} />
               <Route path="/workspace" element={<StudioWorkspacePage />} />
               <Route path="/workspace/:pageId" element={<StudioWorkspacePage />} />
