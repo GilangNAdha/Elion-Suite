@@ -52,6 +52,10 @@ export const useRuntimeStore = create<RuntimeState>()(
         else {
           clearTimeout(timer)
           timer = undefined
+          // BUGFIX: flag `scheduled` ikut di-reset — dulu biarkan true, sehingga
+          // setelah Off→On wake() selalu early-return dan loop mati diam-diam
+          // sampai reload halaman.
+          scheduled = false
           set({ activeTask: null, phase: 'idle' })
         }
       }
@@ -184,6 +188,8 @@ async function observe(): Promise<boolean> {
       notified[item.id] = todayISO
       acted = true
     }
+    // prune marker lama — map ini tidak boleh tumbuh tanpa batas
+    for (const [id, day] of Object.entries(notified)) if (day !== todayISO) delete notified[id]
     localStorage.setItem(markerKey, JSON.stringify(notified))
   } catch {
     /* storage privat — lewati observer ini, jujur tanpa pura-pura */
@@ -200,37 +206,37 @@ async function observe(): Promise<boolean> {
     /* db busy */
   }
 
-  // 3) objective aktif tanpa task berjalan → jengah? tidak dibuat-buat:
-  //    tanpa LLM planner, 'advance' yang jujur = reminder review terjadwal.
+  // 3) objective aktif → surface untuk review, MAKSIMAL sekali per hari per
+  //    objective (bug lama: tiap siklus observe ~60 detik menulis memori +
+  //    event baru = banjir memori; factKey memastikan pengulangan menguatkan,
+  //    marker harian mencegah churn).
   try {
     const open = (await listObjectives()).filter((o) => !o.done)
     if (open.length) {
-      const t = new Date()
-      t.setDate(t.getDate() + 1)
-      t.setHours(9, 0, 0, 0)
-      for (const o of open.slice(0, 1)) {
+      const todayISO = new Date().toISOString().slice(0, 10)
+      const markerKey = 'elion.objectiveSurfaced'
+      const surfaced: Record<string, string> = JSON.parse(localStorage.getItem(markerKey) ?? '{}')
+      const stale = open.filter((o) => surfaced[o.id] !== todayISO)
+      for (const o of stale.slice(0, 3)) {
+        surfaced[o.id] = todayISO
         await remember({
           type: 'episodic',
           content: `Objective "${o.text.slice(0, 120)}" still open — surfaced for review`,
           source: 'inference',
-          importance: 0.5
+          importance: 0.5,
+          factKey: `objective:${o.id}`
         })
       }
-      void logActivity('objective.surfaced', { detail: `${open.length} active, review tomorrow 09:00` })
-      acted = true
-      void todayMarker(t)
+      localStorage.setItem(markerKey, JSON.stringify(surfaced))
+      if (stale.length) {
+        void logActivity('objective.surfaced', { detail: `${stale.length} of ${open.length} open surfaced today` })
+        acted = true
+      }
     }
   } catch {
-    /* noop */
+    /* storage privat / db busy — lewati observer ini, jujur tanpa pura-pura */
   }
   return acted
-}
-
-/** elion: shortcut - reminder review objective masih berupa catatan memori,
- * belum alarm terjadwal penuh; naikkan jadi schedule.remind saat UI objective
- * butuh ("why" dicatat biar gampang digali). */
-async function todayMarker(_when: Date): Promise<void> {
-  await Promise.resolve()
 }
 
 /** Dipanggil App saat boot — aktifkan loop bila preference user ON (§32). */

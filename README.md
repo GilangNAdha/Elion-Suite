@@ -38,12 +38,28 @@ default system prompt is the operational condensation of that spec.
 
 The chat is no longer MiniCPM-only. Configure **any** backend in
 **Settings > AI assistant**: OpenRouter (every model it lists — Claude, GPT,
-Gemini, DeepSeek, Llama…), 9Router (`localhost:20128/v1`), direct Anthropic
+Gemini, DeepSeek, Llama…), the **Hermes Agent gateway** (your own
+[`hermes-agent`](https://github.com/NousResearch/hermes-agent) runtime on
+`localhost:8642` — its server-side toolset answers, Elion tools stay available
+in-app), 9Router (`localhost:20128/v1`), direct Anthropic
 (Claude), direct OpenAI (incl. the Codex line), Ollama, LM Studio, the original
 local MiniCPM gateway, or any custom OpenAI-compatible endpoint. Models are
 discovered live from `/models`, replies stream token-by-token, keys stay in
 local storage, and the desktop build routes through the Electron main process
 so CORS never gets in the way.
+
+## Hermes bridge — Elion ⇄ hermes-agent
+
+Hermes is the chosen personal-agent runtime (Part VI of the master spec) and
+Elion now talks to it natively: delegate work to the local gateway
+(`hermes.ask`), pull its skills into the permanent Skill Ledger
+(`hermes.skills.import`), schedule unattended cron jobs on it
+(`hermes.job.create`), or just check on it (`hermes.status`). Everything is
+permission-gated (`hermes.delegate` / `hermes.control` default to
+confirm-first) and managed from **Settings › ELION runtime › Hermes agent
+bridge**. When the gateway is off, every surface reports that honestly — no
+simulated results. Setup:
+[docs/HERMES-SETUP.md](docs/HERMES-SETUP.md).
 
 [Controls, behavior and animation preview](docs/FLOATING-PET.md).
 

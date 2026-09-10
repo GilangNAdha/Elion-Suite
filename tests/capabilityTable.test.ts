@@ -17,6 +17,12 @@ describe('capability boundaries (Part IV)', () => {
     expect(['ask', 'deny']).toContain(effectiveMode('files.read'))
     expect(['ask', 'deny']).toContain(effectiveMode('files.write'))
     expect(['ask', 'deny']).toContain(effectiveMode('system.action'))
+    // Hermes bridge: delegation egresses through the gateway's provider and
+    // scheduled jobs run unattended → confirm first. Skill import is local
+    // and additive (Part VII: new skills may be autonomous) → allow.
+    expect(['ask', 'deny']).toContain(effectiveMode('hermes.delegate'))
+    expect(['ask', 'deny']).toContain(effectiveMode('hermes.control'))
+    expect(effectiveMode('hermes.skills')).toBe('allow')
   })
 
   it('internal reversible work stays genuinely autonomous', () => {
@@ -47,6 +53,13 @@ describe('capability boundaries (Part IV)', () => {
         // ke orang lain dijaga guard email.send di DALAM run() (Part IV 🔒).
         'email.send [notifications.send]',
         'files.read [files.read]',
+        // Hermes bridge (Part VI): status/jobs-list = baca lokal; delegasi =
+        // egress via gateway; job-create = kerja unattended; import = ledger.
+        'hermes.ask [hermes.delegate]',
+        'hermes.job.create [hermes.control]',
+        'hermes.jobs.list [workspace.read]',
+        'hermes.skills.import [hermes.skills]',
+        'hermes.status [workspace.read]',
         'memory.recall [workspace.read]',
         'memory.remember [memory.write]',
         'notifications.send [notifications.send]',

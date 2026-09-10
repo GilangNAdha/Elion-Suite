@@ -1,5 +1,6 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
 import { AgentPanel } from '../components/settings/AgentPanel'
+import { HermesPanel } from '../components/settings/HermesPanel'
 import { MonitoringDashboard } from '../components/settings/MonitoringDashboard'
 import { EmailSettings } from '../components/settings/EmailSettings'
 import { SystemAccessSettings } from '../components/settings/SystemAccessSettings'

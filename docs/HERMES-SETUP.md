@@ -7,6 +7,27 @@ bergeser (repo Hermes rilis cepat) — cek `--help` sebelum jalan.
 
 > Instal HANYA dari repo resmi. Jangan pakai mirror tidak resmi (risiko malware).
 
+## 0. Yang SUDAH terintegrasi di Elion Suite (tanpa setup tambahan di kode)
+
+Elion sekarang punya jembatan Hermes bawaan (`src/lib/hermes.ts`) yang bicara
+langsung ke REST API server Hermes (`hermes gateway` di `127.0.0.1:8642`):
+
+| Integrasi | Di mana | Keterangan |
+|---|---|---|
+| Provider chat "Hermes Agent (local runtime)" | Settings › AI assistant | Chat mengalir via `/v1/chat/completions` gateway; toolset server-side Hermes jalan di sana, tool Elion tetap tersedia di app |
+| Tool `hermes.status` | /elion chat | Probe `/health` + `/v1/skills` + `/v1/toolsets` + `/api/jobs` — jawaban jujur walau offline |
+| Tool `hermes.ask` | /elion chat | Delegasi kerja ke Hermes (permission `hermes.delegate`, default **ask**) — context dirangkai gateway lewat `conversation: elion` |
+| Tool `hermes.skills.import` | /elion chat + Settings | Tarik `/v1/skills` → Skill Ledger (origin `hermes-import`), duplikat dilewati |
+| Tool `hermes.job.create` / `hermes.jobs.list` | /elion chat | Cron unattended di gateway (permission `hermes.control`, default **ask**) |
+| Panel "Hermes agent bridge" | Settings › ELION runtime | Status, gateway URL + API key, Test, impor skill, kelola job (pause/resume/run/delete) |
+
+Kejujuran tetap berlaku (§67/§68): gateway mati = status offline + langkah
+setup; tidak ada hasil palsu. Kunci API (`API_SERVER_KEY`) disimpan di local
+storage app — sama seperti key provider lain, tidak pernah dikirim ke mana pun
+selain gateway.
+
+## 1. Install
+
 ## 1. Install
 
 ```bash
@@ -34,6 +55,11 @@ hermes agent-stats   # kalau tersedia — angka inilah yang nanti tampil di
 | Tabel Part IV | Kebijakan approval Hermes: email keluar = confirm, API key = never autonomous |
 
 ## 3. Self-evolution (Part VII)
+
+Sinkronisasi skill saat ini = impor satu arah dari gateway ke ledger
+(`hermes.skills.import`, atau tombol *Import into Skill Ledger* di Settings ›
+ELION runtime › Hermes). Skill yang DIUBAH di sisi Hermes tidak pernah
+menimpa ledger otomatis — tetap lewat PR/review.
 
 Jalan di atas trace sesi Hermes:
 

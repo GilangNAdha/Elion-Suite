@@ -40,7 +40,14 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'browser.interact', label: 'Interact with websites', risk: 'high', default: 'deny' },
   { key: 'email.send', label: 'Send email', risk: 'high', default: 'deny' },
   { key: 'files.write', label: 'Write local files', risk: 'high', default: 'deny' },
-  { key: 'system.action', label: 'Run system commands', risk: 'high', default: 'deny' }
+  { key: 'system.action', label: 'Run system commands', risk: 'high', default: 'deny' },
+  // Hermes gateway (docs/HERMES-SETUP.md): delegasi = egress via provider
+  // Hermes; job terjadwal = kerja unattended yang juga egress → confirm first.
+  // Impor skill = tulis lokal aditif ke ledger → low-risk (aturan Part VII:
+  // skill BARU boleh otonom; yang diubah tetap lewat review).
+  { key: 'hermes.delegate', label: 'Delegate work to the Hermes agent', risk: 'high', default: 'ask' },
+  { key: 'hermes.control', label: 'Create / change scheduled Hermes jobs', risk: 'high', default: 'ask' },
+  { key: 'hermes.skills', label: 'Import Hermes skills into the ledger', risk: 'low', default: 'allow' }
 ]
 
 const def = (key: string) => PERMISSIONS.find((p) => p.key === key)
@@ -116,6 +123,9 @@ export async function guard(key: string, reason: string): Promise<'granted' | 'd
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const approval: Approval = { id, key, reason, at: new Date().toISOString() }
   usePermissionStore.setState({ approvals: [...usePermissionStore.getState().approvals, approval] })
+  // §36: lapisan eksekusi yang mencatat — permintaan masuk antrean approval
+  // adalah event nyata, biar timeline menunjukkan kenapa loop sedang menahan.
+  await logActivity('permission.requested', { detail: `${key} — ${reason.slice(0, 120)}` })
   const label = def(key)?.label ?? key
   void useNotifyStore
     .getState()

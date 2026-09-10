@@ -7,6 +7,7 @@ import { useRuntimeStore } from '../lib/agentRuntime'
 import { usePermissionStore } from '../lib/permissions'
 import { useActivityFeed } from '../lib/activity'
 import { listObjectives, listTasks, type Objective } from '../lib/agentTasks'
+import { probeHermes, type HermesStatus } from '../lib/hermes'
 import { MiniMarkdown } from '../lib/miniMarkdown'
 import { timeAgo } from '../lib/time'
 import { SentientPanel } from '../components/agent/SentientPanel'
@@ -25,6 +26,7 @@ export function ElionPage() {
   const [draft, setDraft] = useState('')
   const [objectives, setObjectives] = useState<Objective[]>([])
   const [queue, setQueue] = useState<string[]>([])
+  const [hermes, setHermes] = useState<HermesStatus | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const configured = aiIsConfigured(ai)
 
@@ -32,6 +34,20 @@ export function ElionPage() {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [chat.messages, chat.busy])
+
+  // Hermes bridge status (docs/HERMES-SETUP.md) — dibaca langsung dari
+  // gateway; offline → chip jujur, bukan asumsi.
+  useEffect(() => {
+    let alive = true
+    void probeHermes()
+      .then((s) => {
+        if (alive) setHermes(s)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     const refresh = async () => {
@@ -69,6 +85,15 @@ export function ElionPage() {
             <p>{state.label}</p>
           </div>
           <div className="elion-head-actions">
+            {hermes?.online && !hermes.unauthorized && (
+              <Link
+                to="/settings#runtime"
+                className="elion-hermes-chip"
+                title={`Hermes gateway online — ${hermes.skills.length} skills, ${hermes.jobs.length} scheduled jobs`}
+              >
+                Hermes · on
+              </Link>
+            )}
             <Button size="sm" variant="ghost" icon={<Trash2 size={13} />} onClick={() => chat.clear()}>
               Clear
             </Button>

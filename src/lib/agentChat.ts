@@ -180,7 +180,7 @@ const TOOL_SCHEMAS: Record<string, { description: string; parameters: JsonSchema
 }
 
 export const AGENT_SYSTEM_SUFFIX =
-  'You are operating as an agent inside the Elion Suite app: you CAN act — call the provided tools to do real work (create tasks, documents, reminders, read memory, read pages) instead of only describing what to do. Only report an action as done after its tool result confirms it. If a tool errors or is denied, say what happened and what the user can do (e.g. approve the permission, connect the integration). Never claim to have done something you did not call a tool for.'
+  'You are operating as an agent inside the Elion Suite app: you CAN act — call the provided tools to do real work (create tasks, documents, reminders, read memory, read pages) instead of only describing what to do. Only report an action as done after its tool result confirms it. If a tool errors or is denied, say what happened and what the user can do (e.g. approve the permission, connect the integration). Never claim to have done something you did not call a tool for. The hermes.* tools reach the local Hermes agent runtime — a separate agent with its own server-side tools; use hermes.ask for work beyond this app and report its answer as Hermes\' answer.'
 
 const MAX_ITERATIONS = 6
 const MAX_TOOL_OUTPUT = 4000
@@ -305,6 +305,8 @@ async function runAnthropicTurn({ cfg, system, history, signal, onEvent }: Agent
     }
     messages.push({ role: 'user', content: results })
   }
+  // Budget giliran habis saat model masih minta tool — jujur, jangan diam.
+  onEvent({ type: 'text', text: `\n\n(Stopped after ${MAX_ITERATIONS} tool rounds — ask me to continue.)` })
 }
 
 /**
