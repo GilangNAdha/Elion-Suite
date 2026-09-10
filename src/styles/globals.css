@@ -169,7 +169,7 @@ pre,
   background: transparent;
 }
 .shell-page {
-  padding-bottom: var(--space-20);
+  padding-bottom: var(--space-6);
 }
 .toast-in {
   animation: quiet-reveal var(--duration-micro) var(--ease);

@@ -176,6 +176,51 @@ const TOOL_SCHEMAS: Record<string, { description: string; parameters: JsonSchema
       },
       required: ['command']
     }
+  },
+  'agent.jobs.create': {
+    description: 'Schedule a recurring IN-APP agent job (in-app cron). Runs inside this app while it is open and the runtime is on — no external gateway needed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short job name.' },
+        prompt: { type: 'string', description: 'The instruction future-Elion executes on each run (it has the same tools you have).' },
+        kind: { type: 'string', description: 'daily | interval | once' },
+        at: { type: 'string', description: "For daily: local time 'HH:MM' (e.g. 09:00). For once: 'YYYY-MM-DDTHH:MM'." },
+        intervalMin: { type: 'string', description: 'For interval jobs: minutes between runs.' }
+      },
+      required: ['prompt', 'kind']
+    }
+  },
+  'agent.jobs.list': {
+    description: 'List the in-app scheduled agent jobs.',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  'skills.create': {
+    description: 'Author a reusable, named skill: an ordered list of registered tool steps Elion can re-run later. Additive self-improvement — recorded in the Skill Ledger.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short skill name (kebab-case).' },
+        description: { type: 'string', description: 'What the skill does, one sentence.' },
+        steps: {
+          type: 'string',
+          description: 'JSON array of steps: [{"title":"...","tool":"tasks.create","args":{"title":"..."}}]. Every tool must be registered.'
+        }
+      },
+      required: ['name', 'steps']
+    }
+  },
+  'skills.run': {
+    description: 'Run a stored executable skill by name — executes its tool steps for real (each step still passes its own permission gate).',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'Skill name.' } },
+      required: ['name']
+    }
+  },
+  'skills.list': {
+    description: 'List the stored executable skills.',
+    parameters: { type: 'object', properties: {}, required: [] }
   }
 }
 
@@ -184,6 +229,9 @@ export const AGENT_SYSTEM_SUFFIX =
 
 const MAX_ITERATIONS = 6
 const MAX_TOOL_OUTPUT = 4000
+// Agent turns (dan job cron yang memakainya) boleh makan waktu menit-melintang —
+// timeout request default 15 detik jelas tidak cukup untuk kerja beneran.
+const AGENT_TURN_TIMEOUT_MS = 180_000
 
 function truncate(text: string): string {
   return text.length > MAX_TOOL_OUTPUT ? `${text.slice(0, MAX_TOOL_OUTPUT)}…(truncated)` : text
@@ -254,8 +302,8 @@ async function runOpenAiTurn({ cfg, system, history, signal, onEvent }: AgentTur
         tools: tools.length ? tools : undefined,
         temperature: cfg.temperature,
         max_tokens: cfg.maxTokens
-      })
-    )) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] }
+      }), AGENT_TURN_TIMEOUT_MS)
+    ) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] }
     const msg = res.choices?.[0]?.message
     if (!msg) throw new Error('The provider returned an empty reply.')
     if (msg.content) onEvent({ type: 'text', text: msg.content })
@@ -289,8 +337,8 @@ async function runAnthropicTurn({ cfg, system, history, signal, onEvent }: Agent
         tools: tools.length ? tools : undefined,
         temperature: cfg.temperature,
         max_tokens: Math.min(cfg.maxTokens, 8192)
-      })
-    )) as { content?: ({ type: string; text?: string; id?: string; name?: string; input?: unknown } | null)[]; stop_reason?: string }
+      }), AGENT_TURN_TIMEOUT_MS)
+    ) as { content?: ({ type: string; text?: string; id?: string; name?: string; input?: unknown } | null)[]; stop_reason?: string }
     const blocks = (res.content ?? []).filter((b): b is { type: string; text?: string; id?: string; name?: string; input?: unknown } => !!b)
     for (const b of blocks) if (b.type === 'text' && b.text) onEvent({ type: 'text', text: b.text })
     const uses = blocks.filter((b) => b.type === 'tool_use' && b.id && b.name)
@@ -305,6 +353,8 @@ async function runAnthropicTurn({ cfg, system, history, signal, onEvent }: Agent
     }
     messages.push({ role: 'user', content: results })
   }
+  // Budget giliran habis saat model masih minta tool — jujur, jangan diam.
+  onEvent({ type: 'text', text: `\n\n(Stopped after ${MAX_ITERATIONS} tool rounds — ask me to continue.)` })
 }
 
 /**

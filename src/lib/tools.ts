@@ -8,6 +8,8 @@ import { usePagesStore } from '../stores/pagesStore'
 import { useNotifyStore } from '../stores/notifyStore'
 import { db } from './db'
 import { uid, type Alarm, type Block, type BlockType } from './types'
+import { listSkills, recordSkill } from './skills'
+import { markJobRun } from './agentJobs'
 
 /**
  * Tool router (§10–§11): satu tempat daftar tool, satu pintu eksekusi.
@@ -374,6 +376,183 @@ registerTool({
       return { ok: true, output: out.slice(0, 8000) || `exit ${result.code}` }
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'command failed' }
+    }
+  }
+})
+
+// ---------------- agent core ----------------
+// Cron, skill packs, dan reasoning-step ber-LLM jalan DI DALAM app —
+// feature-set agent kelas berat (skills, cron, session), native di app.
+
+registerTool({
+  id: 'agent.reason',
+  label: 'Run an agent work step (LLM + tools)',
+  // Meta-tool internal: risiko sesungguhnya ada di tool yang dipanggil DI
+  // DALAM turn ini — dan semuanya tetap lewat guard permission masing-masing.
+  permission: 'none',
+  run: async (args) => {
+    const prompt = str(args, 'prompt', 6000)
+    if (!prompt) return { ok: false, error: 'prompt required' }
+    const jobId = str(args, 'jobId', 60) || undefined
+    const { useAiStore, aiIsConfigured, effectivePersona } = await import('../stores/aiStore')
+    const { providerPreset } = await import('./aiProviders')
+    const ai = useAiStore.getState()
+    if (!aiIsConfigured(ai.settings)) {
+      if (jobId) await markJobRun(jobId, false, 'no AI provider configured')
+      return {
+        ok: false,
+        unconfigured: true,
+        error: 'No AI provider configured — set one in Settings › AI assistant (scheduled jobs run through it).'
+      }
+    }
+    const preset = providerPreset(ai.settings.providerId)
+    const { runAgentTurn, AGENT_SYSTEM_SUFFIX } = await import('./agentChat')
+    let text = ''
+    try {
+      await runAgentTurn({
+        api: preset.api,
+        cfg: ai.settings,
+        system: `${effectivePersona(ai.settings)}\n${AGENT_SYSTEM_SUFFIX}`,
+        history: [{ role: 'user', content: prompt }],
+        signal: new AbortController().signal,
+        onEvent: (e) => {
+          if (e.type === 'text') text += e.text
+        }
+      })
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : 'agent turn failed'
+      const message = raw === 'AGENT_TOOLS_UNSUPPORTED' ? 'the current provider has no function calling — pick another in Settings › AI assistant' : raw
+      if (jobId) await markJobRun(jobId, false, message)
+      return { ok: false, error: message }
+    }
+    if (jobId) await markJobRun(jobId, true, text)
+    return { ok: true, output: text.slice(0, 4000) || '(finished with tool calls only)' }
+  }
+})
+
+registerTool({
+  id: 'agent.jobs.create',
+  label: 'Schedule a recurring agent job (in-app cron)',
+  permission: 'schedule.write',
+  run: async (args) => {
+    const prompt = str(args, 'prompt', 4000)
+    if (!prompt) return { ok: false, error: 'prompt required' }
+    const kind = (str(args, 'kind', 20) || 'daily') as 'daily' | 'interval' | 'once'
+    if (kind !== 'daily' && kind !== 'interval' && kind !== 'once')
+      return { ok: false, error: 'kind must be daily | interval | once' }
+    const at = str(args, 'at', 40) || undefined
+    const intervalMin = typeof args.intervalMin === 'number' ? args.intervalMin : undefined
+    if (kind === 'interval' && !intervalMin) return { ok: false, error: 'intervalMin required for interval jobs' }
+    if (kind === 'daily' && !at) return { ok: false, error: "at ('HH:MM') required for daily jobs" }
+    const { createJob, describeSchedule } = await import('./agentJobs')
+    const job = await createJob({ name: str(args, 'name', 120), prompt, kind, at, intervalMin })
+    return {
+      ok: true,
+      output: `job “${job.name}” scheduled (${describeSchedule(job)}) — runs while the app is open and the runtime is on`
+    }
+  }
+})
+
+registerTool({
+  id: 'agent.jobs.list',
+  label: 'List scheduled agent jobs (in-app cron)',
+  permission: 'workspace.read',
+  run: async () => {
+    const { listJobs, describeSchedule } = await import('./agentJobs')
+    const jobs = await listJobs()
+    if (!jobs.length) return { ok: true, output: 'no scheduled agent jobs — create one with agent.jobs.create' }
+    return {
+      ok: true,
+      output: jobs
+        .map(
+          (j) =>
+            `• ${j.name} — ${describeSchedule(j)}${j.enabled ? '' : ' (disabled)'}${j.lastStatus ? ` · last ${j.lastStatus}` : ''}`
+        )
+        .join('\n')
+    }
+  }
+})
+
+registerTool({
+  id: 'skills.create',
+  label: 'Author a reusable skill (named tool steps)',
+  permission: 'workspace.write',
+  run: async (args) => {
+    const name = str(args, 'name', 120)
+    if (!name) return { ok: false, error: 'name required' }
+    const { createSkill } = await import('./agentSkills')
+    try {
+      const skill = await createSkill({
+        name,
+        description: str(args, 'description', 300) || undefined,
+        steps: args.steps,
+        origin: 'agent'
+      })
+      return {
+        ok: true,
+        output: `skill “${skill.name}” authored (${skill.steps.length} step${skill.steps.length === 1 ? '' : 's'}) — recorded in the Skill Ledger; run it with skills.run`
+      }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'skill authoring failed' }
+    }
+  }
+})
+
+registerTool({
+  id: 'skills.improve',
+  label: 'Distill repeated successful work into new skills',
+  permission: 'workspace.write',
+  run: async () => {
+    const { distillSkills } = await import('./selfImprove')
+    const res = await distillSkills()
+    if (!res.promoted.length)
+      return {
+        ok: true,
+        output: `no new skills promoted — no unlearned pattern with ${3}+ identical successful runs yet (${res.skipped} known pattern${res.skipped === 1 ? '' : 's'} skipped)`
+      }
+    return {
+      ok: true,
+      output: ['promoted to the Skill Ledger:', ...res.promoted.map((n) => `• ${n}`)].join('\n')
+    }
+  }
+})
+
+registerTool({
+  id: 'skills.run',
+  label: 'Run a stored skill by name',
+  permission: 'workspace.write',
+  run: async (args) => {
+    const name = str(args, 'name', 120) || str(args, 'id', 60)
+    if (!name) return { ok: false, error: 'name required' }
+    const { runSkill } = await import('./agentSkills')
+    const run = await runSkill(name)
+    if (!run.skill) return { ok: false, error: run.error ?? 'skill not found' }
+    const lines = run.steps.map(
+      (s) => `${s.ok ? '✓' : '✕'} ${s.title} (${s.tool})${s.ok ? '' : ` — ${s.error?.slice(0, 120)}`}`
+    )
+    return {
+      ok: run.ok,
+      output: [`skill “${run.skill.name}” ${run.ok ? 'completed' : 'stopped on error'}:`, ...lines].join('\n')
+    }
+  }
+})
+
+registerTool({
+  id: 'skills.list',
+  label: 'List stored executable skills',
+  permission: 'workspace.read',
+  run: async () => {
+    const { listSkills } = await import('./agentSkills')
+    const skills = await listSkills()
+    if (!skills.length) return { ok: true, output: 'no executable skills yet — author one with skills.create' }
+    return {
+      ok: true,
+      output: skills
+        .map(
+          (s) =>
+            `• ${s.name}${s.enabled ? '' : ' (disabled)'} — ${s.steps.length} step${s.steps.length === 1 ? '' : 's'} [${s.origin}]${s.description ? ` — ${s.description.slice(0, 80)}` : ''}`
+        )
+        .join('\n')
     }
   }
 })

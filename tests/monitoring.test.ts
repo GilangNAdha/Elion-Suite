@@ -181,7 +181,7 @@ describe('monitoring derivations (§13 — one data source, pure functions)', ()
     const skills: SkillRecord[] = [
       { id: 'a', name: 'a', origin: 'evolve', score: 0.7, createdAt: '2026-09-08T01:00:00Z' },
       { id: 'b', name: 'b', origin: 'evolve', score: 0.7, createdAt: '2026-09-09T01:00:00Z' },
-      { id: 'c', name: 'c', origin: 'gepa-pr', score: 0.9, createdAt: '2026-08-20T01:00:00Z' }
+      { id: 'c', name: 'c', origin: 'gepa-pr', score: 0.9, createdAt: '2026-08-20T01:00:00Z' },
     ]
     const weeks = velocityByWeek(skills, 8, new Date('2026-09-10T12:00:00Z').getTime())
     expect(weeks).toHaveLength(8)

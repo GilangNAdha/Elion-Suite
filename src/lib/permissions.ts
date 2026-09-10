@@ -5,10 +5,14 @@ import { useNotifyStore } from '../stores/notifyStore'
 
 /**
  * Permission manager (§14, §46, §51, §52, §59).
- * Prinsip default: data user tidak keluar tanpa izin — aksi low-risk internal
- * boleh jalan; aksi ber-egres / ireversibel = 'ask' atau 'deny'.
- * Semua keputusan tercatat sebagai event (agent tidak "dengar" monitor —
- * lapisan eksekusi yang mencatat, §36).
+ * Policy default = ALLOW-ALL atas keputusan eksplisit pemilik aplikasi
+ * (permintaan langsung: "allow all of this permission for elion sentient
+ * mode"). Mekanisme persisnya tetap sama:
+ *  - override per-permission di Permission Center (Settings › ELION runtime)
+ *    selalu menang atas default, dan bisa dikembalikan ke default;
+ *  - tool desktop-only tetap jujur "unavailable" di web meski izinnya allow;
+ *  - semua keputusan tercatat sebagai event (lapisan eksekusi yang mencatat,
+ *    §36) — jadi di Monitoring tetap terlihat apa yang ELION lakukan.
  */
 
 export type PermissionMode = 'allow' | 'ask' | 'deny'
@@ -34,13 +38,13 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'memory.write', label: 'Store memories', risk: 'low', default: 'allow' },
   { key: 'notifications.send', label: 'Send notifications', risk: 'low', default: 'allow' },
   { key: 'schedule.write', label: 'Create reminders', risk: 'low', default: 'allow' },
-  { key: 'browser.read', label: 'Read a web page (leaves device)', risk: 'high', default: 'ask' },
-  { key: 'email.read', label: 'Read email', risk: 'high', default: 'ask' },
-  { key: 'files.read', label: 'Read local files (desktop only)', risk: 'high', default: 'ask' },
-  { key: 'browser.interact', label: 'Interact with websites', risk: 'high', default: 'deny' },
-  { key: 'email.send', label: 'Send email', risk: 'high', default: 'deny' },
-  { key: 'files.write', label: 'Write local files', risk: 'high', default: 'deny' },
-  { key: 'system.action', label: 'Run system commands', risk: 'high', default: 'deny' }
+  { key: 'browser.read', label: 'Read a web page (leaves device)', risk: 'high', default: 'allow' },
+  { key: 'email.read', label: 'Read email', risk: 'high', default: 'allow' },
+  { key: 'files.read', label: 'Read local files (desktop only)', risk: 'high', default: 'allow' },
+  { key: 'browser.interact', label: 'Interact with websites', risk: 'high', default: 'allow' },
+  { key: 'email.send', label: 'Send email', risk: 'high', default: 'allow' },
+  { key: 'files.write', label: 'Write local files', risk: 'high', default: 'allow' },
+  { key: 'system.action', label: 'Run system commands', risk: 'high', default: 'allow' }
 ]
 
 const def = (key: string) => PERMISSIONS.find((p) => p.key === key)
@@ -116,6 +120,9 @@ export async function guard(key: string, reason: string): Promise<'granted' | 'd
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const approval: Approval = { id, key, reason, at: new Date().toISOString() }
   usePermissionStore.setState({ approvals: [...usePermissionStore.getState().approvals, approval] })
+  // §36: lapisan eksekusi yang mencatat — permintaan masuk antrean approval
+  // adalah event nyata, biar timeline menunjukkan kenapa loop sedang menahan.
+  await logActivity('permission.requested', { detail: `${key} — ${reason.slice(0, 120)}` })
   const label = def(key)?.label ?? key
   void useNotifyStore
     .getState()

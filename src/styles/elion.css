@@ -224,11 +224,13 @@
   font-size: var(--type-body-s);
 }
 .quick-dock {
-  position: fixed;
-  left: 50%;
-  bottom: var(--space-4);
-  transform: translateX(-50%);
+  /* Mengalir di kolom konten (setelah <main>) — selalu tepat di bawah area
+     konten, ter-center terhadap kolom (bukan viewport), dan tidak pernah
+     menimpa konten saat scroll. */
+  position: relative;
   z-index: 40;
+  flex-shrink: 0;
+  margin: var(--space-2) auto var(--space-3);
   display: flex;
   align-items: center;
   padding: var(--space-1);
@@ -3229,7 +3231,7 @@ html[data-transition='lockdown']::view-transition-new(root) {
 }
 .agent-dot.is-busy {
   background: var(--tint);
-  animation: agent-pulse var(--duration-slow, 1.2s) var(--ease) infinite alternate;
+  animation: agent-pulse var(--duration-pulse) var(--ease) infinite alternate;
 }
 @keyframes agent-pulse {
   from {
@@ -3394,6 +3396,25 @@ html[data-transition='lockdown']::view-transition-new(root) {
 .agent-note {
   color: var(--ink-faint);
   margin-top: var(--space-2);
+}
+
+/* ——— Agent jobs/skills panels (Settings › ELION runtime + /agent) ——— */
+.agent-skill-list {
+  list-style: none;
+  margin-block: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.agent-skill-list li {
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.agent-inline-actions {
+  display: inline-flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
 }
 
 /* ——— Monitoring dashboard (Settings › ELION runtime › Monitoring) §13 spek v4.3 ——— */
@@ -3597,6 +3618,9 @@ html[data-transition='lockdown']::view-transition-new(root) {
 }
 .elion-head-actions {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .elion-dot {
   width: var(--space-2);
@@ -3610,7 +3634,7 @@ html[data-transition='lockdown']::view-transition-new(root) {
 }
 .elion-dot.is-work {
   background: var(--tint);
-  animation: agent-pulse var(--duration-slow, 1.2s) var(--ease) infinite alternate;
+  animation: agent-pulse var(--duration-pulse) var(--ease) infinite alternate;
 }
 .elion-dot.is-attn {
   background: var(--warn);
@@ -3836,4 +3860,1098 @@ html[data-transition='lockdown']::view-transition-new(root) {
 .sentient-more {
   font-size: var(--type-body-s);
   color: var(--tint);
+}
+
+/* ——— /agent hub (Part V) — chat + connect + jobs/skills/activity ——— */
+.agent-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  max-width: 87.5rem;
+  margin-inline: auto;
+  width: 100%;
+}
+.agent-page-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.agent-page-head h1 {
+  font-size: var(--type-m);
+  color: var(--ink);
+}
+.agent-page-head p {
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+}
+.agent-hub {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .agent-hub {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.agent-hub-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.agent-hub-main .elion-chat {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+.agent-hub-tabs {
+  display: inline-flex;
+  gap: var(--space-1);
+  border-bottom: var(--hairline-width) solid var(--line-subtle);
+}
+.hub-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  border-bottom: var(--hairline-width) solid transparent;
+}
+.hub-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--tint);
+}
+/* garis aktif tab sedikit tebal agar terbaca — tetap token-based */
+.agent-hub-panel {
+  padding-block: var(--space-2);
+}
+.agent-hub-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.agent-timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.agent-timeline li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding-block: var(--space-1);
+  border-bottom: var(--hairline-width) solid var(--line-subtle);
+  font-size: var(--type-body-s);
+}
+.agent-timeline li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+}
+.agent-timeline time {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  font-size: 0.9em;
+}
+
+/* ——— Connect AI (satu tombol ke semua provider) ——— */
+.agent-connect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+.agent-connect h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--type-body);
+  color: var(--ink);
+}
+.connect-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.connect-chip {
+  appearance: none;
+  border: var(--hairline-width) solid var(--line);
+  background: none;
+  color: var(--ink-muted);
+  border-radius: var(--radius-sm);
+  font-size: var(--type-caption);
+  padding: var(--space-0_5) var(--space-1_5);
+  cursor: pointer;
+}
+.connect-chip.is-active {
+  border-color: var(--tint);
+  color: var(--tint);
+}
+.connect-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.connect-status {
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.connect-spin {
+  animation: connect-rotate 0.9s linear infinite;
+}
+@keyframes connect-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connect-spin {
+    animation: none;
+  }
+}
+
+/* ===========================================================================
+   ELION monitor — first-class operating surface (Master Prompt §6/§90–§102)
+   =========================================================================== */
+
+/* --- header / hero (§8) --- */
+.agent-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+  border-bottom: var(--hairline-width) solid var(--line);
+  margin-bottom: var(--space-4);
+}
+.agent-hero-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.agent-hero-id h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+}
+.agent-dot {
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  flex: none;
+}
+.agent-dot.is-work { background: var(--ok); }
+.agent-dot.is-observe { background: var(--info); }
+.agent-dot.is-auto { background: var(--accent); }
+.agent-dot.is-paused { background: var(--warn); }
+.agent-dot.is-idle { background: var(--ink-faint); }
+.agent-state {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.agent-state.is-work { color: var(--ok); }
+.agent-state.is-paused { color: var(--warn); }
+.agent-hero-actions { display: flex; gap: var(--space-2); }
+
+.elion-stop,
+.elion-start {
+  border-radius: var(--radius-sm);
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+.elion-stop:hover { border-color: var(--bad); color: var(--bad); }
+.elion-start:hover { border-color: var(--ok); color: var(--ok); }
+
+.topbar-elion-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.topbar-elion-pill:hover { border-color: var(--ok); color: var(--ok); }
+
+/* --- tab nav (§100) --- */
+.agent-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: var(--hairline-width) solid var(--line);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+}
+.agent-tab {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-bottom: 0.125rem solid transparent;
+  color: var(--ink-muted);
+  font-size: 0.9em;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.agent-tab:hover { color: var(--ink); }
+.agent-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* --- monitor layout: satu permukaan utama + rail tipis (§102) --- */
+.agent-monitor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: var(--space-6);
+  align-items: start;
+}
+.agent-monitor-main > * + * {
+  border-top: var(--hairline-width) solid var(--line);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+}
+.agent-monitor-rail { position: sticky; top: var(--space-4); }
+
+/* --- current activity hero (§11–§15) --- */
+.mon-current-head,
+.mon-sec-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.mon-current-head h2,
+.mon-sec-head h2,
+.mon-live-head h2 {
+  margin: 0;
+  font-size: 0.8em;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.mon-state {
+  margin-left: auto;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.mon-state.is-work { color: var(--ok); }
+.mon-state.is-paused { color: var(--warn); }
+.mon-current-title {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+  overflow-wrap: anywhere;
+}
+.mon-why {
+  color: var(--ink-muted);
+  font-size: 0.92em;
+  margin: 0 0 var(--space-2);
+}
+.mon-why strong,
+.mon-next-row strong {
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+.mon-meta { display: flex; gap: var(--space-3); font-size: 0.85em; color: var(--ink-faint); margin: 0; }
+.mon-elapsed { display: block; font-size: 0.82em; color: var(--ink-faint); margin-top: var(--space-1); }
+.mon-next-row {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: 0.92em;
+}
+.mon-next-row p { margin: 0; color: var(--ink-muted); }
+.mon-objective { margin-top: var(--space-4); }
+.mon-objective h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.mon-objective ul { margin: 0; padding: 0; list-style: none; }
+.mon-objective li {
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: 0.92em;
+  color: var(--ink-muted);
+}
+
+/* --- live activity timeline (§16–§22) --- */
+.mon-live-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.mon-live-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--info);
+  animation: mon-pulse 2.4s ease-in-out infinite;
+}
+@keyframes mon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mon-live-dot { animation: none; }
+}
+.mon-filters { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-bottom: var(--space-2); }
+.mon-filter {
+  appearance: none;
+  border: var(--hairline-width) solid var(--line);
+  background: none;
+  color: var(--ink-faint);
+  border-radius: var(--radius);
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+}
+.mon-filter:hover { color: var(--ink); }
+.mon-filter.is-active { border-color: var(--accent); color: var(--accent); }
+.mon-search {
+  inline-size: 100%;
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 0.85em;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: var(--space-3);
+}
+.mon-timeline { list-style: none; margin: 0; padding: 0; }
+.mon-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3.2rem 1.1rem minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+.mon-timeline li + li::before {
+  content: '';
+  position: absolute;
+  left: 3.55rem;
+  top: 0;
+  block-size: 100%;
+  border-left: var(--hairline-width) solid var(--line);
+}
+.mon-timeline time { font-size: 0.75em; color: var(--ink-faint); font-variant-numeric: tabular-nums; padding-top: 0.15rem; }
+.mon-glyph { text-align: center; font-size: 0.85em; color: var(--ink-faint); }
+.mon-timeline li[data-state='ok'] .mon-glyph { color: var(--ok); }
+.mon-timeline li[data-state='run'] .mon-glyph { color: var(--info); }
+.mon-timeline li[data-state='fail'] .mon-glyph { color: var(--bad); }
+.mon-timeline li[data-state='mem'] .mon-glyph { color: var(--accent); }
+.mon-timeline li[data-state='wait'] .mon-glyph { color: var(--warn); }
+.mon-row-body { min-width: 0; }
+.mon-row-body code {
+  font-size: 0.78em;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.05rem 0.35rem;
+}
+.mon-row-body p {
+  margin: 0.15rem 0 0;
+  font-size: 0.85em;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.mon-count { font-size: 0.75em; font-style: normal; font-weight: 700; color: var(--ink-faint); margin-left: 0.3rem; }
+
+/* --- active tasks (§23–§26) --- */
+.mon-bg-count { margin-left: auto; font-size: 0.78em; color: var(--ink-faint); }
+.mon-tasks ul { list-style: none; margin: 0; padding: 0; }
+.mon-tasks li {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: 0.9em;
+}
+.mon-task-glyph { color: var(--ink-faint); text-align: center; }
+.mon-tasks li[data-status='running'] .mon-task-glyph { color: var(--ok); }
+.mon-tasks li[data-status='paused'] .mon-task-glyph,
+.mon-tasks li[data-status='resumable'] .mon-task-glyph,
+.mon-tasks li[data-status='interrupted'] .mon-task-glyph { color: var(--warn); }
+.mon-task-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-src {
+  font-style: normal;
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+}
+.mon-src.is-user { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.mon-src.is-schedule { background: color-mix(in srgb, var(--info) 15%, transparent); color: var(--info); }
+.mon-src.is-autonomous { background: var(--surface); color: var(--ink-faint); }
+.mon-task-state { font-size: 0.8em; color: var(--ink-faint); }
+.mon-note { font-size: 0.8em; color: var(--ink-faint); margin: var(--space-3) 0 0; }
+.mon-note a { color: var(--ink-muted); }
+
+/* --- while away (§27) --- */
+.elion-mini.is-away h2 { color: var(--warn); }
+
+/* --- performance (§29–§42) --- */
+.perf-view > section,
+.perf-view > .perf-grid { margin-top: var(--space-5); }
+.perf-view > section:first-of-type { margin-top: 0; }
+.perf-view h3 {
+  margin: 0 0 var(--space-3);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.perf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  border-top: var(--hairline-width) solid var(--line);
+  padding-top: var(--space-4);
+}
+.perf-metric { display: flex; flex-direction: column; gap: 0.15rem; }
+.perf-value { font-size: 1.6em; font-weight: 650; font-variant-numeric: tabular-nums; }
+.perf-label { font-size: 0.8em; color: var(--ink-muted); }
+.perf-sub { font-size: 0.72em; color: var(--ink-faint); }
+.perf-spark { inline-size: 100%; max-inline-size: 22rem; block-size: 2.75rem; }
+.perf-spark path { stroke: var(--accent); }
+.perf-tools ul,
+.perf-health ul { list-style: none; margin: 0; padding: 0; }
+.perf-tools li,
+.perf-health li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: 0.85em;
+}
+.perf-tools code { min-inline-size: 9rem; color: var(--ink-muted); }
+.perf-tools em,
+.perf-health em { font-style: normal; color: var(--ink-faint); margin-left: auto; font-variant-numeric: tabular-nums; }
+.perf-bar {
+  flex: 1;
+  max-inline-size: 12rem;
+  block-size: 0.3rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.perf-bar i { display: block; block-size: 100%; background: var(--ok); }
+.perf-health span { min-inline-size: 8rem; color: var(--ink-muted); }
+
+/* --- memory view --- */
+.mem-list { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+.mem-list li { padding: var(--space-3) 0; border-top: var(--hairline-width) solid var(--line); }
+.mem-list code { font-size: 0.78em; color: var(--accent); }
+.mem-list p { margin: 0.2rem 0; font-size: 0.9em; color: var(--ink-muted); overflow-wrap: anywhere; }
+.mem-list time { font-size: 0.75em; color: var(--ink-faint); }
+
+@media (max-width: 60rem) {
+  .agent-monitor { grid-template-columns: minmax(0, 1fr); }
+  .agent-monitor-rail { position: static; }
+  .mon-tasks li { grid-template-columns: 1.2rem minmax(0, 1fr) auto; }
+  .mon-task-state { display: none; }
+}
+
+/* ===========================================================================
+   POLISH LAYER — "calm OS" skin untuk /agent + /elion
+   Satu bahasa visual: permukaan raised + hairline + bayangan lembut, angka
+   tabular, label kecil ber-tracking. Semua dari token foundation.
+   =========================================================================== */
+
+/* ---------- 1. Page header (hero) ---------- */
+.agent-hero {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: var(--space-5) var(--space-4) var(--space-3);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  border-bottom: var(--hairline-width) solid var(--line);
+}
+.agent-hero-id h1 {
+  font-size: var(--type-l);
+  letter-spacing: var(--tracking-heading);
+  font-weight: 650;
+}
+.agent-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  border-radius: var(--radius-pill);
+  border: var(--hairline-width) solid color-mix(in srgb, currentColor 22%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: var(--ink-muted);
+  padding: var(--space-0_5) var(--space-2_5);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lozenge);
+}
+.agent-state::before {
+  content: '';
+  inline-size: var(--space-1_5);
+  block-size: var(--space-1_5);
+  border-radius: var(--radius-round);
+  background: currentColor;
+}
+.agent-state.is-work,
+.agent-state.is-auto { color: var(--ok); }
+.agent-state.is-observe { color: var(--info); }
+.agent-state.is-paused { color: var(--warn); }
+.agent-state.is-idle { color: var(--ink-faint); }
+.agent-dot.is-work {
+  box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--ok) 18%, transparent);
+}
+
+.elion-stop,
+.elion-start {
+  block-size: var(--control-height-sm);
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-4);
+  transition:
+    background var(--duration-micro) var(--ease),
+    border-color var(--duration-micro) var(--ease),
+    color var(--duration-micro) var(--ease);
+}
+.elion-start {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--ok) 13%, transparent);
+  color: var(--ok);
+}
+.elion-start:hover { background: color-mix(in srgb, var(--ok) 20%, transparent); }
+.elion-stop:hover {
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+  background: color-mix(in srgb, var(--bad) 8%, transparent);
+  color: var(--bad);
+}
+
+.topbar-elion-pill {
+  background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--ok) 26%, transparent);
+  color: var(--ok);
+}
+
+/* ---------- 2. Segmented tab nav ---------- */
+.agent-tabs {
+  display: inline-flex;
+  gap: var(--space-0_5);
+  padding: var(--space-0_5);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border-bottom: 0;
+  margin-bottom: var(--space-5);
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+.agent-tab {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  font-weight: var(--weight-medium);
+  padding: var(--space-1_5) var(--space-4);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--duration-micro) var(--ease),
+    color var(--duration-micro) var(--ease),
+    box-shadow var(--duration-micro) var(--ease);
+}
+.agent-tab:hover { color: var(--ink); }
+.agent-tab.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-raised);
+}
+
+/* ---------- 3. Stat tiles ---------- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--space-3);
+}
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-4);
+  min-inline-size: 0;
+}
+.stat-label {
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lozenge);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.stat-value {
+  font-size: var(--type-metric-l);
+  font-weight: 650;
+  letter-spacing: var(--tracking-heading);
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.stat-sub {
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.stat-tile[data-tone='ok'] .stat-value { color: var(--ok); }
+.stat-tile[data-tone='warn'] .stat-value { color: var(--warn); }
+.stat-tile[data-tone='bad'] .stat-value { color: var(--bad); }
+.stat-tile[data-tone='info'] .stat-value { color: var(--info); }
+.stat-tile[data-tone='accent'] .stat-value { color: var(--accent); }
+
+/* ---------- 4. Panels ---------- */
+.mon-dash > .mon-panel,
+.mon-dash > .stat-row { margin-top: var(--space-4); }
+.mon-panel {
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-5);
+  min-inline-size: 0;
+}
+.mon-panel > h3,
+.mon-panel > .mon-sub {
+  margin: 0 0 var(--space-4);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lozenge);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.mon-panel > .mon-sub { margin-top: var(--space-5); }
+.mon-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+.mon-duo .mon-panel { margin-top: 0; }
+
+/* Honest empty state — konsisten di semua section */
+.agent-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--hairline-width) dashed color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  color: var(--ink-faint);
+  font-size: var(--type-body-s);
+}
+
+/* ---------- 5. Charts ---------- */
+.chart-block { min-inline-size: 0; }
+.hour-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  block-size: 7rem;
+}
+.hour-bar {
+  flex: 1;
+  block-size: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-inline-size: 0;
+}
+.hour-bar i {
+  display: block;
+  inline-size: 100%;
+  border-radius: var(--space-0_5) var(--space-0_5) 0 0;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: background var(--duration-micro) var(--ease);
+}
+.hour-bar:hover i { background: var(--accent); }
+.hour-bar i[data-empty='true'] { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.hour-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.trend-svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 5.5rem;
+}
+.trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trend-area { fill: color-mix(in srgb, var(--accent) 12%, transparent); stroke: none; }
+.trend-caption {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.trend-caption em { font-style: normal; color: var(--bad); }
+.trend-caption em[data-up='true'] { color: var(--ok); }
+
+/* Heatmap */
+.heatmap-scroll { overflow-x: auto; padding-bottom: var(--space-1); }
+.heatmap {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, var(--space-2_5));
+  grid-auto-columns: var(--space-2_5);
+  gap: var(--space-0_5);
+  inline-size: max-content;
+}
+.heat-cell {
+  border-radius: var(--space-0_5);
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.heat-cell[data-level='1'] { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+.heat-cell[data-level='2'] { background: color-mix(in srgb, var(--accent) 50%, transparent); }
+.heat-cell[data-level='3'] { background: color-mix(in srgb, var(--accent) 72%, transparent); }
+.heat-cell[data-level='4'] { background: var(--accent); }
+.heat-cell.is-legend { inline-size: var(--space-2_5); block-size: var(--space-2_5); }
+.heatmap-months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc(var(--space-2_5) + var(--space-0_5));
+  gap: var(--space-0_5);
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+  margin-bottom: var(--space-1);
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+}
+
+/* Category + tool bars */
+.cat-bars,
+.tool-table { list-style: none; margin: 0; padding: 0; }
+.cat-bars li,
+.tool-table li {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: var(--type-body-s);
+}
+.cat-bars li:first-child,
+.tool-table li:first-child { border-top: 0; }
+.cat-bars code,
+.tool-table code {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-bars em,
+.tool-table em {
+  font-style: normal;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.perf-bar {
+  display: block;
+  block-size: var(--space-1_5);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  overflow: hidden;
+}
+.perf-bar i { display: block; block-size: 100%; background: var(--ok); border-radius: inherit; }
+.perf-bar i[data-low='true'] { background: var(--warn); }
+.tool-table .perf-bar i { background: var(--accent); }
+.tool-table .perf-bar i[data-low='true'] { background: var(--warn); }
+
+/* Errors */
+.err-list { list-style: none; margin: 0; padding: 0; }
+.err-list li {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+}
+.err-list li:first-child { border-top: 0; }
+.err-list li > span { color: var(--bad); font-weight: 700; }
+.err-list p { margin: 0; font-size: var(--type-body-s); color: var(--ink); overflow-wrap: anywhere; }
+.err-list time { font-size: var(--type-caption); color: var(--ink-faint); white-space: nowrap; }
+
+/* Health + memory ops */
+.health-list { list-style: none; margin: 0; padding: 0; }
+.health-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: var(--hairline-width) solid var(--line);
+  font-size: var(--type-body-s);
+}
+.health-list li:first-child { border-top: 0; }
+.health-list span { color: var(--ink-muted); }
+.health-list em {
+  font-style: normal;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.mem-ops { display: flex; gap: var(--space-8); }
+.mem-ops strong {
+  display: block;
+  font-size: var(--type-metric-m);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.mem-ops span { font-size: var(--type-caption); color: var(--ink-faint); }
+
+/* ---------- 6. Monitor tab ---------- */
+.agent-monitor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+.agent-monitor-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+.agent-monitor-main > * + * {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+.agent-monitor-rail {
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Current activity = satu-satunya permukaan yang di-elevate (§102) */
+.mon-current {
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-5);
+}
+.mon-live,
+.mon-tasks {
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-5);
+}
+.mon-current-head h2,
+.mon-sec-head h2,
+.mon-live-head h2 {
+  font-size: var(--type-caption);
+  letter-spacing: var(--tracking-lozenge);
+  text-transform: uppercase;
+  font-weight: var(--weight-semibold);
+}
+.mon-current-title { font-size: var(--type-m); letter-spacing: var(--tracking-heading); font-weight: 650; }
+.mon-elapsed { font-variant-numeric: tabular-nums; }
+.mon-filters { margin-bottom: var(--space-3); }
+.mon-filter {
+  transition:
+    color var(--duration-micro) var(--ease),
+    border-color var(--duration-micro) var(--ease),
+    background var(--duration-micro) var(--ease);
+}
+.mon-filter.is-active { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.mon-search {
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-color: transparent;
+}
+.mon-search:focus-visible {
+  outline: var(--focus-width) solid var(--accent);
+  outline-offset: var(--focus-offset);
+  background: var(--surface);
+}
+.mon-timeline li {
+  grid-template-columns: 3.4rem 1.2rem minmax(0, 1fr);
+  transition: background var(--duration-micro) var(--ease);
+  border-radius: var(--radius-sm);
+}
+.mon-timeline li:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.mon-timeline li + li::before { display: none; }
+.mon-row-body code {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  font-family: var(--font-mono);
+}
+.mon-tasks li { border-radius: var(--radius-sm); padding-inline: var(--space-1); }
+.mon-src { border-radius: var(--radius-pill); }
+
+/* ---------- 7. While away + rail cards ---------- */
+.elion-mini.is-away {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: color-mix(in srgb, var(--warn) 6%, var(--surface));
+}
+.elion-rail { position: sticky; top: var(--space-4); }
+.elion-rail .elion-mini,
+.sentient-panel {
+  box-shadow: var(--shadow-raised);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+.elion-rail .elion-mini > h2,
+.elion-mini > h2 {
+  font-size: var(--type-caption);
+  letter-spacing: var(--tracking-lozenge);
+  text-transform: uppercase;
+  font-weight: var(--weight-semibold);
+}
+.elion-rail .elion-mini ul li {
+  padding: var(--space-1_5) 0;
+  border-top: var(--hairline-width) solid var(--line);
+}
+
+/* ---------- 8. Chat card (/elion + tab Chat di /agent) ---------- */
+.elion-chat {
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  padding: var(--space-4);
+  gap: var(--space-3);
+  min-height: min(74vh, 46rem);
+}
+.elion-head {
+  padding-bottom: var(--space-3);
+  border-bottom: var(--hairline-width) solid var(--line);
+}
+.elion-head h1 {
+  font-size: var(--type-m);
+  letter-spacing: var(--tracking-heading);
+  font-weight: 650;
+}
+.elion-messages {
+  background: var(--sunken);
+  border: var(--hairline-width) solid color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  max-block-size: min(60vh, 40rem);
+}
+.elion-msg { max-width: min(85%, 42rem); }
+.elion-msg.is-user .elion-bubble {
+  border-radius: var(--radius-bubble);
+  border-end-end-radius: var(--radius-sm);
+  padding: var(--space-2_5) var(--space-3_5);
+  font-size: var(--type-body);
+  box-shadow: var(--shadow-raised);
+}
+.elion-msg.is-assistant .elion-bubble {
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-bubble);
+  border-start-start-radius: var(--radius-sm);
+  padding: var(--space-2_5) var(--space-3_5);
+  font-size: var(--type-body);
+  box-shadow: var(--shadow-raised);
+}
+.elion-msg.is-user { align-items: flex-end; }
+.elion-tools li {
+  background: var(--sunken);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+.elion-tools li > span { font-weight: 700; }
+.elion-empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  border: var(--hairline-width) dashed color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius: var(--radius);
+}
+.elion-empty p { font-size: var(--type-body-s); }
+.elion-composer input {
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
+  transition: border-color var(--duration-micro) var(--ease), background var(--duration-micro) var(--ease);
+}
+.elion-composer input:focus-visible {
+  background: var(--surface);
+  outline: var(--focus-width) solid var(--accent);
+  outline-offset: var(--focus-offset);
+}
+.elion-typing { animation: agent-pulse var(--duration-pulse) var(--ease) infinite alternate; }
+
+/* ---------- 9. Responsive ---------- */
+@media (max-width: 60rem) {
+  .mon-duo { grid-template-columns: minmax(0, 1fr); }
+  .agent-hero {
+    position: static;
+    margin: 0 0 var(--space-4);
+    padding: 0;
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .elion-msg { max-width: 92%; }
+  .cat-bars li,
+  .tool-table li { grid-template-columns: 5.5rem minmax(0, 1fr); }
+  .cat-bars em,
+  .tool-table em { display: none; }
 }

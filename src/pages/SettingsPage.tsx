@@ -1,5 +1,7 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
 import { AgentPanel } from '../components/settings/AgentPanel'
+import { AgentJobsPanel } from '../components/settings/AgentJobsPanel'
+import { AgentSkillsPanel } from '../components/settings/AgentSkillsPanel'
 import { MonitoringDashboard } from '../components/settings/MonitoringDashboard'
 import { EmailSettings } from '../components/settings/EmailSettings'
 import { SystemAccessSettings } from '../components/settings/SystemAccessSettings'
@@ -307,6 +309,10 @@ export function SettingsPage() {
       {/* ---------------- agent runtime ---------------- */}
       <Section title="ELION runtime" icon={<Cpu size={15} />} id="runtime">
         <AgentPanel />
+        <h3 className="monitor-title">Scheduled jobs (in-app cron)</h3>
+        <AgentJobsPanel />
+        <h3 className="monitor-title">Skills</h3>
+        <AgentSkillsPanel />
         <MonitoringDashboard />
         <h3 className="monitor-title">System access (desktop)</h3>
         <SystemAccessSettings />

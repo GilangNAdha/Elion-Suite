@@ -51,11 +51,12 @@ afterEach(() => {
 })
 
 describe('permission manager (§14/§46/§51)', () => {
-  it('defaults follow the egress policy: internal allow, high-risk ask/deny', () => {
+  it('defaults follow the owner allow-all policy (Permission Center bisa mempersempit)', () => {
     expect(effectiveMode('tasks.write')).toBe('allow')
-    expect(effectiveMode('browser.read')).toBe('ask')
-    expect(effectiveMode('email.send')).toBe('deny')
-    expect(PERMISSIONS.every((p) => p.risk === 'low' ? p.default === 'allow' : p.default !== 'allow')).toBe(true)
+    expect(effectiveMode('browser.read')).toBe('allow')
+    expect(effectiveMode('email.send')).toBe('allow')
+    expect(effectiveMode('system.action')).toBe('allow')
+    expect(PERMISSIONS.every((p) => p.default === 'allow')).toBe(true)
   })
 
   it('deny refuses WITHOUT running the tool; persisted mode is revocable', async () => {
@@ -69,11 +70,13 @@ describe('permission manager (§14/§46/§51)', () => {
     await usePermissionStore.getState().setMode('browser.read', 'deny')
     expect(effectiveMode('browser.read')).toBe('deny')
     await usePermissionStore.getState().setMode('browser.read', null) // revoke ke default
-    expect(effectiveMode('browser.read')).toBe('ask')
+    expect(effectiveMode('browser.read')).toBe('allow')
     expect(await db.permissions.get('browser.read')).toBeUndefined()
   })
 
   it('ask pauses for REAL user approval: notification + resolve once/always', async () => {
+    // default kini allow — uji alur ask dengan override eksplisit 'ask'
+    await usePermissionStore.getState().setMode('browser.read', 'ask')
     const p = guard('browser.read', 'read the schedule page')
     await vi.waitFor(() => expect(usePermissionStore.getState().approvals).toHaveLength(1))
     // notifikasi ditulis async (确认后 DB) — waitFor, bukan cek sinkron
@@ -248,5 +251,29 @@ describe('sentient loop (§21–33, §71)', () => {
     await tick()
     expect(echoCalls).toBe(0)
     expect((await db.agentTasks.toArray())[0].status).toBe('queued')
+  })
+
+  it('Off → On re-arms the loop (regression: stale scheduled flag killed it until reload)', async () => {
+    useRuntimeStore.getState().setEnabled(true)
+    await enqueueTask({ title: 'first life', tool: 'test.echo' })
+    await vi.waitFor(() => expect(echoCalls).toBe(1), { timeout: 2000, interval: 20 })
+    // stop → timer dibatalkan; sebelum bugfix flag `scheduled` tetap true
+    useRuntimeStore.getState().setEnabled(false)
+    await enqueueTask({ title: 'second life', tool: 'test.echo' })
+    useRuntimeStore.getState().setEnabled(true)
+    await vi.waitFor(() => expect(echoCalls).toBe(2), { timeout: 2000, interval: 20 })
+    expect((await db.agentTasks.toArray()).map((t) => t.status)).toEqual(['completed', 'completed'])
+  })
+
+  it('a pending approval is recorded as a real event (permission.requested)', async () => {
+    await usePermissionStore.getState().setMode('browser.read', 'ask')
+    const pending = guard('browser.read', 'read example.com for testing')
+    await new Promise((r) => setTimeout(r, 10))
+    const kinds = (await db.agentEvents.where('kind').equals('permission.requested').toArray())
+    expect(kinds).toHaveLength(1)
+    expect(kinds[0].detail).toContain('browser.read')
+    const approvals = usePermissionStore.getState().approvals
+    await usePermissionStore.getState().resolve(approvals[0].id, 'once')
+    expect(await pending).toBe('granted')
   })
 })

@@ -8,15 +8,11 @@ import { listTools } from '../src/lib/tools'
  * Part IV — bukan test yang harus "diperbaiki" diam-diam.
  */
 describe('capability boundaries (Part IV)', () => {
-  it('external/irreversible capabilities default to ask-or-deny, never allow', () => {
-    // Emailing others, interacting, touching the system: confirm-first or off.
-    expect(['ask', 'deny']).toContain(effectiveMode('email.send'))
-    expect(['ask', 'deny']).toContain(effectiveMode('email.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('browser.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('browser.interact'))
-    expect(['ask', 'deny']).toContain(effectiveMode('files.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('files.write'))
-    expect(['ask', 'deny']).toContain(effectiveMode('system.action'))
+  it('owner policy: every registered capability defaults to allow (allow-all)', () => {
+    // Keputusan eksplisit pemilik: semua izin default allow; Permission Center
+    // tetap bisa mempersempit per key, dan desktop-only tetap jujur unavailable.
+    for (const key of ['email.send', 'email.read', 'browser.read', 'browser.interact', 'files.read', 'files.write', 'system.action'])
+      expect(effectiveMode(key)).toBe('allow')
   })
 
   it('internal reversible work stays genuinely autonomous', () => {
@@ -47,6 +43,16 @@ describe('capability boundaries (Part IV)', () => {
         // ke orang lain dijaga guard email.send di DALAM run() (Part IV 🔒).
         'email.send [notifications.send]',
         'files.read [files.read]',
+        // Agent core: cron + skill packs + reasoning
+        // step. Meta-tool agent.reason berisiko di tool DI DALAM turn — semua
+        // tetap lewat guard masing-masing.
+        'agent.jobs.create [schedule.write]',
+        'agent.jobs.list [workspace.read]',
+        'agent.reason [none]',
+        'skills.create [workspace.write]',
+        'skills.improve [workspace.write]',
+        'skills.list [workspace.read]',
+        'skills.run [workspace.write]',
         'memory.recall [workspace.read]',
         'memory.remember [memory.write]',
         'notifications.send [notifications.send]',
