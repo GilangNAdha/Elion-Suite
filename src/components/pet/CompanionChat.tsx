@@ -198,7 +198,7 @@ export function CompanionChat({ compact = false, onClose }: { compact?: boolean;
             <h3>A thought, a plan, a little clarity.</h3>
             <p>
               {connected
-                ? `Tell Elion what’s on your mind — replies come from ${cloud ? `${preset.name} · ${aiSettings.model}` : 'your local model'}.`
+                ? 'Ask for a plan, a breakdown, or a second opinion on what you’re working on.'
                 : 'Once set up, Elion can help you plan projects, break work down and find the next step.'}
             </p>
             <div className="nova-suggestions">

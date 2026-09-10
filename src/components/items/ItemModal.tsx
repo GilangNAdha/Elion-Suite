@@ -11,19 +11,33 @@ import { DEFAULT_STATUSES } from '../views/views'
 const PRIORITIES: Priority[] = ['lowest', 'low', 'medium', 'high', 'highest']
 const TYPES: ItemType[] = ['task', 'story', 'epic', 'subtask', 'habit']
 
-export function ItemModal({
-  db,
-  databaseId,
-  editing,
-  creating,
-  onClose
-}: {
+type ItemModalProps = {
   db: WorkspaceDatabase | null
   databaseId: string | null
   editing: WorkspaceItem | null
   creating: Partial<WorkspaceItem> | null
   onClose: () => void
-}) {
+}
+
+/**
+ * §44 object-switch correctness: the ITEM ID is the source of truth.
+ * Switching to another object (or external update of the same one) remounts
+ * the form AND always hydrates from the live store copy — so no save can ever
+ * write a stale snapshot onto a different object.
+ */
+export function ItemModal(props: ItemModalProps) {
+  return <ItemModalForm key={props.editing?.id ?? (props.creating ? 'create' : 'none')} {...props} />
+}
+
+function ItemModalForm({
+  db,
+  databaseId,
+  editing: editingProp,
+  creating,
+  onClose
+}: ItemModalProps) {
+  // Ambil salinan TERBARU dari store (bukan snapshot saat caller mengklik).
+  const editing = useItemsStore((s) => (editingProp ? s.items[editingProp.id] ?? editingProp : null))
   const createItem = useItemsStore((s) => s.createItem)
   const updateItem = useItemsStore((s) => s.updateItem)
   const deleteItem = useItemsStore((s) => s.deleteItem)
