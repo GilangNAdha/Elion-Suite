@@ -165,7 +165,7 @@ test('MiniCPM unavailable state is honest and cannot send a fake reply', async (
   await page.getByRole('button', { name: 'Chat with Elion', exact: true }).click()
   await chat.getByRole('radio', { name: /MiniCPM Desk Pet/ }).click()
   await chat.getByRole('button', { name: 'Connect MiniCPM', exact: true }).click()
-  await expect(chat.locator('.nova-chat-error')).toContainText('could not be reached')
+  await expect(chat.locator('.nova-chat-error')).toContainText('MiniCPM is not connected')
   await chat.getByRole('textbox', { name: 'Message Elion', exact: true }).fill('Help me focus')
   await expect(chat.getByRole('button', { name: 'Send message to Elion', exact: true })).toBeDisabled()
   await expect(chat.locator('.nova-message.from-assistant')).toHaveCount(0)
