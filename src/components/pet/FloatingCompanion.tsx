@@ -176,8 +176,8 @@ export function FloatingCompanion() {
         <div className="floating-nova-tools">
           <button
             type="button"
-            aria-label="Move Nova"
-            title="Drag Nova, or use the arrow keys"
+            aria-label="Move Elion"
+            title="Drag Elion, or use the arrow keys"
             onPointerDown={startDrag}
             onKeyDown={(event) => {
               if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
@@ -205,8 +205,8 @@ export function FloatingCompanion() {
           </button>
           <button
             type="button"
-            aria-label="Hide Nova"
-            title="Hide pet — enable again in Settings"
+            aria-label="Hide Elion"
+            title="Hide Elion — turn it back on in Settings"
             onClick={() => state.setPinned(false)}
           >
             <X size={12} />
@@ -216,7 +216,7 @@ export function FloatingCompanion() {
           ref={avatar}
           type="button"
           className="floating-nova-avatar"
-          aria-label="Interact with Nova"
+          aria-label="Interact with Elion"
           aria-haspopup="dialog"
           aria-expanded={state.controlsOpen || state.open}
           aria-controls={state.open ? 'nova-chat-popover' : 'nova-pet-controls'}
@@ -238,11 +238,11 @@ export function FloatingCompanion() {
         <button
           type="button"
           className="floating-nova-label"
-          aria-label="Open Nova controls"
+          aria-label="Open Elion controls"
           onClick={toggleControls}
         >
           {state.resting ? <Moon size={11} /> : <Hand size={11} />}
-          {state.activity === 'idle' ? 'Nova' : status}
+          {state.activity === 'idle' ? 'Elion' : status}
         </button>
         <AnimatePresence>
           {state.reaction && (
@@ -270,7 +270,7 @@ export function FloatingCompanion() {
             id={state.open ? 'nova-chat-popover' : 'nova-pet-controls'}
             className={`floating-nova-popover ${state.open ? 'floating-nova-chat' : 'floating-nova-actions'}`}
             role="dialog"
-            aria-label={state.open ? 'Nova chat' : 'Nova controls'}
+            aria-label={state.open ? 'Elion chat' : 'Elion controls'}
             onKeyDown={onEscape}
             style={{
               left: popup.x,
@@ -290,17 +290,17 @@ export function FloatingCompanion() {
               <>
                 <header className="nova-actions-heading">
                   <div>
-                    <strong>Nova</strong>
+                    <strong>Elion</strong>
                     <span>{status}</span>
                   </div>
-                  <IconBtn label="Close pet controls" onClick={closePanel}>
+                  <IconBtn label="Close Elion controls" onClick={closePanel}>
                     <X size={14} />
                   </IconBtn>
                 </header>
                 <div className="nova-actions-grid">
                   <button ref={firstAction} type="button" onClick={() => state.interact('pat')}>
                     <Heart size={15} />
-                    Pat Nova
+                    High five Elion
                   </button>
                   <button type="button" onClick={() => state.interact('wave')}>
                     <Hand size={15} />
@@ -308,15 +308,15 @@ export function FloatingCompanion() {
                   </button>
                   <button
                     type="button"
-                    aria-label={state.resting ? 'Wake Nova' : 'Let Nova nap'}
+                    aria-label={state.resting ? 'Wake Elion' : 'Let Elion rest'}
                     onClick={() => state.setResting(!state.resting)}
                   >
                     {state.resting ? <Sun size={15} /> : <Moon size={15} />}
-                    {state.resting ? 'Wake Nova' : 'Let Nova nap'}
+                    {state.resting ? 'Wake Elion' : 'Let Elion rest'}
                   </button>
                   <button type="button" onClick={() => state.setOpen(true)}>
                     <MessageCircle size={15} />
-                    Chat with Nova
+                    Start a chat
                   </button>
                 </div>
                 <button
@@ -328,7 +328,7 @@ export function FloatingCompanion() {
                   }}
                 >
                   <Settings size={13} />
-                  Pet settings
+                  Elion settings
                 </button>
               </>
             )}

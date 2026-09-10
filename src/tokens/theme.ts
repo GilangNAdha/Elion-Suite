@@ -5,6 +5,8 @@
 
 import type { AuroraTheme, Harmony } from '../lib/types'
 
+// Legacy "Night glass" identity, kept for the opt-in preset and the wallpaper
+// scrim text. The shipped default is the iOS-style system palette below.
 export const ELION_PALETTE = {
   void: '#0A0E16',
   depth: '#141B27',
@@ -15,7 +17,36 @@ export const ELION_PALETTE = {
   dusk: '#9C87F7',
   ember: '#F2A65A'
 } as const
-export const ELION_SEED = { h: 168.4, s: 71.4, l: 57.5 } as const
+// iOS system colors: grouped light-gray canvas, solid elevated cards, hairline
+// separators and the system blue tint. `current` is the accessibility-safe
+// fill (white labels ≥ 4.5:1); `tint` is the brighter raw system blue used
+// for icons, links and selections.
+export const IOS_PALETTE = {
+  light: {
+    void: '#F2F2F7',
+    depth: '#FFFFFF',
+    hairline: '#DFDFE5',
+    fog: '#62626A',
+    paper: '#1B1B1F',
+    current: '#0066D6',
+    tint: '#007AFF',
+    dusk: '#5E5CE6',
+    ember: '#9C5700'
+  },
+  dark: {
+    void: '#000000',
+    depth: '#1C1C1E',
+    hairline: '#38383A',
+    fog: '#98989F',
+    paper: '#FFFFFF',
+    current: '#0A6CE0',
+    tint: '#0A84FF',
+    dusk: '#5E5CE6',
+    ember: '#FF9F0A'
+  }
+} as const
+export const ELION_SEED = { h: 211, s: 100, l: 50 } as const
+export const CLASSIC_SEED = { h: 168.4, s: 71.4, l: 57.5 } as const
 
 const mod = (h: number) => ((h % 360) + 360) % 360
 
@@ -170,17 +201,21 @@ const cssHsl = (v: Hsl) => hsl(v.h, v.s, v.l)
 export function deriveTheme(t: AuroraTheme): ResolvedTheme {
   const { h, s } = t.seed
   const dark = t.mode === 'dark'
-  const signatureDefault =
-    Math.abs(h - ELION_SEED.h) < 0.05 &&
-    Math.abs(s - ELION_SEED.s) < 0.05 &&
-    Math.abs(t.seed.l - ELION_SEED.l) < 0.05
-  const isDefault = dark && signatureDefault
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.05
+  const classicSeed = near(h, CLASSIC_SEED.h) && near(s, CLASSIC_SEED.s) && near(t.seed.l, CLASSIC_SEED.l)
+  const iosSeed = near(h, ELION_SEED.h) && near(s, ELION_SEED.s) && near(t.seed.l, ELION_SEED.l)
+  // The legacy glass identity only resolves for its own signature dark seed;
+  // the iOS system palette is mode-aware (light + dark shipped defaults).
+  const classic = dark && classicSeed && !iosSeed
+  const pal = iosSeed && !classic ? (dark ? IOS_PALETTE.dark : IOS_PALETTE.light) : null
+  const ios = pal !== null
+  const isDefault = classic || ios
   const baseHue = mod(h + 55)
   const surface: Hsl = isDefault
-    ? rgbToHsl(colorRgb(ELION_PALETTE.depth))
+    ? rgbToHsl(colorRgb(classic ? ELION_PALETTE.depth : pal!.depth))
     : { h: baseHue, s: dark ? 25 : 24, l: dark ? 11 : 98 }
   const bg: Hsl = isDefault
-    ? rgbToHsl(colorRgb(ELION_PALETTE.void))
+    ? rgbToHsl(colorRgb(classic ? ELION_PALETTE.void : pal!.void))
     : { h: baseHue, s: dark ? 32 : 24, l: dark ? 6 : 95 }
   const ink = autoFixContrast({ h: baseHue, s: 20, l: dark ? 94 : 15 }, surface, 4.5)
   const muted = autoFixContrast({ h: baseHue, s: 15, l: dark ? 64 : 40 }, surface, 4.5)
@@ -190,14 +225,15 @@ export function deriveTheme(t: AuroraTheme): ResolvedTheme {
     3
   )
   const harmony = harmonize(h, t.harmony)
-  const duskHue = signatureDefault ? 251.3 : (harmony.find((v) => v !== h) ?? mod(h + 88))
+  const duskHue = classicSeed || iosSeed ? 251.3 : (harmony.find((v) => v !== h) ?? mod(h + 88))
   // Dusk is never exposed as a stand-alone accent fill. Only --signature uses it.
-  const current = isDefault ? ELION_PALETTE.current : cssHsl(primary)
-  const dusk = isDefault ? ELION_PALETTE.dusk : hsl(duskHue, 64, dark ? 72 : 46)
-  const surfaceColor = isDefault ? ELION_PALETTE.depth : cssHsl(surface)
-  const bgColor = isDefault ? ELION_PALETTE.void : cssHsl(bg)
-  const inkColor = isDefault ? ELION_PALETTE.paper : cssHsl(ink)
-  const mutedColor = isDefault ? ELION_PALETTE.fog : cssHsl(muted)
+  const current = classic ? ELION_PALETTE.current : pal ? pal.current : cssHsl(primary)
+  const tint = pal ? pal.tint : current
+  const dusk = classic ? ELION_PALETTE.dusk : pal ? pal.dusk : hsl(duskHue, 64, dark ? 72 : 46)
+  const surfaceColor = classic ? ELION_PALETTE.depth : pal ? pal.depth : cssHsl(surface)
+  const bgColor = classic ? ELION_PALETTE.void : pal ? pal.void : cssHsl(bg)
+  const inkColor = classic ? ELION_PALETTE.paper : pal ? pal.paper : cssHsl(ink)
+  const mutedColor = classic ? ELION_PALETTE.fog : pal ? pal.fog : cssHsl(muted)
   const glassAlpha = 1 - (Math.max(0, Math.min(100, t.glass)) / 100) * 0.48
   const glassRgb = colorRgb(surfaceColor)
   const glassColor = `rgba(${glassRgb.map(Math.round).join(', ')}, ${glassAlpha.toFixed(2)})`
@@ -237,15 +273,18 @@ export function deriveTheme(t: AuroraTheme): ResolvedTheme {
   const vars: Record<string, string> = {
     '--void': bgColor,
     '--depth': surfaceColor,
-    '--hairline': isDefault ? ELION_PALETTE.hairline : hsl(baseHue, 23, dark ? 21 : 84),
+    '--hairline': classic ? ELION_PALETTE.hairline : pal ? pal.hairline : hsl(baseHue, 23, dark ? 21 : 84),
     '--paper': inkColor,
     '--wallpaper-ink': ELION_PALETTE.paper,
     '--fog': mutedColor,
     '--current': current,
+    '--tint': tint,
     '--dusk': dusk,
-    '--ember': isDefault
-      ? ELION_PALETTE.ember
-      : cssHsl(autoFixContrast({ h: 30, s: 70, l: dark ? 65 : 37 }, surface, 4.5)),
+    '--ember': pal
+      ? pal.ember
+      : classic
+        ? ELION_PALETTE.ember
+        : cssHsl(autoFixContrast({ h: 30, s: 70, l: dark ? 65 : 37 }, surface, 4.5)),
     '--bg': bgColor,
     '--surface': surfaceColor,
     '--raised': surfaceColor,
@@ -258,10 +297,10 @@ export function deriveTheme(t: AuroraTheme): ResolvedTheme {
     '--ink': inkColor,
     '--ink-muted': mutedColor,
     '--ink-faint': mutedColor,
-    '--line': isDefault ? ELION_PALETTE.hairline : hsl(baseHue, 23, dark ? 21 : 84),
+    '--line': classic ? ELION_PALETTE.hairline : pal ? pal.hairline : hsl(baseHue, 23, dark ? 21 : 84),
     '--line-strong': hsl(baseHue, 22, dark ? 38 : 60),
     '--primary': current,
-    '--on-primary': pickOn(rgbToHsl(colorRgb(current))),
+    '--on-primary': pal ? '#FFFFFF' : pickOn(rgbToHsl(colorRgb(current))),
     '--primary-soft': `color-mix(in srgb, ${current} 10%, transparent)`,
     '--accent': current,
     '--on-accent': pickOn(rgbToHsl(colorRgb(current))),
@@ -274,8 +313,13 @@ export function deriveTheme(t: AuroraTheme): ResolvedTheme {
     '--glass-blur': `${Math.round(t.glass * 0.24)}px`,
     '--density': String({ compact: 0.82, comfortable: 1, spacious: 1.18 }[t.density]),
     '--shadow-sunken': 'none',
-    '--shadow-raised': `0 4px 16px rgba(3, 7, 14, ${dark ? 0.16 : 0.06})`,
-    '--shadow-overlay': `0 16px 48px rgba(3, 7, 14, ${dark ? 0.5 : 0.18})`
+    // iOS-style elevation: cards are separated by fill + hairline, shadows stay
+    // whisper-quiet in light and deepen only for floating overlays.
+    '--shadow-raised': pal && !dark
+      ? '0 1px 2px rgba(0, 0, 0, 0.05)'
+      : `0 4px 16px rgba(3, 7, 14, ${dark ? 0.16 : 0.06})`,
+    '--shadow-overlay':
+      pal && !dark ? '0 12px 40px rgba(0, 0, 0, 0.16)' : `0 16px 48px rgba(3, 7, 14, ${dark ? 0.5 : 0.18})`
   }
   const pairs: ContrastPair[] = [
     { label: 'Body text / surface', fg: inkColor, bg: surfaceColor, ratio: 0, required: 4.5, pass: false },

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { PawPrint, Hand, MessageCircle, RotateCcw } from 'lucide-react'
+import { Sparkles, Hand, MessageCircle, RotateCcw } from 'lucide-react'
 import { useCompanionStore } from '../../stores/companionStore'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 import { Button, Toggle } from '../ui'
@@ -25,29 +25,29 @@ export function FloatingPetSettings() {
       aria-labelledby="floating-pet-heading"
     >
       <header>
-        <PawPrint size={17} />
-        <h2 id="floating-pet-heading">Floating pet</h2>
+        <Sparkles size={17} />
+        <h2 id="floating-pet-heading">Elion, your friend</h2>
         <span className={enabled ? 'is-enabled' : ''}>{enabled ? 'Active' : 'Off'}</span>
       </header>
       <p>
-        Nova lives above the app, not in a separate tab. Keep it beside you on any screen, including Settings
-        and Lockdown.
+        Elion is not a pet to be kept — he’s a friend who hangs out above the app. Keep him beside you on
+        any screen, including Settings and Lockdown.
       </p>
       <Toggle
-        label="Enable floating pet"
-        hint="Click Nova for interactions, or drag the pet itself to move it. Your choice is saved on this device."
+        label="Keep Elion on top"
+        hint="Click Elion to say hi, or drag him to move. Your choice is saved on this device."
         checked={enabled}
         onChange={useCompanionStore.getState().setPinned}
       />
       <Toggle
-        label="Animate pet"
-        hint="Breathing, blinking, waving, typing and sleep animations. Interactions still work when animation is off."
+        label="Animate Elion"
+        hint="Breathing, blinking, waving, typing and rest animations. Interactions still work when animation is off."
         checked={animations}
         onChange={useCompanionStore.getState().setAnimations}
       />
       {reduced && (
         <p className="pet-motion-note">
-          Your system or app reduced-motion preference takes priority over pet animation.
+          Your system or app reduced-motion preference takes priority over Elion’s animation.
         </p>
       )}
       <div className="pet-settings-actions">
@@ -57,7 +57,7 @@ export function FloatingPetSettings() {
           icon={<Hand size={14} />}
           onClick={() => useCompanionStore.getState().setControlsOpen(true)}
         >
-          Show pet controls
+          Show Elion’s controls
         </Button>
         <Button
           size="sm"
@@ -65,7 +65,7 @@ export function FloatingPetSettings() {
           icon={<MessageCircle size={14} />}
           onClick={() => useCompanionStore.getState().setOpen(true)}
         >
-          Open pet chat
+          Chat with Elion
         </Button>
         <Button
           size="sm"
@@ -74,14 +74,14 @@ export function FloatingPetSettings() {
           icon={<RotateCcw size={13} />}
           onClick={useCompanionStore.getState().resetPosition}
         >
-          Reset pet position
+          Reset position
         </Button>
       </div>
       <div className="pet-settings-note">
         <span className={`pet-model-dot ${connection === 'ready' ? 'is-connected' : ''}`} />
         <p>
-          {connection === 'ready' ? 'MiniCPM is connected.' : 'Chat can optionally connect to MiniCPM.'}{' '}
-          Patting, waving, sleeping and moving the pet do not need a model.
+          {connection === 'ready' ? 'MiniCPM is connected.' : 'Chat can optionally connect to MiniCPM or any AI provider in Settings.'}{' '}
+          High-fives, waves, rests and moving Elion around never need a model.
         </p>
       </div>
     </section>

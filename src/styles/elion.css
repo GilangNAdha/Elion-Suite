@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   border-right: var(--hairline-width) solid var(--line);
-  background: var(--bg);
+  background: var(--sidebar-bg);
 }
 .brand-lockup {
   min-height: var(--topbar-height);
@@ -62,35 +62,30 @@
   align-items: center;
   gap: var(--space-3);
   min-height: var(--space-10);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1_5) var(--space-3);
   color: var(--ink-muted);
   font-size: var(--type-body);
-  border-radius: var(--radius-sm);
-  transition: opacity var(--duration-micro) var(--ease);
+  border-radius: var(--radius);
+  transition: background var(--duration-micro) var(--ease), color var(--duration-micro) var(--ease);
 }
 .nav-item > svg {
   flex-shrink: 0;
 }
 .nav-item:hover {
   color: var(--ink);
+  background: var(--chrome-hover);
 }
+/* iOS selection: a soft tint pill, no rails, no gradients. */
 .nav-item.is-active {
-  color: var(--ink);
+  color: var(--tint);
   font-weight: var(--weight-medium);
+  background: var(--nav-active-bg);
 }
-/* Signature use 1 of 3. Never a gradient nav fill. */
-.nav-item.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: var(--space-2);
-  bottom: var(--space-2);
-  width: var(--focus-width);
-  border-radius: var(--radius-sm);
-  background: var(--signature);
+.nav-item.is-active:hover {
+  color: var(--tint);
 }
 .nav-item.is-active > svg {
-  color: var(--current);
+  color: var(--tint);
 }
 .project-link {
   display: flex;
@@ -252,8 +247,8 @@
   border-radius: var(--radius);
 }
 .dock-link.is-active {
-  color: var(--current);
-  background: var(--bg);
+  color: var(--tint);
+  background: var(--nav-active-bg);
 }
 .dock-link:hover {
   color: var(--ink);
@@ -285,8 +280,9 @@
 }
 .panel {
   background: var(--surface);
-  border: var(--hairline-width) solid var(--line);
+  border: none;
   border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
 }
 .panel-heading {
   display: flex;
@@ -3007,4 +3003,202 @@ html[data-transition='lockdown']::view-transition-new(root) {
   inset-block: var(--space-1);
   width: var(--focus-width);
   background: var(--signature);
+}
+
+/* ---------------------------------------------------------------------------
+   AI assistant configuration — provider cards, endpoint form, probe state.
+--------------------------------------------------------------------------- */
+.ai-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3_5);
+}
+.ai-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.ai-provider-grid.is-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ai-provider-card {
+  text-align: left;
+  padding: var(--space-2_5) var(--space-3);
+  border-radius: var(--radius);
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  transition: background var(--duration-micro) var(--ease), border-color var(--duration-micro) var(--ease);
+}
+.ai-provider-card > span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--type-body-s);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+.ai-provider-card > small {
+  display: block;
+  margin-top: var(--space-0_5);
+  font-size: var(--type-caption);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.ai-provider-card:hover {
+  border-color: var(--line-strong);
+}
+.ai-provider-card.is-selected {
+  border-color: var(--tint);
+  background: var(--nav-active-bg);
+}
+.ai-provider-check {
+  margin-left: auto;
+  color: var(--tint);
+  flex-shrink: 0;
+}
+.ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2_5);
+}
+.ai-form.is-tight {
+  gap: var(--space-2);
+}
+.ai-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  margin-bottom: var(--space-1);
+}
+.ai-key-row {
+  position: relative;
+  display: flex;
+}
+.ai-key-row > input {
+  padding-right: var(--space-9);
+}
+.ai-key-reveal {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  translate: 0 -50%;
+  width: var(--space-7);
+  height: var(--space-7);
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+  border-radius: var(--radius-sm);
+}
+.ai-key-reveal:hover {
+  color: var(--ink);
+}
+.ai-probe {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  min-height: var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-medium);
+  color: var(--tint);
+  background: var(--primary-soft);
+}
+.ai-probe:disabled {
+  opacity: 0.55;
+}
+.ai-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.ai-example {
+  padding: var(--space-0_5) var(--space-2_5);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--ink-muted);
+  font-size: var(--type-caption);
+  font-family: var(--font-mono);
+}
+.ai-example:hover {
+  color: var(--tint);
+}
+.ai-probe-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--type-caption);
+}
+.ai-probe-line.is-ok {
+  color: var(--ok);
+}
+.ai-probe-line.is-error {
+  color: var(--bad);
+}
+.ai-sliders {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.ai-persona > summary {
+  cursor: pointer;
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.ai-persona-text {
+  width: 100%;
+  margin-top: var(--space-2);
+  background: var(--surface);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font-size: var(--type-body-s);
+  color: var(--ink);
+  resize: vertical;
+}
+.ai-privacy {
+  font-size: var(--type-caption);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.ai-privacy a {
+  color: var(--tint);
+  text-decoration: underline;
+  text-underline-offset: var(--space-0_5);
+}
+.ai-row-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 40rem) {
+  .ai-provider-grid,
+  .ai-provider-grid.is-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Settings sections read as iOS grouped cards: quiet gray title over a card. */
+.settings-section {
+  margin-bottom: var(--space-6);
+  scroll-margin-top: var(--space-5);
+}
+.settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+}
+.settings-section-body {
+  padding: var(--space-4);
+  margin-bottom: 0;
 }

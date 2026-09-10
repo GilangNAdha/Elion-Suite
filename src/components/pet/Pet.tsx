@@ -3,7 +3,7 @@ import type { PetMoodState } from '../../lib/types'
 import { DuelPet } from './DuelPet'
 import { NovaPet } from './NovaPet'
 
-/** Nova is the new default. Existing opt-in duel blocks remain available. */
+/** Elion (formerly "Nova") is the default friend. Opt-in duel blocks remain available. */
 export function Pet({ mood, size = 120 }: { mood?: PetMoodState['mood']; size?: number }) {
   const style = useSettingsStore((state) => state.petStyle)
   if (style === 'duel')

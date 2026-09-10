@@ -31,8 +31,8 @@ export default defineConfig({
         name: 'Elion Suite',
         short_name: 'Elion',
         description: 'Local-first personal productivity suite: Workspace, Lockdown, tasks, habits, notes.',
-        theme_color: '#0A0E16',
-        background_color: '#0A0E16',
+        theme_color: '#F2F2F7',
+        background_color: '#F2F2F7',
         display: 'standalone',
         start_url: '/',
         icons: [
