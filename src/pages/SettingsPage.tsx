@@ -1,5 +1,8 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
 import { AgentPanel } from '../components/settings/AgentPanel'
+import { MonitoringDashboard } from '../components/settings/MonitoringDashboard'
+import { EmailSettings } from '../components/settings/EmailSettings'
+import { SystemAccessSettings } from '../components/settings/SystemAccessSettings'
 import { assetUrl } from '../lib/assets'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { useMemo, useRef, useState } from 'react'
@@ -13,6 +16,7 @@ import { Cpu,
   ShieldAlert,
   MapPin,
   Info,
+  Mail,
   Check,
   X,
   Swords,
@@ -303,6 +307,13 @@ export function SettingsPage() {
       {/* ---------------- agent runtime ---------------- */}
       <Section title="ELION runtime" icon={<Cpu size={15} />} id="runtime">
         <AgentPanel />
+        <MonitoringDashboard />
+        <h3 className="monitor-title">System access (desktop)</h3>
+        <SystemAccessSettings />
+      </Section>
+
+      <Section title="Elion's email" icon={<Mail size={15} />} id="email">
+        <EmailSettings />
       </Section>
 
       {/* ---------------- distraction guard ---------------- */}

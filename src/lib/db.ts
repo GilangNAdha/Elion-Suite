@@ -47,6 +47,7 @@ class ElionDB extends Dexie {
   permissions!: Table<import('./permissions').PermissionRow, string>
   agentTasks!: Table<import('./agentTasks').AgentTask, string>
   objectives!: Table<import('./agentTasks').Objective, string>
+  skills!: Table<import('./skills').SkillRecord, string>
 
   constructor() {
     super('elion-suite')
@@ -76,6 +77,11 @@ class ElionDB extends Dexie {
       permissions: 'key, mode',
       agentTasks: 'id, status, priority, createdAt, objectiveId',
       objectives: 'id, done'
+    })
+    // Spec v4.3 Part VII — Skill Ledger. Catatan permanen tiap skill yang
+    // Elion buat untuk dirinya sendiri; asal + skor terekam, bisa diaudit.
+    this.version(4).stores({
+      skills: 'id, origin, createdAt'
     })
   }
 }

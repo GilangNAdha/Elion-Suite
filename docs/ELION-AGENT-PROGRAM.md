@@ -69,6 +69,29 @@ platform ini diisolasi di belakang antarmuka — tidak dipura-purakan.
 | 9 Bugs | §44 fixed by root cause; race re-entrancy tick + abort-selesai-retrieval ditemukan & diperbaiki oleh test | ✅ (slice) |
 | 10 Validasi | 147 unit/integration test hijau; e2e CI 26/26 | ✅ (berjalan terus) |
 
+## Spek v4.3 (konsolidasi) — peta delta & status
+
+Sumber: `docs/ELION-MASTER-SPEC-v4.3.md` (single entry point; tiga dokumen
+deep-detail tetap otoritatif). Yang dikerjakan turn ini:
+
+| Kebutuhan v4.3 | Status | Implementasi |
+|---|---|---|
+| §13 Monitoring dashboard (4 panel, 1 sumber data, "Not enough data yet") | ✅ | `src/lib/monitoring.ts` (fungsi murni: queue, tier, outcomes, latensi, hourly, memops, errors, heatmap, curve, velocity, stop/resume) + `src/components/settings/MonitoringDashboard.tsx` di Settings › ELION runtime |
+| Skill Ledger permanen | ✅ | tabel Dexie `skills` (v4) + `src/lib/skills.ts` — `recordSkill()` satu-satunya penulis, selalu berpasangan dgn event `skill.promoted`; mulai kosong dgn jujur |
+| Latensi tool nyata per kategori | ✅ | `elapsedMs` di `AgentEventRecord` (tanpa index → tanpa migrasi) + diukur di `runTool()` |
+| Memory reads nyata | ✅ | event `memory.recalled` ditulis `recall()` (query + hit count, tanpa isi memori) |
+| Part IV baris API-key (⛔ never autonomous) | ✅ | tidak ada tool settings/key (dikunci `tests/capabilityTable.test.ts` + snapshot registry) |
+| §12 known fix (string provider) | ✅ sudah | diverifikasi: grep 0 hasil di `src/` |
+| §44/§12 object-switch bug | ✅ sudah | `ItemModal` remount per id + regression test tetap hijau |
+| Part IV tabel → Gateway enforcement | ◐ eksternal | butuh pilihan runtime Gilang (lihat bawah) |
+| Part VI OpenClaw ATAU Hermes | ✅ Hermes dipilih | `docs/HERMES-SETUP.md` — install + peta Suite→Hermes; perintah final cek `--help` |
+| Part VII /evolve + GEPA-PR | ⏳ eksternal | ledger + heatmap siap menerima; mekanisme evolusi jalan di Hermes |
+| Gmail milik Elion | ✅ | login di UI (Settings › Elion's email) + vault token main process + `docs/GMAIL-SETUP.md`; tool `email.*` nyata kalau connected |
+| Electron system adapter | ✅ | `electron/sys.cjs`: files.read + allow-list perintah; UI di runtime section; desktop-only jujur |
+| /elion agent chat + Sentient di UI | ✅ | `src/pages/ElionPage.tsx`: chat tool-capable (function calling OpenAI/Anthropic, fallback jujur buat MiniCPM), panel Sentient §11, While-you-were-away dari event |
+| /elion page + dock side/below | ◐ menyusul | monitor tinggal pindah ke tab Monitoring saat halaman /elion dibangun |
+| Cost/token di dashboard | ◐ jujur-kosong | runtime belum expose → "Not enough data yet" + catatan |
+
 ## Sisa fase (urutan kerja berikutnya)
 
 1. **PHASE 3 — Agent runtime**: tool router + permission manager (tabel

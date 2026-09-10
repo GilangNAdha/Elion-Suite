@@ -31,6 +31,23 @@ contextBridge.exposeInMainWorld('elion', {
     ipcRenderer.on('voice:toggle', listener)
     return () => ipcRenderer.removeListener('voice:toggle', listener)
   },
+  mail: {
+    status: () => ipcRenderer.invoke('mail:status'),
+    saveClient: (clientId, clientSecret) => ipcRenderer.invoke('mail:save-client', { clientId, clientSecret }),
+    saveMyEmail: (email) => ipcRenderer.invoke('mail:save-my-email', { email }),
+    connect: () => ipcRenderer.invoke('mail:connect'),
+    disconnect: () => ipcRenderer.invoke('mail:disconnect'),
+    list: (query, max) => ipcRenderer.invoke('mail:list', { query, max }),
+    read: (id) => ipcRenderer.invoke('mail:read', { id }),
+    send: (to, subject, body) => ipcRenderer.invoke('mail:send', { to, subject, body })
+  },
+  sys: {
+    readFile: (filePath) => ipcRenderer.invoke('sys:read-file', { path: filePath }),
+    allowlist: () => ipcRenderer.invoke('sys:allowlist-get'),
+    addAllow: (command, args) => ipcRenderer.invoke('sys:allowlist-add', { command, args }),
+    removeAllow: (index) => ipcRenderer.invoke('sys:allowlist-remove', { index }),
+    run: (command, args) => ipcRenderer.invoke('sys:run', { command, args })
+  },
   platform: process.platform,
   setNudge: (thresholdMs, bring) => ipcRenderer.invoke('lockdown:set-nudge', { thresholdMs, bring }),
   bringToFront: () => ipcRenderer.invoke('lockdown:bring-to-front'),

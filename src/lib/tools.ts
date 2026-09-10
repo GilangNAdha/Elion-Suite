@@ -1,6 +1,8 @@
 import { logActivity } from './activity'
 import { guard } from './permissions'
 import { remember, recall } from './memory'
+import { isSysDesktop, sysReadFile, sysRun } from './sysClient'
+import { isMailDesktop, mailList, mailRead, mailSend, mailStatus } from './mailClient'
 import { useItemsStore } from '../stores/itemsStore'
 import { usePagesStore } from '../stores/pagesStore'
 import { useNotifyStore } from '../stores/notifyStore'
@@ -30,6 +32,25 @@ export interface ToolDef {
   /** bisa dipanggil Elion autonomous; tool ber-`unconfigured` hanya tampil
    * sebagai "known gap" di monitor */
   run: (args: Record<string, unknown>) => Promise<ToolResult>
+  /**
+   * true kalau backend tool ini TERSEDIA sekarang (host/credential terpasang).
+   * Agent chat hanya menawarkan tool yang available — model tidak pernah
+   * disuruh memanggil tool yang pasti gagal. Default: selalu tersedia.
+   */
+  available?: () => boolean | Promise<boolean>
+}
+
+/** Tool yang boleh ditawarkan ke model agent saat ini. */
+export async function listAvailableTools(): Promise<ToolDef[]> {
+  const out: ToolDef[] = []
+  for (const t of registry.values()) {
+    try {
+      if ((await t.available?.()) ?? true) out.push(t)
+    } catch {
+      /* availability check gagal = anggap tidak tersedia, jujur */
+    }
+  }
+  return out
 }
 
 const registry = new Map<string, ToolDef>()
@@ -56,16 +77,22 @@ export async function runTool(
     }
   }
   await logActivity('tool.started', { taskId: ctx.taskId, detail: id })
+  const startedAt = Date.now()
   try {
     const result = await tool.run(args)
     await logActivity(result.ok ? 'tool.completed' : 'tool.failed', {
       taskId: ctx.taskId,
-      detail: `${id}${result.error ? ` — ${result.error.slice(0, 120)}` : ''}`
+      detail: `${id}${result.error ? ` — ${result.error.slice(0, 120)}` : ''}`,
+      elapsedMs: Date.now() - startedAt
     })
     return result
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    await logActivity('tool.failed', { taskId: ctx.taskId, detail: `${id} — ${message.slice(0, 120)}` })
+    await logActivity('tool.failed', {
+      taskId: ctx.taskId,
+      detail: `${id} — ${message.slice(0, 120)}`,
+      elapsedMs: Date.now() - startedAt
+    })
     return { ok: false, error: message }
   }
 }
@@ -219,7 +246,9 @@ registerTool({
   }
 })
 
-// ---------------- capability gap TERBUKA (jangan pernah pura-pura) ----------------
+// ---------------- gap yang masih TERBUKA (jangan pernah pura-pura) ----------------
+// email/files/system sudah nyata via adapter Electron di atas; browser
+// automation (webContents) masih menunggu — tetap unconfigured jujur.
 
 const UNCONFIGURED = (why: string): ToolDef['run'] => async () => ({
   ok: false,
@@ -228,7 +257,123 @@ const UNCONFIGURED = (why: string): ToolDef['run'] => async () => ({
 })
 
 registerTool({ id: 'browser.interact', label: 'Interact with websites', permission: 'browser.interact', run: UNCONFIGURED('requires the Electron host (webContents automation)') })
-registerTool({ id: 'email.read', label: 'Read email', permission: 'email.read', run: UNCONFIGURED('requires user-provided Gmail OAuth in the Electron main process') })
-registerTool({ id: 'email.send', label: 'Send email', permission: 'email.send', run: UNCONFIGURED('requires user-provided Gmail OAuth in the Electron main process') })
-registerTool({ id: 'files.read', label: 'Read local files', permission: 'files.read', run: UNCONFIGURED('requires the Electron host') })
-registerTool({ id: 'system.action', label: 'System commands', permission: 'system.action', run: UNCONFIGURED('requires the Electron host and an explicit policy') })
+
+registerTool({
+  id: 'email.read',
+  label: "Read Elion's mail",
+  permission: 'email.read',
+  available: async () => {
+    try {
+      return (await mailStatus()).configured
+    } catch {
+      return false
+    }
+  },
+  run: async (args) => {
+    if (!isMailDesktop())
+      return { ok: false, unconfigured: true, error: 'Mail needs the desktop app — connect it in Settings › Email.' }
+    const id = str(args, 'id', 100)
+    try {
+      if (id) {
+        const m = await mailRead(id)
+        return { ok: true, output: `From: ${m.from}\nSubject: ${m.subject}\nDate: ${m.date}\n\n${m.body ?? m.snippet}`.slice(0, 8000) }
+      }
+      const rows = await mailList(str(args, 'query', 200) || undefined, Number(args.max) || 5)
+      if (!rows.length) return { ok: true, output: 'no messages found' }
+      return {
+        ok: true,
+        output: rows.map((m) => `• ${m.from} — “${m.subject}” (${m.date}) [${m.id}]`).join('\n').slice(0, 6000)
+      }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'mail read failed' }
+    }
+  }
+})
+
+registerTool({
+  id: 'email.send',
+  label: 'Send email',
+  // Pondasi = notifikasi ke user sendiri (Part IV: email ke Gilang = bebas,
+  // sama seperti chat). Ke orang lain = guard email.send di dalam run().
+  permission: 'notifications.send',
+  available: async () => {
+    try {
+      return (await mailStatus()).configured
+    } catch {
+      return false
+    }
+  },
+  run: async (args) => {
+    const to = str(args, 'to', 200)
+    const subject = str(args, 'subject', 200)
+    const body = str(args, 'body', 12000)
+    if (!to || !subject || !body) return { ok: false, error: 'to, subject and body are required' }
+    if (!isMailDesktop())
+      return { ok: false, unconfigured: true, error: 'Mail needs the desktop app — connect it in Settings › Email.' }
+    let status: { configured: boolean; myEmail?: string | null }
+    try {
+      status = await mailStatus()
+    } catch (error) {
+      return { ok: false, unconfigured: true, error: error instanceof Error ? error.message : 'mail unavailable' }
+    }
+    if (!status.configured)
+      return { ok: false, unconfigured: true, error: 'Mail is not connected — connect it in Settings › Email.' }
+    const self = (status.myEmail || '').trim().toLowerCase()
+    if (!self || to.toLowerCase() !== self) {
+      // Part IV 🔒: email ke orang lain = confirm first. Default policy
+      // email.send adalah deny (lebih ketat dari spek) — user yang mengubah
+      // ke ask di Permission Center kalau mau aliran approval.
+      const decision = await guard('email.send', `Send email to ${to} — “${subject.slice(0, 80)}”`)
+      if (decision === 'denied') {
+        await logActivity('tool.denied', { detail: 'email.send (external recipient)' })
+        return { ok: false, error: 'Denied by permission policy (email.send)' }
+      }
+    }
+    try {
+      const id = await mailSend(to, subject, body)
+      return { ok: true, output: `sent ${id}` }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'mail send failed' }
+    }
+  }
+})
+
+registerTool({
+  id: 'files.read',
+  label: 'Read a local file',
+  permission: 'files.read',
+  available: () => isSysDesktop(),
+  run: async (args) => {
+    const filePath = str(args, 'path', 500)
+    if (!filePath) return { ok: false, error: 'path required' }
+    try {
+      const { content, truncated } = await sysReadFile(filePath)
+      return { ok: true, output: truncated ? `${content}…(truncated)` : content }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'file read failed' }
+    }
+  }
+})
+
+registerTool({
+  id: 'system.action',
+  label: 'Run an allow-listed command',
+  permission: 'system.action',
+  available: () => isSysDesktop(),
+  run: async (args) => {
+    const command = str(args, 'command', 300)
+    if (!command) return { ok: false, error: 'command required' }
+    const argv = Array.isArray(args.args)
+      ? (args.args as unknown[]).map((a) => String(a))
+      : str(args, 'args', 1000).split(/\s+/).filter(Boolean)
+    try {
+      const result = await sysRun(command, argv)
+      const out = [`exit ${result.code}`, result.stdout, result.stderr ? `STDERR:\n${result.stderr}` : '']
+        .filter(Boolean)
+        .join('\n')
+      return { ok: true, output: out.slice(0, 8000) || `exit ${result.code}` }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'command failed' }
+    }
+  }
+})

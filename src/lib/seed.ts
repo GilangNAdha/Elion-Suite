@@ -6,11 +6,29 @@ import type { PageRecord, WorkspaceItem, FocusSession } from './types'
 import { uid } from './types'
 import { toISODate, addDays } from './time'
 
+const SEED_FLAG = 'elion-seeded-v1'
+
+function readSeedFlag(): boolean {
+  try {
+    return localStorage.getItem(SEED_FLAG) === '1'
+  } catch {
+    return false // private-mode storage: fall through to the page-count guard
+  }
+}
+
+function writeSeedFlag(): void {
+  try {
+    localStorage.setItem(SEED_FLAG, '1')
+  } catch {
+    /* storage blocked — the page-count guard still prevents double seeding */
+  }
+}
+
 export async function seedIfEmpty(): Promise<void> {
-  if (localStorage.getItem('elion-seeded-v1')) return
+  if (readSeedFlag()) return
   const pageCount = await db.pages.count()
   if (pageCount > 0) {
-    localStorage.setItem('elion-seeded-v1', '1')
+    writeSeedFlag()
     return
   }
 
@@ -438,5 +456,5 @@ export async function seedIfEmpty(): Promise<void> {
 
   // mark seeded only after every write succeeded (a failed partial seed can
   // retry on next launch instead of being silently skipped forever)
-  localStorage.setItem('elion-seeded-v1', '1')
+  writeSeedFlag()
 }

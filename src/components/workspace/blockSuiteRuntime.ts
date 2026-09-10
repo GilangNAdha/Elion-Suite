@@ -78,13 +78,21 @@ const hosts = new Map<string, { add: (embed: NativeEmbed) => void; remove: (id: 
 class EmbeddedComponent extends BlockComponent<EmbeddedModel> {
   override firstUpdated() {
     const target = this.querySelector<HTMLElement>('.native-react-mount')!
-    const source = JSON.parse(this.model.data) as { block: Block; descendants?: Block[] }
-    if (source.block)
+    // Corrupt embed payloads (crashed write, manual tampering) must degrade to
+    // an empty embed, never throw inside the Lit lifecycle and blank the editor.
+    let source: { block: Block; descendants?: Block[] } | null = null
+    try {
+      const parsed = JSON.parse(this.model.data) as { block: Block; descendants?: Block[] }
+      if (parsed && typeof parsed.block === 'object') source = parsed
+    } catch {
+      source = null
+    }
+    if (source)
       hosts.get(this.doc.id)?.add({
         id: this.blockId,
         element: target,
         source: source.block,
-        descendants: source.descendants ?? []
+        descendants: Array.isArray(source.descendants) ? source.descendants : []
       })
   }
   override disconnectedCallback() {
@@ -211,8 +219,23 @@ function project(doc: Doc, previous: Block[]): Block[] {
       return
     }
     if (model.flavour === 'elion:embedded' && model.data) {
-      const data = JSON.parse(model.data) as { block: Block; descendants: Block[] }
-      output.push({ ...data.block, parentId, order: output.length + 1 }, ...data.descendants)
+      // A corrupt embed payload must not abort the whole projection (which
+      // would drop every block after it). Fall back to the last-known block
+      // so the document stays complete and re-saves cleanly.
+      try {
+        const data = JSON.parse(model.data) as { block: Block; descendants: Block[] }
+        if (data && typeof data.block === 'object') {
+          output.push(
+            { ...data.block, parentId, order: output.length + 1 },
+            ...(Array.isArray(data.descendants) ? data.descendants : [])
+          )
+          return
+        }
+      } catch {
+        /* fall through to the previous-version fallback below */
+      }
+      const fallback = byId.get(model.id)
+      if (fallback) output.push({ ...fallback, parentId, order: output.length + 1 })
       return
     }
     const original = byId.get(model.id)

@@ -58,8 +58,13 @@ export class MiniCpmEventStream {
         .map((line) => line.slice(5).trimStart())
         .join('\n')
       if (data) {
-        const event = JSON.parse(data) as MiniCpmEvent
-        if (!['start', 'delta', 'think', 'end', 'error'].includes(event.event))
+        let event: MiniCpmEvent
+        try {
+          event = JSON.parse(data) as MiniCpmEvent
+        } catch {
+          throw new Error('MiniCPM sent a malformed stream event. Update the gateway and reconnect.')
+        }
+        if (!event || !['start', 'delta', 'think', 'end', 'error'].includes(event.event))
           throw new Error('MiniCPM returned an unsupported stream event. Update the gateway and reconnect.')
         if (event.event === 'end' || event.event === 'error') this.ended = true
         this.onEvent(event)
@@ -88,7 +93,11 @@ export async function miniCpmRequest<T>(path: '/health' | '/models' | '/warmup',
         ? COMPANION_OFFLINE
         : 'The MiniCPM gateway could not complete this request. Check its model status and retry.'
     )
-  return (await response.json()) as T
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new Error('The MiniCPM gateway returned an unexpected response. Update it and reconnect.')
+  }
 }
 
 export async function streamMiniCpm(

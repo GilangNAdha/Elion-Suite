@@ -82,7 +82,15 @@ export async function recall(
     .filter((x) => x.overlap > 0 || (x.m.type === 'user' && x.m.source === 'explicit-user'))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-  return scored.map((x) => x.m)
+  const hits = scored.map((x) => x.m)
+  // §13 dashboard butuh angka "reads" yang NYATA — catat tiap retrieval
+  // kontekstual (ringkas: query + jumlah hit, tanpa isi memori).
+  if (terms.length) {
+    await logActivity('memory.recalled', {
+      detail: `“${query.slice(0, 60)}” → ${hits.length} hit${hits.length === 1 ? '' : 's'}`
+    })
+  }
+  return hits
 }
 
 /** §6 Reinforce — tiap kali sebuah memory benar-benar dipakai konteksnya,

@@ -3395,3 +3395,445 @@ html[data-transition='lockdown']::view-transition-new(root) {
   color: var(--ink-faint);
   margin-top: var(--space-2);
 }
+
+/* ——— Monitoring dashboard (Settings › ELION runtime › Monitoring) §13 spek v4.3 ——— */
+.monitor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-top: var(--hairline-width) solid var(--line-subtle);
+  padding-top: var(--space-3);
+}
+.monitor-title {
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  margin: 0;
+}
+.monitor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.monitor-panel > h4 {
+  font-size: var(--type-body);
+  color: var(--ink);
+  margin: 0;
+}
+.monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+.monitor-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+}
+.monitor-grid dt {
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+}
+.monitor-grid dd {
+  margin: 0;
+  font-size: var(--type-body-s);
+  color: var(--ink);
+}
+.monitor-sub > h5 {
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-1);
+  font-weight: 600;
+}
+.monitor-sub ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.monitor-sub small,
+.monitor-note {
+  color: var(--ink-faint);
+  font-size: 0.9em;
+}
+.monitor-sub time {
+  color: var(--ink-faint);
+}
+.monitor-sub .is-done {
+  text-decoration: line-through;
+  color: var(--ink-faint);
+}
+.monitor-nodata {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.monitor-perms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+.monitor-perms li[data-mode='allow'] > span {
+  color: var(--ok);
+}
+.monitor-perms li[data-mode='deny'] > span {
+  color: var(--bad);
+}
+.monitor-perms li[data-mode='ask'] > span {
+  color: var(--warn);
+}
+.monitor-spark {
+  width: 100%;
+  height: 2.5rem;
+  display: block;
+}
+.monitor-spark polyline {
+  stroke: var(--tint);
+}
+.monitor-heat {
+  display: grid;
+  grid-template-columns: repeat(30, 1fr);
+  gap: 0.15rem;
+}
+.monitor-heat > span {
+  aspect-ratio: 1;
+  border-radius: 0.15rem;
+  background: var(--sunken);
+}
+.monitor-heat > span[data-level='1'] {
+  background: color-mix(in srgb, var(--tint) 25%, var(--sunken));
+}
+.monitor-heat > span[data-level='2'] {
+  background: color-mix(in srgb, var(--tint) 50%, var(--sunken));
+}
+.monitor-heat > span[data-level='3'] {
+  background: color-mix(in srgb, var(--tint) 75%, var(--sunken));
+}
+.monitor-heat > span[data-level='4'] {
+  background: var(--tint);
+}
+.monitor-velocity li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+.monitor-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.monitor-bars > i {
+  display: block;
+  height: 0.35rem;
+  border-radius: var(--radius-round);
+  background: var(--sunken);
+}
+.monitor-bars > i[data-src='evolve'] {
+  background: var(--tint);
+}
+.monitor-bars > i[data-src='gepa'] {
+  background: var(--info);
+}
+.monitor-ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-body-s);
+}
+.monitor-ledger th,
+.monitor-ledger td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-top: var(--hairline-width) solid var(--line-subtle);
+}
+.monitor-ledger th {
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+  font-weight: 600;
+  border-top: none;
+}
+.monitor-ledger td {
+  color: var(--ink-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .monitor-spark polyline {
+    stroke-width: 2;
+  }
+}
+
+/* ——— Halaman /elion: agent chat + Sentient di UI (Part V spek v4.3) ——— */
+.elion-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+.elion-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 70vh;
+}
+.elion-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.elion-head h1 {
+  font-size: var(--type-body);
+  margin: 0;
+  color: var(--ink);
+}
+.elion-head p {
+  margin: 0;
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.elion-head-actions {
+  margin-left: auto;
+}
+.elion-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-round);
+  background: var(--ink-faint);
+  flex-shrink: 0;
+}
+.elion-dot.is-think {
+  background: var(--tint);
+}
+.elion-dot.is-work {
+  background: var(--tint);
+  animation: agent-pulse var(--duration-slow, 1.2s) var(--ease) infinite alternate;
+}
+.elion-dot.is-attn {
+  background: var(--warn);
+}
+.elion-dot.is-off {
+  background: var(--bad);
+}
+.elion-warn,
+.elion-error,
+.elion-note {
+  margin: 0;
+  font-size: var(--type-body-s);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  border: var(--hairline-width) solid var(--line);
+}
+.elion-warn {
+  color: var(--ink);
+  background: var(--surface);
+}
+.elion-error {
+  color: var(--bad);
+}
+.elion-note {
+  color: var(--ink-muted);
+}
+.elion-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  max-height: 60vh;
+  padding-right: var(--space-1);
+}
+.elion-empty {
+  color: var(--ink-faint);
+  font-size: var(--type-body-s);
+}
+.elion-empty p {
+  margin: 0 0 var(--space-1);
+}
+.elion-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 46rem;
+}
+.elion-msg time {
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+}
+.elion-msg.is-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.elion-msg.is-user .elion-bubble {
+  background: var(--tint);
+  color: var(--on-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--type-body-s);
+  white-space: pre-wrap;
+}
+.elion-msg.is-assistant .elion-bubble {
+  font-size: var(--type-body-s);
+  color: var(--ink);
+}
+.elion-typing {
+  color: var(--ink-faint);
+}
+.elion-tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.elion-tools li[data-ok='true'] > span {
+  color: var(--ok);
+}
+.elion-tools li[data-ok='false'] > span {
+  color: var(--bad);
+}
+.elion-tools code {
+  font-family: var(--font-mono);
+}
+.elion-live {
+  margin: 0;
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.elion-composer {
+  display: flex;
+  gap: var(--space-2);
+}
+.elion-composer input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-height);
+  border-radius: var(--radius);
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 var(--space-3);
+  font-size: var(--type-body-s);
+}
+.elion-composer input:focus-visible {
+  outline: var(--focus-width) solid var(--tint);
+  outline-offset: var(--focus-offset);
+}
+.elion-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.elion-mini {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--space-3);
+}
+.elion-mini > h2 {
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-1);
+}
+.elion-mini p {
+  margin: 0;
+  font-size: var(--type-body-s);
+  color: var(--ink-faint);
+}
+.elion-mini ul {
+  list-style: none;
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.elion-mini a {
+  font-size: var(--type-body-s);
+  color: var(--tint);
+}
+@media (max-width: 60rem) {
+  .elion-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ——— Panel Sentient kompak (§11) ——— */
+.sentient-panel {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sentient-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-s);
+  color: var(--ink);
+}
+.sentient-head button {
+  margin-left: auto;
+}
+.sentient-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-round);
+  background: var(--ink-faint);
+  flex-shrink: 0;
+}
+.sentient-dot.is-on {
+  background: var(--ok);
+}
+.sentient-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sentient-rows > div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2);
+  font-size: var(--type-body-s);
+}
+.sentient-rows dt {
+  color: var(--ink-faint);
+}
+.sentient-rows dd {
+  margin: 0;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sentient-perms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.sentient-perms [data-mode='allow'] {
+  color: var(--ok);
+}
+.sentient-perms [data-mode='deny'] {
+  color: var(--ink-faint);
+}
+.sentient-perms [data-mode='ask'] {
+  color: var(--warn);
+}
+.sentient-more {
+  font-size: var(--type-body-s);
+  color: var(--tint);
+}

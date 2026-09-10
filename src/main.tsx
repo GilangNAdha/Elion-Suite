@@ -15,9 +15,14 @@ applyThemeCss(deriveTheme(initialTheme), initialTheme.mode)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<App />)
 
-// PWA service worker (autoUpdate via vite-plugin-pwa)
+// PWA service worker (autoUpdate via vite-plugin-pwa). Resolved against the
+// runtime base (see index.html), never an absolute /sw.js — absolute paths
+// break subpath hosting and are meaningless under Electron's file:// URLs.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+    const swUrl = new URL('sw.js', document.baseURI).href
+    if (swUrl.startsWith('http')) {
+      void navigator.serviceWorker.register(swUrl).catch(() => undefined)
+    }
   })
 }

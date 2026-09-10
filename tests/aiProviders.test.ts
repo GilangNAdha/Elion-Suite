@@ -4,6 +4,7 @@ import {
   mapModelRows,
   createSSEDecoder,
   joinUrl,
+  listModelDetails,
   parseAnthropicDelta,
   parseOpenAiDelta,
   providerPreset,
@@ -130,6 +131,19 @@ describe('model discovery parsing', () => {
     expect(mapModelRows({ models: [{ id: 'x', supported_total_tokens: 4096 }] })).toEqual([
       { id: 'x', context: 4096 }
     ])
+  })
+  it('reports a 200-with-HTML gateway reply as a base-URL problem, not a SyntaxError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('<html>proxy login</html>', { status: 200 }))
+    )
+    try {
+      await expect(listModelDetails('openai', { ...cfg })).rejects.toThrow(
+        'The provider returned a non-JSON response. Check the base URL'
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

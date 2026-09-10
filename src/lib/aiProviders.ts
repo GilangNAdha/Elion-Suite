@@ -153,7 +153,7 @@ export interface AiChatConfig {
 export const joinUrl = (baseUrl: string, path: string) =>
   `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 
-function assertHttpUrl(raw: string): string {
+export function assertHttpUrl(raw: string): string {
   let url: URL
   try {
     url = new URL(raw)
@@ -296,7 +296,7 @@ const bridge = (): AiBridge | undefined => (window as unknown as { elion?: { ai?
 
 export const isDesktopBridge = () => bridge() !== undefined
 
-async function readThroughBridge(
+export async function readThroughBridge(
   url: string,
   method: 'GET' | 'POST',
   headers: Record<string, string>,
@@ -315,7 +315,15 @@ async function readThroughBridge(
     text = await response.text()
   }
   if (!text) return {}
-  return JSON.parse(text)
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Gateways sometimes answer 200 with an HTML error page (proxy login,
+    // maintenance). A raw SyntaxError would confuse; say what happened.
+    throw new Error(
+      'The provider returned a non-JSON response. Check the base URL — it may point at a login page or proxy instead of the API.'
+    )
+  }
 }
 
 async function statusError(response: Response): Promise<Error> {

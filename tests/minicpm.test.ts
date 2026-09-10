@@ -39,6 +39,21 @@ describe('MiniCPM Desk Pet SSE contract', () => {
     stream.feed('data: {"event":"delta","content":"incomplete"}\n\n')
     expect(() => stream.finish()).toThrow('ended early')
   })
+  it('reports malformed stream JSON with an actionable message, not a SyntaxError', () => {
+    const stream = new MiniCpmEventStream(() => undefined)
+    expect(() => stream.feed('data: {not valid json}\n\n')).toThrow(
+      'MiniCPM sent a malformed stream event. Update the gateway and reconnect.'
+    )
+  })
+  it('rejects structurally valid JSON that is not a MiniCPM event', () => {
+    const stream = new MiniCpmEventStream(() => undefined)
+    expect(() => stream.feed('data: {\"event\":\"teleport\"}\n\n')).toThrow(
+      'MiniCPM returned an unsupported stream event. Update the gateway and reconnect.'
+    )
+    expect(() => stream.feed('data: 42\n\n')).toThrow(
+      'MiniCPM returned an unsupported stream event. Update the gateway and reconnect.'
+    )
+  })
   it('handles a model error without requiring a fake end event', () => {
     const events: MiniCpmEvent[] = []
     const stream = new MiniCpmEventStream((event) => events.push(event))

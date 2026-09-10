@@ -6,6 +6,8 @@ const path = require('node:path')
 const fs = require('node:fs')
 require('./minicpm.cjs').installMiniCpmIpc(ipcMain)
 require('./ai.cjs').installAiIpc(ipcMain)
+require('./email.cjs').installMailIpc(ipcMain)
+require('./sys.cjs').installSysIpc(ipcMain)
 
 let win = null
 let nudgeThresholdMs = 8000
@@ -70,17 +72,27 @@ function createWindow() {
   win.on('blur', () => {
     if (nudgeTimer) clearTimeout(nudgeTimer)
     nudgeTimer = setTimeout(() => {
+      // The window may have been closed while the timer was pending; touching
+      // a destroyed window throws an uncaught exception in the main process.
+      if (!win || win.isDestroyed()) return
       nudgeActive = true
       win.webContents.send('lockdown:nudge')
       if (bringToFront) {
         setTimeout(() => {
-          if (nudgeActive && win && !win.isFocused()) {
+          if (nudgeActive && win && !win.isDestroyed() && !win.isFocused()) {
             if (win.isMinimized()) win.restore()
             win.focus()
           }
         }, 2500)
       }
     }, nudgeThresholdMs)
+  })
+
+  win.on('closed', () => {
+    if (nudgeTimer) clearTimeout(nudgeTimer)
+    nudgeTimer = null
+    nudgeActive = false
+    if (win && win.isDestroyed()) win = null
   })
 }
 
@@ -104,7 +116,7 @@ ipcMain.handle('lockdown:set-nudge', (_e, { thresholdMs, bring }) => {
 })
 
 ipcMain.handle('lockdown:bring-to-front', () => {
-  if (win) {
+  if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore()
     win.show()
     win.focus()
@@ -114,7 +126,7 @@ ipcMain.handle('lockdown:bring-to-front', () => {
 
 // Fullscreen on a chosen display (multi-monitor awareness, §8.2)
 ipcMain.handle('lockdown:fullscreen-on', (_e, { displayId }) => {
-  if (!win) return false
+  if (!win || win.isDestroyed()) return false
   if (displayId != null) {
     const displays = screen.getAllDisplays()
     const d = displays.find((x) => x.id === displayId)
@@ -128,7 +140,7 @@ ipcMain.handle('lockdown:fullscreen-on', (_e, { displayId }) => {
 })
 
 ipcMain.handle('lockdown:exit-fullscreen', () => {
-  if (win && win.isFullScreen()) win.setFullScreen(false)
+  if (win && !win.isDestroyed() && win.isFullScreen()) win.setFullScreen(false)
   return true
 })
 
@@ -152,7 +164,7 @@ ipcMain.handle('voice:configure-shortcut', (_event, { enabled, accelerator }) =>
   try {
     const ok = globalShortcut.register(accelerator, () => {
       // Never dictate into another application, or compete with Handy outside Elion.
-      if (win && win.isFocused()) win.webContents.send('voice:toggle')
+      if (win && !win.isDestroyed() && win.isFocused()) win.webContents.send('voice:toggle')
     })
     if (ok) voiceAccelerator = accelerator
     return { ok, error: ok ? undefined : 'This shortcut is in use — choose another in Settings.' }

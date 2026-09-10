@@ -18,7 +18,8 @@ import {
   Filter,
   CopyPlus,
   Palette,
-  MessageCircle
+  MessageCircle,
+  Sparkles
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Kbd } from '../ui'
@@ -122,6 +123,14 @@ export function usePaletteActions(
         icon: <MessageCircle size={15} />,
         keywords: 'elion assistant ai friend talk ask plan',
         perform: () => useCompanionStore.getState().setOpen(true)
+      },
+      {
+        id: 'nav-elion',
+        label: 'Open Elion agent chat',
+        hint: 'Tools + Sentient Mode',
+        icon: <Sparkles size={15} />,
+        keywords: 'elion agent sentient autonomous tools',
+        perform: () => navigate('/elion')
       },
       {
         id: 'nav-lockdown',
