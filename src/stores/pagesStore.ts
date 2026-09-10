@@ -107,6 +107,8 @@ export const usePagesStore = create<PagesState>()((set, get) => ({
       updatedAt: now
     }
     await db.pages.add(page)
+    // §61: lapisan yang mengerjakan menulis event, bukan UI
+    void import('../lib/activity').then(({ logActivity }) => logActivity('document.created', { detail: page.title }))
     set({ pages: { ...get().pages, [page.id]: page } })
     return page
   },

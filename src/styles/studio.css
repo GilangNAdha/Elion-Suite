@@ -1262,13 +1262,15 @@ html[data-reduced='1'] .spotlight-wash {
   margin-top: var(--space-1);
 }
 .nova-chat {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: calc(var(--space-80) * 2);
   max-height: calc(var(--space-96) * 2);
-  border: var(--hairline-width) solid var(--line);
+  border: none;
   border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-raised);
   overflow: hidden;
 }
 .nova-chat-heading {
@@ -1276,7 +1278,6 @@ html[data-reduced='1'] .spotlight-wash {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: var(--hairline-width) solid var(--line);
 }
 .nova-chat-heading h2 {
   font-size: var(--type-body);
@@ -1314,8 +1315,9 @@ html[data-reduced='1'] .spotlight-wash {
 }
 .nova-connection-panel {
   padding: var(--space-4);
-  border-bottom: var(--hairline-width) solid var(--line);
-  background: var(--bg);
+  margin-inline: var(--space-2);
+  border-radius: var(--radius);
+  background: var(--sunken);
 }
 .connection-panel-title {
   display: flex;
@@ -1444,14 +1446,15 @@ html[data-reduced='1'] .spotlight-wash {
 }
 .nova-suggestions button {
   font-size: var(--type-body-s);
-  color: var(--ink-muted);
-  padding: var(--space-1_5) var(--space-3);
-  border: var(--hairline-width) solid var(--line);
-  border-radius: var(--radius-sm);
+  color: var(--tint);
+  padding: var(--space-1_5) var(--space-3_5);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
 }
 .nova-suggestions button:hover {
-  color: var(--ink);
-  border-color: var(--line-strong);
+  background: var(--chrome-hover);
+  color: var(--tint);
 }
 .nova-message {
   display: flex;
@@ -1461,24 +1464,35 @@ html[data-reduced='1'] .spotlight-wash {
   margin-bottom: var(--space-4);
 }
 .message-author {
-  color: var(--ink-muted);
-  font-size: var(--type-caption);
+  position: absolute;
+  width: var(--space-px);
+  height: var(--space-px);
+  overflow: hidden;
+  clip-path: inset(50%);
 }
+/* iMessage geometry: roomy bubbles, tightened tail corner. */
 .nova-message p {
   font-size: var(--type-body);
-  line-height: 1.7;
+  line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-width: 100%;
+  max-width: min(100%, 34rem);
+  padding: var(--space-2) var(--space-3_5);
+  border-radius: var(--radius-bubble);
+  background: var(--sunken);
 }
 .nova-message.from-user {
   align-items: flex-end;
 }
 .nova-message.from-user p {
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg);
-  border: var(--hairline-width) solid var(--line);
-  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.nova-message.from-assistant p {
+  border-bottom-left-radius: var(--space-2);
+}
+.nova-message.from-user p {
+  border-bottom-right-radius: var(--space-2);
 }
 .nova-message > small {
   color: var(--ink-muted);
@@ -1518,10 +1532,14 @@ html[data-reduced='1'] .spotlight-wash {
 }
 .nova-composer {
   margin: var(--space-2) var(--space-4) var(--space-4);
-  border: var(--hairline-width) solid var(--line-strong);
-  border-radius: var(--radius);
-  background: var(--bg);
-  padding: var(--space-3);
+  border: var(--hairline-width) solid transparent;
+  border-radius: var(--radius-bubble);
+  background: var(--sunken);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color var(--duration-micro) var(--ease);
+}
+.nova-composer:focus-within {
+  border-color: var(--tint);
 }
 .nova-composer > textarea {
   width: 100%;
@@ -1546,13 +1564,13 @@ html[data-reduced='1'] .spotlight-wash {
   margin-right: auto;
 }
 .chat-send {
-  width: var(--space-7);
-  height: var(--space-7);
+  width: var(--space-8);
+  height: var(--space-8);
   display: grid;
   place-items: center;
-  color: var(--bg);
-  background: var(--current);
-  border-radius: var(--radius-sm);
+  color: var(--on-primary);
+  background: var(--primary);
+  border-radius: var(--radius-round);
 }
 .chat-send:disabled {
   opacity: 0.35;
@@ -1901,3 +1919,170 @@ html[data-reduced='1'] .spotlight-wash {
 .nova-connection-panel[data-details='false'] > label { display: none; }
 .nova-connection-panel[data-details='false'] .connection-actions { margin-top: var(--space-3); }
 .nova-connection-panel[data-details='false'] .preview-connection-note { font-size: var(--type-caption); }
+
+/* ——— Chat upgrade: mini markdown, message actions, jump pill, counter, personas ——— */
+.nova-message .mini-md {
+  font-size: var(--type-body);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  max-width: min(100%, 34rem);
+  padding: var(--space-2) var(--space-3_5);
+  border-radius: var(--radius-bubble);
+  background: var(--sunken);
+}
+.nova-message.from-user .mini-md {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.nova-message.from-user .mini-md .mini-code,
+.nova-message.from-user .mini-md .mini-codeblock pre {
+  background: color-mix(in srgb, var(--on-primary) 14%, transparent);
+}
+.mini-md p {
+  margin: 0;
+  white-space: normal;
+}
+.mini-md p + p,
+.mini-md .mini-heading + p,
+.mini-md .mini-li + p {
+  margin-top: var(--space-1_5);
+}
+.mini-heading {
+  margin: var(--space-1) 0 0;
+  font-size: var(--type-body);
+  font-weight: 700;
+}
+.mini-li {
+  padding-left: var(--space-2);
+  text-indent: calc(var(--space-2) * -1);
+}
+.mini-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: var(--space-0_5);
+}
+.nova-message.from-user .mini-md .mini-link {
+  color: var(--on-primary);
+}
+.mini-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.mini-codeblock {
+  margin: var(--space-2) 0 0;
+  max-width: 100%;
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.mini-codeblock figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  background: var(--raised);
+  border-bottom: var(--hairline-width) solid var(--line);
+}
+.mini-codeblock figcaption button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: inherit;
+  font-size: inherit;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-1);
+}
+.mini-codeblock figcaption button:hover {
+  color: var(--ink);
+}
+.mini-codeblock pre {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.mini-codeblock code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  white-space: pre;
+}
+.message-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: calc(var(--space-1) * -1);
+}
+.message-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-round);
+  color: var(--ink-faint);
+}
+.message-actions button:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.mini-inline-action {
+  color: inherit;
+  text-decoration: underline;
+}
+.chat-jump-latest {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: var(--space-20);
+  z-index: 2;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: var(--hairline-width) solid var(--line);
+  background: var(--raised);
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  box-shadow: var(--shadow-raised);
+}
+.chat-jump-latest:hover {
+  color: var(--ink);
+}
+.chat-count {
+  font-size: var(--type-body-s);
+  color: var(--ink-faint);
+}
+.chat-count.is-max {
+  color: var(--bad);
+}
+.persona-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--space-44), 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.persona-chip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.persona-chip small {
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+}
+.persona-chip.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.chat-model-menu {
+  max-height: var(--space-64);
+  overflow: auto;
+}

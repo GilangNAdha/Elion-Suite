@@ -231,3 +231,96 @@ html[data-reduced='1'] *::after {
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+/* ---------------------------------------------------------------------------
+   iOS-style primitives — switches, segmented controls and grouped settings
+   lists. Everything paints from tokens; geometry lives in foundation.css.
+--------------------------------------------------------------------------- */
+.ios-switch {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--switch-w);
+  height: var(--switch-h);
+  border-radius: var(--radius-pill);
+  background: var(--switch-off);
+  transition: background var(--duration-shell) var(--ease);
+}
+.ios-switch[data-on='true'] {
+  background: var(--ok);
+}
+.ios-switch-knob {
+  position: absolute;
+  top: var(--switch-pad);
+  left: var(--switch-pad);
+  width: var(--switch-knob);
+  height: var(--switch-knob);
+  border-radius: var(--radius-round);
+  background: white;
+  box-shadow: var(--shadow-knob);
+  transition: transform var(--duration-shell) var(--ease);
+}
+.ios-switch[data-on='true'] .ios-switch-knob {
+  transform: translateX(calc(var(--switch-w) - var(--switch-knob) - var(--switch-pad) * 2));
+}
+.ios-group {
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+}
+.ios-group + .ios-group-title,
+.ios-group-title {
+  margin: 0 var(--space-4) var(--space-2);
+  font-size: var(--type-body-s);
+  font-weight: var(--weight-regular);
+  color: var(--ink-muted);
+}
+.ios-group-title:first-child {
+  margin-top: 0;
+}
+.ios-list > .ios-row + .ios-row {
+  border-top: var(--hairline-width) solid var(--line);
+}
+.ios-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--ios-row-min);
+  padding: var(--space-2_5) var(--ios-row-x);
+  text-align: left;
+  width: 100%;
+}
+.ios-row-label {
+  min-width: 0;
+  flex: 1;
+  font-size: var(--type-body);
+}
+.ios-row-label small {
+  display: block;
+  margin-top: var(--space-0_5);
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+.ios-row-value {
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+.ios-row-chevron {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+button.ios-row,
+a.ios-row {
+  transition: background var(--duration-micro) var(--ease);
+}
+button.ios-row:hover,
+a.ios-row:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}

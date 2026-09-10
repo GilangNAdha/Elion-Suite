@@ -65,27 +65,52 @@ describe('theming engine (§5)', () => {
 })
 
 import { DEFAULT_THEME, BUILT_IN_PRESETS, isValidTheme, useThemeStore } from '../src/stores/themeStore'
-import { ELION_PALETTE } from '../src/tokens/theme'
+import { ELION_PALETTE, IOS_PALETTE } from '../src/tokens/theme'
 
-describe('Elion premium dark glass visual contract', () => {
-  it('resolves the exact named palette, hierarchy and glass recipe', () => {
+describe('Elion iOS visual contract', () => {
+  it('resolves the light system palette for the shipped default', () => {
     const { vars } = deriveTheme(DEFAULT_THEME)
-    expect(vars['--bg']).toBe(ELION_PALETTE.void)
-    expect(vars['--surface']).toBe(ELION_PALETTE.depth)
-    expect(vars['--line']).toBe(ELION_PALETTE.hairline)
-    expect(vars['--ink-muted']).toBe(ELION_PALETTE.fog)
-    expect(vars['--ink']).toBe(ELION_PALETTE.paper)
-    expect(vars['--current']).toBe(ELION_PALETTE.current)
-    expect(vars['--dusk']).toBe(ELION_PALETTE.dusk)
-    expect(vars['--ember']).toBe(ELION_PALETTE.ember)
+    expect(vars['--bg']).toBe(IOS_PALETTE.light.void)
+    expect(vars['--surface']).toBe(IOS_PALETTE.light.depth)
+    expect(vars['--line']).toBe(IOS_PALETTE.light.hairline)
+    expect(vars['--ink-muted']).toBe(IOS_PALETTE.light.fog)
+    expect(vars['--ink']).toBe(IOS_PALETTE.light.paper)
+    expect(vars['--current']).toBe(IOS_PALETTE.light.current)
+    expect(vars['--tint']).toBe(IOS_PALETTE.light.tint)
+    expect(vars['--dusk']).toBe(IOS_PALETTE.light.dusk)
+    expect(vars['--ember']).toBe(IOS_PALETTE.light.ember)
+    expect(vars['--on-primary']).toBe('#FFFFFF')
     expect(vars['--radius']).toBe('12px')
     expect(vars['--radius-sm']).toBe('6px')
     expect(vars['--radius-lg']).toBe('16px')
-    expect(vars['--surface-glass']).toBe('rgba(20, 27, 39, 0.60)')
-    expect(vars['--glass-blur']).toBe('20px')
+    // iOS cards are solid: no blur, no glass recipe at the default.
+    expect(vars['--surface-glass']).toBe('rgba(255, 255, 255, 1.00)')
+    expect(vars['--glass-blur']).toBe('0px')
     expect(vars['--shadow-sunken']).toBe('none')
     for (const semantic of ['ok', 'warn', 'bad', 'info'])
       expect([vars['--current'], vars['--dusk']]).not.toContain(vars[`--${semantic}`])
+  })
+  it('resolves the dark system palette for iOS dark', () => {
+    const { vars } = deriveTheme({ ...DEFAULT_THEME, mode: 'dark' })
+    expect(vars['--bg']).toBe(IOS_PALETTE.dark.void)
+    expect(vars['--surface']).toBe(IOS_PALETTE.dark.depth)
+    expect(vars['--ink']).toBe(IOS_PALETTE.dark.paper)
+    expect(vars['--current']).toBe(IOS_PALETTE.dark.current)
+    expect(vars['--tint']).toBe(IOS_PALETTE.dark.tint)
+    expect(vars['--surface-glass']).toBe('rgba(28, 28, 30, 1.00)')
+  })
+  it('keeps the legacy Night glass identity reachable via its signature seed', () => {
+    const classic = deriveTheme({
+      ...DEFAULT_THEME,
+      mode: 'dark',
+      seed: { h: 168.4, s: 71.4, l: 57.5 },
+      glass: 83
+    })
+    expect(classic.vars['--bg']).toBe(ELION_PALETTE.void)
+    expect(classic.vars['--surface']).toBe(ELION_PALETTE.depth)
+    expect(classic.vars['--current']).toBe(ELION_PALETTE.current)
+    expect(classic.vars['--surface-glass']).toBe('rgba(20, 27, 39, 0.60)')
+    expect(classic.vars['--glass-blur']).toBe('20px')
   })
   it.each(BUILT_IN_PRESETS)('passes real contrast including glass and subtle lozenges: $name', (preset) => {
     for (const mode of ['light', 'dark'] as const) {

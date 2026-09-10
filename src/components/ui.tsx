@@ -11,7 +11,7 @@ import {
 import type { ReactNode, CSSProperties, ButtonHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { create } from 'zustand'
-import { X, Check } from 'lucide-react'
+import { X, Check, ChevronRight } from 'lucide-react'
 import { uid } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -33,13 +33,15 @@ export function Button({
   icon?: ReactNode
 }) {
   const base =
-    'elion-button inline-flex items-center justify-center gap-2 rounded-token-sm font-medium transition-opacity duration-150 select-none disabled:opacity-40 disabled:pointer-events-none focus-ring'
+    'elion-button inline-flex items-center justify-center gap-2 rounded-token font-medium transition-opacity duration-150 select-none disabled:opacity-40 disabled:pointer-events-none focus-ring'
   const sizes = size === 'sm' ? 'h-7 px-2.5 text-[0.85em]' : 'h-9 px-3.5'
+  // iOS semantics: primary is a solid tinted fill, "outline" reads as the
+  // quiet secondary button, ghost is a plain tint text button.
   const variants: Record<ButtonVariant, string> = {
-    primary: 'border border-line bg-raised text-ink hover:opacity-80',
-    outline: 'border border-line bg-transparent text-ink hover:opacity-80',
-    ghost: 'text-ink-muted hover:text-ink hover:bg-raised',
-    soft: 'border border-line bg-surface text-primary hover:opacity-80',
+    primary: 'bg-primary text-primary-on hover:opacity-85',
+    outline: 'border border-line bg-surface text-ink hover:opacity-80',
+    ghost: 'text-primary hover:text-ink hover:bg-surface',
+    soft: 'bg-sunken text-ink hover:opacity-80',
     danger: 'bg-bad/15 text-bad hover:bg-bad/25'
   }
   return (
@@ -419,16 +421,8 @@ export function Toggle({
         <span className="block text-[0.95em]">{label}</span>
         {hint && <span className="block text-[0.78em] text-ink-faint">{hint}</span>}
       </span>
-      <span
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-primary' : 'bg-line'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-ink transition-transform ${
-            checked ? 'translate-x-[18px]' : ''
-          }`}
-        />
+      <span className="ios-switch" data-on={checked ? 'true' : 'false'} aria-hidden>
+        <span className="ios-switch-knob" />
       </span>
     </button>
   )
@@ -450,7 +444,11 @@ export function Tabs<T extends string>({
   size?: 'sm' | 'md'
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-token-sm bg-sunken p-0.5" role="tablist">
+    <div
+      className="flex items-center gap-0.5 rounded-token bg-sunken p-1"
+      role="tablist"
+      style={{ background: 'var(--switch-off)' }}
+    >
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -458,7 +456,11 @@ export function Tabs<T extends string>({
           aria-selected={value === t.id}
           className={`focus-ring rounded-token-sm transition-colors ${
             size === 'sm' ? 'px-2 py-0.5 text-[0.8em]' : 'px-3 py-1 text-[0.9em]'
-          } ${value === t.id ? 'bg-raised text-ink shadow-sm' : 'text-ink-muted hover:text-ink'}`}
+          } ${
+            value === t.id
+              ? 'bg-[var(--segment-selected)] font-medium text-ink shadow-sm'
+              : 'text-ink-muted hover:text-ink'
+          }`}
           onClick={() => onChange(t.id)}
         >
           {t.label}
@@ -548,4 +550,76 @@ export function Toaster({ position = 'bottom' }: { position?: 'bottom' | 'top' }
       ))}
     </div>
   )
+}
+
+// ---------------------------------------------------------------------------
+// iOS grouped list primitives — Settings-style cards with inset separators.
+// ---------------------------------------------------------------------------
+
+export function SettingsGroup({
+  title,
+  footer,
+  children
+}: {
+  title?: string
+  footer?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <section aria-label={title}>
+      {title && <h2 className="ios-group-title">{title}</h2>}
+      <div className="ios-list ios-group">{children}</div>
+      {footer && <p className="-mt-4 mb-6 px-4 text-[0.78em] leading-relaxed text-ink-muted">{footer}</p>}
+    </section>
+  )
+}
+
+export function SettingsRow({
+  label,
+  hint,
+  icon,
+  value,
+  detail,
+  onClick,
+  control,
+  href
+}: {
+  label: string
+  hint?: string
+  icon?: ReactNode
+  value?: ReactNode
+  detail?: string
+  onClick?: () => void
+  control?: ReactNode
+  href?: string
+}) {
+  const content = (
+    <>
+      {icon && <span className="shrink-0 text-ink-muted [&>svg]:h-5 [&>svg]:w-5">{icon}</span>}
+      <span className="ios-row-label">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      {value && <span className="ios-row-value">{value}</span>}
+      {control}
+      {(onClick || href) && (
+        <span className="ios-row-chevron" aria-hidden>
+          <ChevronRight size={15} />
+        </span>
+      )}
+    </>
+  )
+  if (href)
+    return (
+      <a className="ios-row" href={href}>
+        {content}
+      </a>
+    )
+  if (onClick)
+    return (
+      <button type="button" className="ios-row focus-ring" onClick={onClick}>
+        {content}
+      </button>
+    )
+  return <div className="ios-row">{content}</div>
 }

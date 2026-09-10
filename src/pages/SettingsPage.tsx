@@ -1,14 +1,13 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
+import { AgentPanel } from '../components/settings/AgentPanel'
 import { assetUrl } from '../lib/assets'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { useMemo, useRef, useState } from 'react'
-import {
+import { Cpu,
   Palette,
   Download,
   Upload,
   Trash2,
-  Moon,
-  Sun,
   SlidersHorizontal,
   Mic,
   ShieldAlert,
@@ -16,15 +15,17 @@ import {
   Info,
   Check,
   X,
-  Swords
+  Swords,
+  Sparkles
 } from 'lucide-react'
+import { AiProviderSettings } from '../components/ai/AiProviderSettings'
 import type { AuroraTheme, Harmony } from '../lib/types'
 import { uid } from '../lib/types'
 import { useThemeStore } from '../stores/themeStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { deriveTheme } from '../tokens/theme'
 import { db } from '../lib/db'
-import { Button, Input, Select, Slider, Toggle, Menu, MenuItem, MenuSep, IconBtn } from '../components/ui'
+import { Button, Input, Select, Slider, Tabs, Toggle, Menu, MenuItem, MenuSep, IconBtn } from '../components/ui'
 
 const HARMONIES: { id: Harmony; label: string }[] = [
   { id: 'complementary', label: 'Complementary' },
@@ -54,6 +55,22 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl p-6 pb-24">
       <h1 className="mb-5 text-[1.7em] font-bold tracking-tight">Settings</h1>
+
+      {/* ---------------- AI assistant ---------------- */}
+      <section className="settings-section" id="ai" aria-label="AI assistant">
+        <h2 className="ios-group-title settings-section-title">
+          <span className="text-primary"><Sparkles size={15} /></span>
+          AI assistant
+        </h2>
+        <div className="ios-group settings-section-body">
+          <AiProviderSettings />
+          <p className="mt-3 text-[0.72em] text-ink-faint">
+            The friend in this app talks straight to whichever backend you configure here — no middle servers. MiniCPM users keep
+            the fully local path; every other provider streams straight from this device.
+          </p>
+        </div>
+      </section>
+
       <FloatingPetSettings />
 
       {/* ---------------- theme editor ---------------- */}
@@ -96,20 +113,15 @@ export function SettingsPage() {
               </Select>
             </label>
             <div className="flex items-center gap-3">
-              <button
-                className={`focus-ring flex h-9 items-center gap-1.5 rounded-token-sm border px-3 text-[0.85em] ${theme.mode === 'dark' ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted'}`}
-                onClick={() => patch({ mode: 'dark' })}
-                aria-pressed={theme.mode === 'dark'}
-              >
-                <Moon size={14} /> Dark
-              </button>
-              <button
-                className={`focus-ring flex h-9 items-center gap-1.5 rounded-token-sm border px-3 text-[0.85em] ${theme.mode === 'light' ? 'border-primary bg-primary-soft text-primary' : 'border-line text-ink-muted'}`}
-                onClick={() => patch({ mode: 'light' })}
-                aria-pressed={theme.mode === 'light'}
-              >
-                <Sun size={14} /> Light
-              </button>
+              <Tabs
+                size="sm"
+                tabs={[
+                  { id: 'light', label: 'Light' },
+                  { id: 'dark', label: 'Dark' }
+                ]}
+                value={theme.mode}
+                onChange={(mode) => patch({ mode: mode as AuroraTheme['mode'] })}
+              />
               <Select
                 value={theme.density}
                 className="h-9"
@@ -288,6 +300,11 @@ export function SettingsPage() {
         <VoiceSettings />
       </Section>
 
+      {/* ---------------- agent runtime ---------------- */}
+      <Section title="ELION runtime" icon={<Cpu size={15} />} id="runtime">
+        <AgentPanel />
+      </Section>
+
       {/* ---------------- distraction guard ---------------- */}
       <Section title="Distraction guard (Lockdown)" icon={<ShieldAlert size={15} />}>
         <Toggle
@@ -406,19 +423,21 @@ export function SettingsPage() {
 function Section({
   title,
   icon,
+  id,
   children
 }: {
   title: string
   icon: React.ReactNode
+  id?: string
   children: React.ReactNode
 }) {
   return (
-    <section className="mb-5 rounded-token-lg border border-line bg-raised p-4">
-      <h2 className="mb-3 flex items-center gap-1.5 text-[0.95em] font-semibold">
+    <section id={id} className="settings-section" aria-label={title}>
+      <h2 className="ios-group-title settings-section-title">
         <span className="text-primary">{icon}</span>
         {title}
       </h2>
-      {children}
+      <div className="ios-group settings-section-body">{children}</div>
     </section>
   )
 }

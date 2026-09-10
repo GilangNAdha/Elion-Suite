@@ -15,6 +15,16 @@ contextBridge.exposeInMainWorld('elion', {
       return () => ipcRenderer.removeListener('minicpm:chunk', listener)
     }
   },
+  ai: {
+    request: (options) => ipcRenderer.invoke('ai:request', options),
+    stream: (id, options) => ipcRenderer.invoke('ai:stream', { id, ...options }),
+    cancel: (id) => ipcRenderer.send('ai:cancel', id),
+    onChunk: (callback) => {
+      const listener = (_event, message) => callback(message)
+      ipcRenderer.on('ai:chunk', listener)
+      return () => ipcRenderer.removeListener('ai:chunk', listener)
+    }
+  },
   configureVoiceShortcut: (enabled, accelerator) => ipcRenderer.invoke('voice:configure-shortcut', { enabled, accelerator }),
   onVoiceToggle: (handler) => {
     const listener = () => handler()

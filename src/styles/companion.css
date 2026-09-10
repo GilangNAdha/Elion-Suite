@@ -163,9 +163,10 @@
 .pet-settings-panel {
   padding: var(--space-5);
   margin-bottom: var(--space-6);
-  border: var(--hairline-width) solid var(--line);
+  border: none;
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-raised);
   scroll-margin-top: var(--space-5);
 }
 .pet-settings-panel > header {

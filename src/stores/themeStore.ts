@@ -5,17 +5,37 @@ import { ELION_SEED } from '../tokens/theme'
 
 export const DEFAULT_THEME: AuroraTheme = {
   id: 'default',
-  name: 'Premium dark glass',
+  name: 'iOS light',
   seed: { ...ELION_SEED },
-  harmony: 'analogous',
-  mode: 'dark',
+  harmony: 'monochromatic',
+  mode: 'light',
   density: 'comfortable',
   radius: 12,
-  glass: 83
+  glass: 0
 }
 
 export const BUILT_IN_PRESETS: AuroraTheme[] = [
   { ...DEFAULT_THEME },
+  {
+    id: 'preset-ios-dark',
+    name: 'iOS dark',
+    seed: { ...ELION_SEED },
+    harmony: 'monochromatic',
+    mode: 'dark',
+    density: 'comfortable',
+    radius: 12,
+    glass: 0
+  },
+  {
+    id: 'preset-night-glass',
+    name: 'Night glass (classic)',
+    seed: { h: 168.4, s: 71.4, l: 57.5 },
+    harmony: 'analogous',
+    mode: 'dark',
+    density: 'comfortable',
+    radius: 12,
+    glass: 83
+  },
   {
     id: 'preset-ember',
     name: 'Ember',
@@ -149,26 +169,40 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'elion-theme',
-      version: 1,
-      migrate: (persisted) => {
+      version: 2,
+      migrate: (persisted, version) => {
         const old = persisted as Pick<ThemeState, 'theme' | 'presets' | 'reducedMotion'>
-        // Only upgrade the untouched previous factory preset; preserve custom
-        // seeds, density, glass and user-saved presets across this design pass.
-        const untouched = (t: AuroraTheme) =>
-          t.id === 'default' &&
-          t.name === 'Aurora Night' &&
-          t.seed.h === 228 &&
-          t.seed.s === 68 &&
-          t.seed.l === 60 &&
-          t.harmony === 'complementary' &&
-          t.mode === 'dark' &&
-          t.density === 'comfortable' &&
-          t.radius === 12 &&
-          t.glass === 35
+        const upgrade = (t: AuroraTheme): AuroraTheme => {
+          // v1: the original Aurora Night factory preset.
+          const untouchedV1 =
+            t.id === 'default' &&
+            t.name === 'Aurora Night' &&
+            t.seed.h === 228 &&
+            t.seed.s === 68 &&
+            t.seed.l === 60 &&
+            t.harmony === 'complementary' &&
+            t.mode === 'dark' &&
+            t.density === 'comfortable' &&
+            t.radius === 12 &&
+            t.glass === 35
+          // v2: the untouched "Premium dark glass" factory preset becomes the
+          // iOS default; the old look stays reachable via the Night glass preset.
+          const untouchedV2 =
+            version < 2 &&
+            t.id === 'default' &&
+            t.name === 'Premium dark glass' &&
+            t.seed.h === 168.4 &&
+            t.seed.s === 71.4 &&
+            t.glass === 83 &&
+            t.radius === 12 &&
+            t.mode === 'dark'
+          if (untouchedV1 || untouchedV2) return { ...DEFAULT_THEME }
+          return t
+        }
         return {
           ...old,
-          theme: old.theme && untouched(old.theme) ? DEFAULT_THEME : (old.theme ?? DEFAULT_THEME),
-          presets: (old.presets ?? BUILT_IN_PRESETS).map((p) => (untouched(p) ? DEFAULT_THEME : p))
+          theme: old.theme ? upgrade(old.theme) : DEFAULT_THEME,
+          presets: (old.presets ?? BUILT_IN_PRESETS).map(upgrade)
         }
       },
       partialize: (s) => ({ theme: s.theme, presets: s.presets, reducedMotion: s.reducedMotion })

@@ -36,8 +36,10 @@ test('exact default tokens and a content-weighted dashboard', async ({ page }) =
       button: getComputedStyle(document.querySelector('.focus-action')!).backgroundImage
     }
   })
-  expect(tokens.bg).toBe('#0A0E16')
-  expect(tokens.current).toBe('#45E0C2')
+  // iOS light jadi default sejak v0.7 — bandingkan trim+uppercase biar
+  // kapitalisasi hex dari runtime tidak jadi source of flake.
+  expect(tokens.bg.trim().toUpperCase()).toBe('#F2F2F7')
+  expect(tokens.current.trim().toUpperCase()).toBe('#0066D6')
   expect(tokens.font).toContain('Geist')
   expect(tokens.ratio).toBeGreaterThan(3)
   expect(tokens.button).toBe('none')
@@ -80,8 +82,8 @@ test('pixel art changes frames, reacts to a cheer, and honors reduced motion', a
   const sprite = page.locator('.floating-nova [data-frame]').first()
   const frame = await sprite.getAttribute('data-frame')
   await expect.poll(() => sprite.getAttribute('data-frame')).not.toBe(frame)
-  await page.getByRole('button', { name: 'Interact with Nova', exact: true }).click()
-  await page.getByRole('button', { name: 'Pat Nova', exact: true }).click()
+  await page.getByRole('button', { name: 'Interact with Elion', exact: true }).click()
+  await page.getByRole('button', { name: 'High five Elion', exact: true }).click()
   await expect(page.locator('.floating-nova .nova-pet')).toHaveAttribute('data-pose', 'happy')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(page.locator('.floating-nova .nova-pet')).toHaveAttribute('data-animated', 'false')

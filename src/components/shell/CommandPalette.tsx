@@ -17,7 +17,8 @@ import {
   FileText,
   Filter,
   CopyPlus,
-  Palette
+  Palette,
+  MessageCircle
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Kbd } from '../ui'
@@ -26,6 +27,7 @@ import { usePagesStore } from '../../stores/pagesStore'
 import { useItemsStore } from '../../stores/itemsStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useCompanionStore } from '../../stores/companionStore'
 
 export interface PaletteAction {
   id: string
@@ -112,6 +114,14 @@ export function usePaletteActions(
         label: 'Go to Settings',
         icon: <Settings size={15} />,
         perform: () => navigate('/settings')
+      },
+      {
+        id: 'chat-elion',
+        label: 'Chat with Elion',
+        hint: 'Companion panel',
+        icon: <MessageCircle size={15} />,
+        keywords: 'elion assistant ai friend talk ask plan',
+        perform: () => useCompanionStore.getState().setOpen(true)
       },
       {
         id: 'nav-lockdown',

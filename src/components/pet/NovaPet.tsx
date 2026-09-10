@@ -41,7 +41,7 @@ export function NovaPet({
       className="nova-pet"
       style={{ width: `${size / 16}rem` }}
       role="img"
-      aria-label={`Nova, animated pixel companion, ${state}`}
+      aria-label={`Elion, your animated friend, ${state}`}
       data-pose={state}
       data-animated={!reduced}
     >

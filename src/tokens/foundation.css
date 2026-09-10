@@ -16,16 +16,19 @@
 }
 
 :root {
-  color-scheme: dark;
-  --void: #0a0e16;
-  --depth: #141b27;
-  --hairline: #232c3d;
-  --fog: #8b93a8;
-  --paper: #edeff6;
+  color-scheme: light dark;
+  /* Pre-JS fallback matches the shipped iOS light default; theme.ts re-resolves
+     every paint token per render, so this block only prevents a flash. */
+  --void: #f2f2f7;
+  --depth: #ffffff;
+  --hairline: #dfdfE5;
+  --fog: #62626a;
+  --paper: #1b1b1f;
   --wallpaper-ink: #edeff6;
-  --current: #45e0c2;
-  --dusk: #9c87f7;
-  --ember: #f2a65a;
+  --current: #0066d6;
+  --tint: #007aff;
+  --dusk: #5e5ce6;
+  --ember: #9c5700;
   --bg: var(--void);
   --surface: var(--depth);
   --raised: var(--depth);
@@ -35,26 +38,26 @@
   --ink-muted: var(--fog);
   --ink-faint: var(--fog);
   --line: var(--hairline);
-  --line-strong: #47546c;
+  --line-strong: #c6c6cc;
   --primary: var(--current);
   --primary-soft: color-mix(in srgb, var(--current) 10%, transparent);
-  --on-primary: var(--void);
+  --on-primary: #ffffff;
   --accent: var(--current);
-  --on-accent: var(--void);
-  --ok: #9bce8c;
-  --warn: #e8c875;
-  --bad: #f58b99;
-  --info: #8bb9ed;
-  --surface-glass: rgba(20, 27, 39, 0.6);
+  --on-accent: #ffffff;
+  --ok: #248a3d;
+  --warn: #af7000;
+  --bad: #d70015;
+  --info: #006ada;
+  --surface-glass: rgba(255, 255, 255, 1);
   --surface-alpha: var(--surface-glass);
-  --glass-blur: 20px;
-  --glass-ink-muted: #c0c6d3;
+  --glass-blur: 0px;
+  --glass-ink-muted: #62626a;
   --wallpaper-scrim: rgba(10, 14, 22, 0.68);
-  --shadow-raised: 0 4px 16px rgba(3, 7, 14, 0.16);
-  --shadow-overlay: 0 16px 48px rgba(3, 7, 14, 0.5);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-overlay: 0 12px 40px rgba(0, 0, 0, 0.16);
   --shadow-sunken: none;
-  --shadow-color: rgba(3, 7, 14, 0.45);
-  --backdrop: rgba(3, 7, 14, 0.7);
+  --shadow-color: rgba(0, 0, 0, 0.18);
+  --backdrop: rgba(0, 0, 0, 0.28);
   --signature: linear-gradient(135deg, var(--current), var(--dusk));
   --radius: 12px;
   --radius-sm: 6px;
@@ -65,7 +68,9 @@
   --focus-width: 2px;
   --focus-offset: 3px;
 
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Geist', ui-sans-serif, system-ui,
+    sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
   --type-xxl: 2rem;
   --type-xl: 1.75rem;
@@ -75,7 +80,7 @@
   --type-xs: 0.875rem;
   --type-xxs: 0.75rem;
   --type-body-l: 1rem;
-  --type-body: 0.875rem;
+  --type-body: 0.9375rem;
   --type-body-s: 0.75rem;
   --type-caption: 0.6875rem;
   --type-metric-l: 1.75rem;
@@ -173,11 +178,36 @@
   --metal-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.2' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* iOS control geometry: switches, chat bubbles, grouped settings rows. */
+:root {
+  --switch-w: 3.25rem;
+  --switch-h: 1.9375rem;
+  --switch-knob: 1.6875rem;
+  --switch-pad: 0.125rem;
+  --switch-off: #e9e9ee;
+  --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --radius-bubble: 18px;
+  --ios-row-min: 2.875rem;
+  --ios-row-x: var(--space-4);
+  --sidebar-bg: #ececf1;
+  --segment-selected: #ffffff;
+  --nav-active-bg: color-mix(in srgb, var(--tint) 13%, transparent);
+}
+html[data-mode='dark'] {
+  --switch-off: #39393d;
+  --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --sidebar-bg: #100f14;
+  --segment-selected: #48484a;
+  --backdrop: rgba(0, 0, 0, 0.55);
+  --nav-active-bg: color-mix(in srgb, var(--tint) 22%, transparent);
+}
+
 /* Studio revision: purposeful glow and lighter document chrome. */
 :root {
-  --glow-current: color-mix(in srgb, var(--current) 9%, transparent);
-  --glow-edge: color-mix(in srgb, var(--current) 44%, transparent);
-  --glow-soft: 0 0 24px color-mix(in srgb, var(--current) 13%, transparent);
+  /* iOS pass: glow is rationed to a whisper — surfaces speak for themselves. */
+  --glow-current: color-mix(in srgb, var(--current) 5%, transparent);
+  --glow-edge: color-mix(in srgb, var(--current) 26%, transparent);
+  --glow-soft: 0 0 24px color-mix(in srgb, var(--current) 7%, transparent);
   --line-subtle: color-mix(in srgb, var(--line) 62%, transparent);
   --chrome-hover: color-mix(in srgb, var(--ink) 4%, transparent);
   --studio-tree-width: 14rem;

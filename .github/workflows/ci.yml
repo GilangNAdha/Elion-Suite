@@ -1,0 +1,69 @@
+# Elion Suite — tiap push/PR diverifikasi: token check, tipe, unit test, build.
+# Job kedua menjalankan e2e Playwright terhadap dev server yang auto-start.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    name: Typecheck, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check:design
+      - run: npm run typecheck
+      - run: npx vitest run
+      - run: npm run build
+
+  e2e:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright e2e
+        env:
+          CI: true
+        # Ringkasan nempel di job summary (log mentah lebih gampang hilang),
+        # supaya kegagalan bisa dibaca dari API tanpa unduh artefak.
+        run: |
+          set -o pipefail
+          status=0
+          PLAYWRIGHT_JSON_OUTPUT_NAME=pw-e2e.json npx playwright test --reporter=line,json 2>&1 | tee pw-e2e.log || status=$?
+          # Vonis dari JSON laporan; exit code CLI Playwright tidak dipercaya
+          # (flaky-only run tetap bisa exit 1). Kalau JSON tidak ketulis,
+          # fallback ke exit code tadi.
+          if node scripts/ci-e2e-report.mjs pw-e2e.json; then status=0; fi
+          {
+            echo "### Playwright e2e (exit $status)"
+            echo '```'
+            tail -c 11000 pw-e2e.log
+            echo ''
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Annotation per baris penting — bisa dibaca via API walau log/blob diblokir.
+          # '|| true' wajib: GH menjalankan bash dengan -e dan grep tanpa match exit 1.
+          grep -aE '✘|Error:|Timed out' pw-e2e.log | head -12 \
+            | while IFS= read -r l; do echo "::error::${l:0:180}"; done || true
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

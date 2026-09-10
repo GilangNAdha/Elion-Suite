@@ -20,13 +20,30 @@ One item model, one page/block model. Every surface is a *merged view* over the 
 
 ---
 
-## Floating pet (latest interaction update)
+## Elion, your friend (not a pet)
 
-Nova now lives **above the app**, not in a separate Companion tab or dashboard
-card. Open **Settings > Floating pet** to enable it and control animation. Click
-the pet to pat, wave, nap/wake, or open floating chat; drag the pet itself to move
-it. It stays active on Settings, Dashboard, Workspace and Lockdown, including
-compact layouts. Existing `/pet` bookmarks redirect to the settings section.
+**Elion** — formerly codenamed *Nova* — lives **above the app**, not in a
+separate Companion tab or dashboard card. He is a friend and personal project
+agent, not a mascot to be kept. Open **Settings > Elion, your friend** to keep
+him on top and control animation. Click him for a high five or a wave, let him
+rest, or open the floating chat; drag him anywhere. He stays active on
+Settings, Dashboard, Workspace and Lockdown, including compact layouts.
+Existing `/pet` bookmarks redirect to the settings section.
+
+His identity, mission, personality and Default/Sentient operating modes are
+specified in [`docs/ELION-IDENTITY.md`](docs/ELION-IDENTITY.md); the chat's
+default system prompt is the operational condensation of that spec.
+
+## AI assistant — any provider, any model
+
+The chat is no longer MiniCPM-only. Configure **any** backend in
+**Settings > AI assistant**: OpenRouter (every model it lists — Claude, GPT,
+Gemini, DeepSeek, Llama…), 9Router (`localhost:20128/v1`), direct Anthropic
+(Claude), direct OpenAI (incl. the Codex line), Ollama, LM Studio, the original
+local MiniCPM gateway, or any custom OpenAI-compatible endpoint. Models are
+discovered live from `/models`, replies stream token-by-token, keys stay in
+local storage, and the desktop build routes through the Electron main process
+so CORS never gets in the way.
 
 [Controls, behavior and animation preview](docs/FLOATING-PET.md).
 

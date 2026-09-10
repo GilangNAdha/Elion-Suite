@@ -24,6 +24,8 @@ export interface BlobRecord {
   data: Blob
 }
 
+// Tabel agent (spek §4–§6 & §37) ditambahkan lewat version(2) — skema lama
+// tidak diubah, jadi database existing user ikut ter-migrate otomatis.
 class ElionDB extends Dexie {
   pages!: Table<PageRecord, string>
   items!: Table<WorkspaceItem, string>
@@ -40,6 +42,11 @@ class ElionDB extends Dexie {
   comments!: Table<BlockComment, string>
   savedFilters!: Table<SavedFilter, string>
   blobs!: Table<BlobRecord, string>
+  memories!: Table<import('./memory').MemoryRecord, string>
+  agentEvents!: Table<import('./activity').AgentEventRecord, string>
+  permissions!: Table<import('./permissions').PermissionRow, string>
+  agentTasks!: Table<import('./agentTasks').AgentTask, string>
+  objectives!: Table<import('./agentTasks').Objective, string>
 
   constructor() {
     super('elion-suite')
@@ -59,6 +66,16 @@ class ElionDB extends Dexie {
       comments: 'id, pageId, blockId, at',
       savedFilters: 'id, name, databaseId',
       blobs: 'id, kind'
+    })
+    this.version(2).stores({
+      memories: 'id, type, factKey, updatedAt, lastAccessedAt, retention, *relatedEntities',
+      agentEvents: 'id, at, kind, taskId'
+    })
+    // Phase 3 — agent runtime. Tabel baru, skema lama tetap utuh.
+    this.version(3).stores({
+      permissions: 'key, mode',
+      agentTasks: 'id, status, priority, createdAt, objectiveId',
+      objectives: 'id, done'
     })
   }
 }

@@ -1,8 +1,8 @@
 {
   "name": "elion-suite",
   "private": true,
-  "version": "0.6.0",
-  "description": "Elion Suite — local-first personal productivity suite (web + Windows desktop)",
+  "version": "0.7.0",
+  "description": "Elion Suite \u2014 local-first personal productivity suite (web + Windows desktop)",
   "author": "Gilang N Adha",
   "license": "MIT",
   "type": "module",

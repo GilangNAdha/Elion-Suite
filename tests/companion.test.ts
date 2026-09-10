@@ -96,7 +96,12 @@ it('disabling the pet closes its controls and cancels an active reply', async ()
   const pending = useCompanionStore.getState().send('A question')
   useCompanionStore.getState().setPinned(false)
   await pending
-  expect(signal?.aborted).toBe(true)
+  // Sejak retrieval memori jadi async, pembatalan bisa terjadi SEBELUM stream
+  // dimulai — yang penting reply berhenti dan ditandai, signal (kalau sempat
+  // dibuat) harus ikut ter-abort.
+  const last = useCompanionStore.getState().messages.at(-1)
+  expect(last?.interrupted).toBe(true)
+  if (signal) expect(signal.aborted).toBe(true)
   expect(useCompanionStore.getState()).toMatchObject({
     pinned: false,
     open: false,
