@@ -50,6 +50,9 @@ jobs:
             echo ''
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # Annotation per baris penting — bisa dibaca via API walau log/blob diblokir
+          grep -aE '✘|Error:|Timed out|expect\(|passed|failed' pw-e2e.log | head -30 \
+            | while IFS= read -r l; do echo "::error::${l:0:180}"; done
           exit $status
       - uses: actions/upload-artifact@v4
         if: failure()
