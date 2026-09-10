@@ -7,6 +7,23 @@ bergeser (repo Hermes rilis cepat) — cek `--help` sebelum jalan.
 
 > Instal HANYA dari repo resmi. Jangan pakai mirror tidak resmi (risiko malware).
 
+## 0. Inti Hermes sudah embedded di Elion (tanpa instalasi)
+
+Feature-set inti Hermes sekarang jalan **native di dalam Elion** — tanpa
+instal apa pun:
+
+| Kemampuan Hermes | Padanan embedded di Elion |
+|---|---|
+| Skills (SKILL.md + langkah) | **Executable skills** — `skills.create` / `skills.run`, panel Settings › ELION runtime › Skills; skill buatan agent masuk Skill Ledger otomatis (origin `authored`) |
+| Cron unattended | **In-app cron** — `agent.jobs.create` / `agent.jobs.list`, dieksekusi loop Sentient lewat `agent.reason` (LLM + tools) via antrean prioritas yang sama (scheduled commitments) |
+| Sesi persisten (state.db) | **Chat sessions** di Dexie — chat selamat dari refresh, 10 sesi terakhir disimpan |
+| Permission/approval | Permission Center (allow/ask/deny) yang sudah ada — tabel Part IV |
+| Memory (`~/.hermes/memories/`) | Memory 6 lapis (`memories` Dexie) dengan recall/reinforce/consolidation |
+
+Jadi kamu TIDAK perlu memasang Hermes untuk memakai Elion. Bagian di bawah
+hanya untuk menghubungkan gateway Hermes sungguhan sebagai **lengan opsional**
+(tool server-side + kerja saat app tertutup).
+
 ## 0. Yang SUDAH terintegrasi di Elion Suite (tanpa setup tambahan di kode)
 
 Elion sekarang punya jembatan Hermes bawaan (`src/lib/hermes.ts`) yang bicara

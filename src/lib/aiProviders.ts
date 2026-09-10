@@ -66,6 +66,39 @@ export const AI_PROVIDER_PRESETS: AiProviderPreset[] = [
     examples: ['cc/claude-opus-4-7', 'oc/gpt-5', 'premium-coding']
   },
   {
+    id: 'kimi',
+    name: 'Kimi (Moonshot AI)',
+    tagline: 'Moonshot platform — kimi-k3 and the K2 line, OpenAI-compatible.',
+    api: 'openai',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    needsKey: true,
+    keyHint: 'sk-...',
+    docsUrl: 'https://platform.moonshot.ai',
+    examples: ['kimi-k3', 'kimi-latest', 'kimi-k2-turbo-preview']
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity (local gateway)',
+    tagline: 'Community gateway that exposes your Google Antigravity subscription as a local OpenAI-compatible API.',
+    api: 'openai',
+    baseUrl: 'http://localhost:8080/v1',
+    needsKey: false,
+    keyHint: 'any value — the gateway does not validate it',
+    docsUrl: 'https://github.com/johnneerdael/antigravity-gateway',
+    examples: ['gemini-3-flash', 'claude-sonnet-4-5-thinking']
+  },
+  {
+    id: 'claudecoderouter',
+    name: 'Claude Code Router (local)',
+    tagline: 'claude-code-router on your machine — Anthropic-format requests routed to Claude, GPT, Gemini, DeepSeek and more.',
+    api: 'anthropic',
+    baseUrl: 'http://127.0.0.1:3456/v1',
+    needsKey: false,
+    keyHint: 'key configured in the router (optional)',
+    docsUrl: 'https://github.com/musistudio/claude-code-router',
+    examples: ['claude-sonnet-4-5', 'gpt-5', 'deepseek-chat']
+  },
+  {
     id: 'anthropic',
     name: 'Claude (Anthropic)',
     tagline: 'Direct access to the Anthropic Messages API.',

@@ -126,9 +126,10 @@ export function HermesPanel() {
       </div>
 
       <p className="agent-note">
-        Hermes is the agent runtime that runs on your machine (<code>hermes gateway</code> with the API server
-        enabled) — Elion delegates work to it, imports its skills into the ledger, and schedules unattended jobs on
-        it. Setup: <code>docs/HERMES-SETUP.md</code>.
+        Optional external link: <code>hermes-agent</code> running on this machine (<code>hermes gateway</code> with
+        its API server enabled). Elion's built-in agent core — skills, cron jobs, sessions, permissions — already
+        works without it; the gateway adds server-side tools and work while the app is closed. Setup:{' '}
+        <code>docs/HERMES-SETUP.md</code>.
       </p>
 
       <div className="agent-columns">

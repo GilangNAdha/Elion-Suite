@@ -84,7 +84,7 @@ deep-detail tetap otoritatif). Yang dikerjakan turn ini:
 | §12 known fix (string provider) | ✅ sudah | diverifikasi: grep 0 hasil di `src/` |
 | §44/§12 object-switch bug | ✅ sudah | `ItemModal` remount per id + regression test tetap hijau |
 | Part IV tabel → Gateway enforcement | ◐ eksternal | butuh pilihan runtime Gilang (lihat bawah) |
-| Part VI OpenClaw ATAU Hermes | ✅ Hermes dipilih + **terintegrasi** | `src/lib/hermes.ts` — jembatan REST ke `hermes gateway` (health/skills/toolsets/jobs/chat): provider preset chat, 5 tool `hermes.*` (status/ask/skills.import/job.create/jobs.list) dengan permission `hermes.delegate`/`hermes.control`/`hermes.skills`, panel Settings › ELION runtime › Hermes bridge; origin ledger baru `hermes-import`; offline = status jujur. Setup fisik: `docs/HERMES-SETUP.md` |
+| Part VI OpenClaw ATAU Hermes | ✅ Hermes dipilih + **inti embedded** | Agent core bawaan = feature-set Hermes versi native: skills `skills.*`, cron `agent.jobs.*` + `agent.reason`, chat sessions persisten, permission table — tanpa instalasi; `src/lib/hermes.ts` = lengan opsional ke gateway Hermes sungguhan (health/skills/toolsets/jobs/chat, offline = status jujur). Setup fisik gateway: `docs/HERMES-SETUP.md` |
 | Part VII /evolve + GEPA-PR | ⏳ eksternal | ledger + heatmap siap menerima; mekanisme evolusi jalan di Hermes |
 | Gmail milik Elion | ✅ | login di UI (Settings › Elion's email) + vault token main process + `docs/GMAIL-SETUP.md`; tool `email.*` nyata kalau connected |
 | Electron system adapter | ✅ | `electron/sys.cjs`: files.read + allow-list perintah; UI di runtime section; desktop-only jujur |

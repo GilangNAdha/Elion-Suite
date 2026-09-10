@@ -4,6 +4,7 @@ import { AGENT_SYSTEM_SUFFIX, runAgentTurn, type AgentToolCall } from '../lib/ag
 import { buildMemoryContext, captureFromUserText, reinforce } from '../lib/memory'
 import { userActivityEnd, userActivityStart } from '../lib/agentRuntime'
 import { aiIsConfigured, effectivePersona, useAiStore } from './aiStore'
+import { appendSessionMessage, clearSession, loadLatestSession } from '../lib/agentSessions'
 
 /**
  * Agent chat (/elion) — Elion sebagai agent tool-capable, BUKAN chat biasa.
@@ -29,6 +30,8 @@ interface AgentChatState {
   activeTool: string | null
   error: string | null
   plainFallback: boolean
+  /** sesi persisten (Hermes lineage) — chat selamat dari refresh */
+  sessionId: string
   send: (text: string) => void
   cancel: () => void
   clear: () => void
@@ -42,6 +45,7 @@ export const useAgentChatStore = create<AgentChatState>()((set, get) => ({
   activeTool: null,
   error: null,
   plainFallback: false,
+  sessionId: '',
   send: (text) => {
     const prompt = text.trim().slice(0, 4000)
     if (!prompt || activeRequest) return
@@ -72,7 +76,10 @@ export const useAgentChatStore = create<AgentChatState>()((set, get) => ({
     const previous = get().messages.filter((m) => m.content.trim() && !m.interrupted).slice(-12)
     const controller = new AbortController()
     activeRequest = controller
-    set({ messages: [...previous, user, assistant], busy: true, error: null, plainFallback: !agentCapable })
+    // Sesi persisten: lanjutkan sesi terakhir, atau buka yang baru.
+    const sessionId = get().sessionId || crypto.randomUUID()
+    set({ messages: [...previous, user, assistant], busy: true, error: null, plainFallback: !agentCapable, sessionId })
+    void appendSessionMessage(sessionId, { ...user, toolCalls: [] }).catch(() => undefined)
     const history: ChatTurn[] = [...previous, user].map(({ role, content }) => ({ role, content }))
     const patchAssistant = (patch: (m: AgentMessage) => AgentMessage) =>
       set((state) => ({
@@ -127,6 +134,10 @@ export const useAgentChatStore = create<AgentChatState>()((set, get) => ({
         if (activeRequest === controller) {
           activeRequest = null
           set({ busy: false, activeTool: null })
+          // Simpan balasan akhir (isi + tool calls) — sesi selamat dari refresh.
+          const final = get().messages.find((m) => m.id === assistant.id)
+          if (final && (final.content.trim() || final.toolCalls.length))
+            void appendSessionMessage(get().sessionId || sessionId, { ...final }).catch(() => undefined)
           userActivityEnd()
         }
       }
@@ -140,5 +151,26 @@ export const useAgentChatStore = create<AgentChatState>()((set, get) => ({
   clear: () => {
     get().cancel()
     set({ messages: [], error: null, plainFallback: false })
+    // Sesi baru — riwayat lama tetap di Dexie (prune menjaga 10 sesi terakhir).
+    void clearSession()
+      .then((sessionId) => set({ sessionId }))
+      .catch(() => undefined)
   }
 }))
+
+// Hydrate sesi terakhir saat app dibuka — chat tidak hilang saat refresh.
+void loadLatestSession()
+  .then(({ sessionId, messages }) =>
+    useAgentChatStore.setState({
+      sessionId,
+      messages: messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        at: m.at,
+        toolCalls: m.toolCalls ?? [],
+        interrupted: m.interrupted
+      }))
+    })
+  )
+  .catch(() => undefined)

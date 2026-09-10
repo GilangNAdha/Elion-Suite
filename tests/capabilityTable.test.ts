@@ -53,6 +53,15 @@ describe('capability boundaries (Part IV)', () => {
         // ke orang lain dijaga guard email.send di DALAM run() (Part IV 🔒).
         'email.send [notifications.send]',
         'files.read [files.read]',
+        // Agent core (embedded Hermes lineage): cron + skill packs + reasoning
+        // step. Meta-tool agent.reason berisiko di tool DI DALAM turn — semua
+        // tetap lewat guard masing-masing.
+        'agent.jobs.create [schedule.write]',
+        'agent.jobs.list [workspace.read]',
+        'agent.reason [none]',
+        'skills.create [workspace.write]',
+        'skills.list [workspace.read]',
+        'skills.run [workspace.write]',
         // Hermes bridge (Part VI): status/jobs-list = baca lokal; delegasi =
         // egress via gateway; job-create = kerja unattended; import = ledger.
         'hermes.ask [hermes.delegate]',

@@ -14,6 +14,7 @@ import {
   listObjectives,
   type AgentTask
 } from './agentTasks'
+import { scheduleDueJobs, msUntilNextJob } from './agentJobs'
 import { useItemsStore } from '../stores/itemsStore'
 import { useNotifyStore } from '../stores/notifyStore'
 
@@ -128,6 +129,14 @@ async function tickInner(store: ReturnType<typeof useRuntimeStore.getState>): Pr
     wake(USER_GAP)
     return
   }
+  // Priority 4 spek §7 — scheduled commitments: job cron jatuh tempo masuk
+  // antrean sebelum picking, jadi eksekusinya lewat prioritas yang sama
+  // dengan kerja lain (bukan jalur pintas).
+  try {
+    await scheduleDueJobs()
+  } catch {
+    /* db busy — coba lagi siklus berikutnya */
+  }
   const task = store.busy ? null : await pickNext()
   if (task) {
     useRuntimeStore.setState({ busy: true, activeTask: task.title, phase: 'acting' })
@@ -155,8 +164,16 @@ async function tickInner(store: ReturnType<typeof useRuntimeStore.getState>): Pr
   useRuntimeStore.setState({ phase: 'observing' })
   const acted = await observe()
   useRuntimeStore.setState({ phase: 'idle' })
-  // §33: idle itu SAH hanya kalau memang tak ada kerja berguna yang diizinkan
-  wake(acted ? ACTIVE_GAP : IDLE_GAP)
+  // §33: idle itu SAH hanya kalau memang tak ada kerja berguna yang diizinkan.
+  // Job cron berikutnya boleh mempercepat wake biar eksekusi tepat waktu.
+  let gap = acted ? ACTIVE_GAP : IDLE_GAP
+  try {
+    const jobMs = await msUntilNextJob()
+    if (jobMs !== null && jobMs < gap) gap = Math.max(1_000, jobMs)
+  } catch {
+    /* db busy */
+  }
+  wake(gap)
 }
 
 /** OBSERVE — deterministik, murah, dan hanya tindakan yang diizinkan policy.

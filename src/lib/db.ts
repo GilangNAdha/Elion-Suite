@@ -48,6 +48,9 @@ class ElionDB extends Dexie {
   agentTasks!: Table<import('./agentTasks').AgentTask, string>
   objectives!: Table<import('./agentTasks').Objective, string>
   skills!: Table<import('./skills').SkillRecord, string>
+  agentJobs!: Table<import('./agentJobs').AgentJob, string>
+  agentSkills!: Table<import('./agentSkills').AgentSkill, string>
+  agentMessages!: Table<import('./agentSessions').StoredAgentMessage, string>
 
   constructor() {
     super('elion-suite')
@@ -82,6 +85,13 @@ class ElionDB extends Dexie {
     // Elion buat untuk dirinya sendiri; asal + skor terekam, bisa diaudit.
     this.version(4).stores({
       skills: 'id, origin, createdAt'
+    })
+    // Agent core (Hermes lineage, embedded): cron jobs, executable skill
+    // packs, dan chat session persistence. Tabel baru — skema lama utuh.
+    this.version(5).stores({
+      agentJobs: 'id, kind, nextRunAt',
+      agentSkills: 'id, name, origin',
+      agentMessages: 'id, sessionId, at'
     })
   }
 }

@@ -176,6 +176,86 @@ const TOOL_SCHEMAS: Record<string, { description: string; parameters: JsonSchema
       },
       required: ['command']
     }
+  },
+  'hermes.status': {
+    description: 'Check the local Hermes agent gateway (online, skills, toolsets, scheduled jobs).',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  'hermes.ask': {
+    description: "Delegate a task to the local Hermes agent runtime and return its final answer. Hermes has its own server-side tools (terminal, files, web, skills) — use for work beyond this app and report the answer as Hermes' answer.",
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'The task for Hermes, one clear instruction.' },
+        context: { type: 'string', description: 'Optional short context Hermes needs.' }
+      },
+      required: ['prompt']
+    }
+  },
+  'hermes.skills.import': {
+    description: 'Import the skills known to the Hermes gateway into the Elion Skill Ledger (duplicates are skipped).',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  'hermes.job.create': {
+    description: 'Schedule an unattended job on the Hermes gateway (hermes cron). Runs even when this app is closed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'What Hermes should do on each run.' },
+        schedule: { type: 'string', description: 'Schedule in hermes cron form, e.g. "daily 09:00" or a cron expression.' },
+        name: { type: 'string', description: 'Short name for the job.' }
+      },
+      required: ['prompt', 'schedule']
+    }
+  },
+  'hermes.jobs.list': {
+    description: 'List the jobs currently scheduled on the Hermes gateway.',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  'agent.jobs.create': {
+    description: 'Schedule a recurring IN-APP agent job (in-app cron). Runs inside this app while it is open and the runtime is on — no external gateway needed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short job name.' },
+        prompt: { type: 'string', description: 'The instruction future-Elion executes on each run (it has the same tools you have).' },
+        kind: { type: 'string', description: 'daily | interval | once' },
+        at: { type: 'string', description: "For daily: local time 'HH:MM' (e.g. 09:00). For once: 'YYYY-MM-DDTHH:MM'." },
+        intervalMin: { type: 'string', description: 'For interval jobs: minutes between runs.' }
+      },
+      required: ['prompt', 'kind']
+    }
+  },
+  'agent.jobs.list': {
+    description: 'List the in-app scheduled agent jobs.',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  'skills.create': {
+    description: 'Author a reusable, named skill: an ordered list of registered tool steps Elion can re-run later. Additive self-improvement — recorded in the Skill Ledger.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short skill name (kebab-case).' },
+        description: { type: 'string', description: 'What the skill does, one sentence.' },
+        steps: {
+          type: 'string',
+          description: 'JSON array of steps: [{"title":"...","tool":"tasks.create","args":{"title":"..."}}]. Every tool must be registered.'
+        }
+      },
+      required: ['name', 'steps']
+    }
+  },
+  'skills.run': {
+    description: 'Run a stored executable skill by name — executes its tool steps for real (each step still passes its own permission gate).',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'Skill name.' } },
+      required: ['name']
+    }
+  },
+  'skills.list': {
+    description: 'List the stored executable skills.',
+    parameters: { type: 'object', properties: {}, required: [] }
   }
 }
 
@@ -184,6 +264,9 @@ export const AGENT_SYSTEM_SUFFIX =
 
 const MAX_ITERATIONS = 6
 const MAX_TOOL_OUTPUT = 4000
+// Agent turns (dan job cron yang memakainya) boleh makan waktu menit-melintang —
+// timeout request default 15 detik jelas tidak cukup untuk kerja beneran.
+const AGENT_TURN_TIMEOUT_MS = 180_000
 
 function truncate(text: string): string {
   return text.length > MAX_TOOL_OUTPUT ? `${text.slice(0, MAX_TOOL_OUTPUT)}…(truncated)` : text
@@ -254,8 +337,8 @@ async function runOpenAiTurn({ cfg, system, history, signal, onEvent }: AgentTur
         tools: tools.length ? tools : undefined,
         temperature: cfg.temperature,
         max_tokens: cfg.maxTokens
-      })
-    )) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] }
+      }), AGENT_TURN_TIMEOUT_MS)
+    ) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] }
     const msg = res.choices?.[0]?.message
     if (!msg) throw new Error('The provider returned an empty reply.')
     if (msg.content) onEvent({ type: 'text', text: msg.content })
@@ -289,8 +372,8 @@ async function runAnthropicTurn({ cfg, system, history, signal, onEvent }: Agent
         tools: tools.length ? tools : undefined,
         temperature: cfg.temperature,
         max_tokens: Math.min(cfg.maxTokens, 8192)
-      })
-    )) as { content?: ({ type: string; text?: string; id?: string; name?: string; input?: unknown } | null)[]; stop_reason?: string }
+      }), AGENT_TURN_TIMEOUT_MS)
+    ) as { content?: ({ type: string; text?: string; id?: string; name?: string; input?: unknown } | null)[]; stop_reason?: string }
     const blocks = (res.content ?? []).filter((b): b is { type: string; text?: string; id?: string; name?: string; input?: unknown } => !!b)
     for (const b of blocks) if (b.type === 'text' && b.text) onEvent({ type: 'text', text: b.text })
     const uses = blocks.filter((b) => b.type === 'tool_use' && b.id && b.name)
