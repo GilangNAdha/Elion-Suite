@@ -448,3 +448,39 @@ export function weeklySuccess(tasks: AgentTask[], weeks = 6, nowMs = Date.now())
   }
   return out
 }
+
+export interface DayCell {
+  dateISO: string
+  count: number
+}
+
+/** Aktivitas AI harian — SEMUA event nyata per hari (bahan heatmap §31). */
+export function eventHeatmap(events: AgentEventRecord[], days = 84, nowMs = Date.now()): DayCell[] {
+  const perDay = new Map<string, number>()
+  for (const e of events) {
+    const day = e.at.slice(0, 10)
+    perDay.set(day, (perDay.get(day) ?? 0) + 1)
+  }
+  const cells: DayCell[] = []
+  const today = new Date(nowMs).toISOString().slice(0, 10)
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(new Date(`${today}T00:00:00Z`).getTime() - i * 86_400_000).toISOString().slice(0, 10)
+    cells.push({ dateISO: d, count: perDay.get(d) ?? 0 })
+  }
+  return cells
+}
+
+/** Jumlah event dalam N jam terakhir — denyut "aktivitas sekarang". */
+export function eventsInLastHours(events: AgentEventRecord[], hours = 1, nowMs = Date.now()): number {
+  const from = nowMs - hours * 3_600_000
+  return events.filter((e) => new Date(e.at).getTime() >= from).length
+}
+
+/** Rata-rata latensi tool tertimbang dari event elapsedMs nyata; null tanpa data. */
+export function avgToolLatency(events: AgentEventRecord[]): { avgMs: number; samples: number } | null {
+  const rows = latencyByCategory(events)
+  if (!rows.length) return null
+  const totalMs = rows.reduce((a, r) => a + r.avgMs * r.samples, 0)
+  const samples = rows.reduce((a, r) => a + r.samples, 0)
+  return { avgMs: Math.round(totalMs / samples), samples }
+}

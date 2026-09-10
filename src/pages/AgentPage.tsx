@@ -4,7 +4,7 @@ import { ConnectPanel } from '../components/agent/ConnectPanel'
 import { SentientPanel } from '../components/agent/SentientPanel'
 import { ActiveTasks, CurrentActivity, LiveActivity, agentStateLabel, useMonitorData } from '../components/agent/Monitor'
 import { MemoryView } from '../components/agent/MemoryView'
-import { PerformanceView } from '../components/agent/PerformanceView'
+import { MonitoringDashboard } from '../components/agent/MonitoringDashboard'
 import { AgentJobsPanel } from '../components/settings/AgentJobsPanel'
 import { AgentSkillsPanel } from '../components/settings/AgentSkillsPanel'
 import { useActivityFeed } from '../lib/activity'
@@ -21,7 +21,7 @@ const TABS = [
   ['monitor', 'Monitor'],
   ['chat', 'Chat'],
   ['jobs', 'Jobs & skills'],
-  ['performance', 'Performance'],
+  ['performance', 'Monitoring'],
   ['memory', 'Memory']
 ] as const
 
@@ -105,7 +105,7 @@ export function AgentPage() {
         </div>
       )}
 
-      {tab === 'performance' && <PerformanceView />}
+      {tab === 'performance' && <MonitoringDashboard />}
       {tab === 'memory' && <MemoryView />}
     </div>
   )

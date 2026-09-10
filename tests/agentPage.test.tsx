@@ -33,7 +33,7 @@ describe('AgentPage (/agent — permukaan operasi ELION)', () => {
     expect(screen.getByRole('tab', { name: 'Monitor' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Chat' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Jobs & skills' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: 'Performance' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Monitoring' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Memory' })).toBeTruthy()
     // Saat off: jujur bahwa tidak berjalan (§60)
     expect(screen.getByText(/Not running/)).toBeTruthy()
