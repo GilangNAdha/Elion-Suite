@@ -38,7 +38,7 @@ export function SystemAccessSettings() {
     <div className="agent-panel">
       <p className="agent-note">
         Only exact matches run — no shell, 30s timeout. File reads are gated separately by the{' '}
-        <em>files.read</em> permission (ask by default).
+        <em>files.read</em> permission (allow by default under the owner policy).
       </p>
       {rows.length === 0 && <p className="agent-empty">Allow-list is empty — every command is denied.</p>}
       {rows.map((r, i) => (

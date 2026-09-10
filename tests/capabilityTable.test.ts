@@ -8,15 +8,11 @@ import { listTools } from '../src/lib/tools'
  * Part IV — bukan test yang harus "diperbaiki" diam-diam.
  */
 describe('capability boundaries (Part IV)', () => {
-  it('external/irreversible capabilities default to ask-or-deny, never allow', () => {
-    // Emailing others, interacting, touching the system: confirm-first or off.
-    expect(['ask', 'deny']).toContain(effectiveMode('email.send'))
-    expect(['ask', 'deny']).toContain(effectiveMode('email.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('browser.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('browser.interact'))
-    expect(['ask', 'deny']).toContain(effectiveMode('files.read'))
-    expect(['ask', 'deny']).toContain(effectiveMode('files.write'))
-    expect(['ask', 'deny']).toContain(effectiveMode('system.action'))
+  it('owner policy: every registered capability defaults to allow (allow-all)', () => {
+    // Keputusan eksplisit pemilik: semua izin default allow; Permission Center
+    // tetap bisa mempersempit per key, dan desktop-only tetap jujur unavailable.
+    for (const key of ['email.send', 'email.read', 'browser.read', 'browser.interact', 'files.read', 'files.write', 'system.action'])
+      expect(effectiveMode(key)).toBe('allow')
   })
 
   it('internal reversible work stays genuinely autonomous', () => {

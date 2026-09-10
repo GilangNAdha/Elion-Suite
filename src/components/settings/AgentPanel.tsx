@@ -148,7 +148,7 @@ export function AgentPanel() {
             ))}
           </tbody>
         </table>
-        <p className="agent-note">Default policy: private data never leaves without approval. High-risk capabilities start at ask/deny.</p>
+        <p className="agent-note">Owner policy: all permissions default to allow. Tighten any capability here — overrides always beat the default, and every decision is logged to the activity timeline.</p>
       </details>
 
       <details className="agent-events" open={active.length > 0}>
