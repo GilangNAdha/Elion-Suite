@@ -36,8 +36,10 @@ test('exact default tokens and a content-weighted dashboard', async ({ page }) =
       button: getComputedStyle(document.querySelector('.focus-action')!).backgroundImage
     }
   })
-  expect(tokens.bg).toBe('#0A0E16')
-  expect(tokens.current).toBe('#45E0C2')
+  // iOS light jadi default sejak v0.7 — bandingkan trim+uppercase biar
+  // kapitalisasi hex dari runtime tidak jadi source of flake.
+  expect(tokens.bg.trim().toUpperCase()).toBe('#F2F2F7')
+  expect(tokens.current.trim().toUpperCase()).toBe('#0066D6')
   expect(tokens.font).toContain('Geist')
   expect(tokens.ratio).toBeGreaterThan(3)
   expect(tokens.button).toBe('none')

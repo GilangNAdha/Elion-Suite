@@ -42,7 +42,8 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          npx playwright test 2>&1 | tee pw-e2e.log || status=$?
+          PLAYWRIGHT_JSON_OUTPUT_NAME=pw-e2e.json npx playwright test --reporter=line,json 2>&1 | tee pw-e2e.log || status=$?
+          node scripts/ci-e2e-report.mjs pw-e2e.json || true
           {
             echo "### Playwright e2e (exit $status)"
             echo '```'
@@ -51,7 +52,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           # Annotation per baris penting — bisa dibaca via API walau log/blob diblokir
-          grep -aE '✘|Error:|Timed out|expect\(|passed|failed' pw-e2e.log | head -30 \
+          grep -aE '✘|Error:|Timed out' pw-e2e.log | head -12 \
             | while IFS= read -r l; do echo "::error::${l:0:180}"; done
           exit $status
       - uses: actions/upload-artifact@v4

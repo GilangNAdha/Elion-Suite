@@ -87,6 +87,7 @@ export function AiProviderSettings({ compact = false }: { compact?: boolean }) {
               <Button
                 size="sm"
                 variant="primary"
+                aria-label="Connect MiniCPM"
                 icon={companion.connection === 'checking' ? <LoaderCircle size={12} /> : <PlugZap size={12} />}
                 disabled={companion.connection === 'checking'}
                 onClick={() => void companion.connect()}
