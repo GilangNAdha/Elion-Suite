@@ -1,4 +1,5 @@
 import type { AgentEventRecord } from './activity'
+import { db } from './db'
 import { PRIORITY, type AgentTask, type Objective } from './agentTasks'
 import type { SkillRecord } from './skills'
 
@@ -279,4 +280,171 @@ export function velocityByWeek(skills: SkillRecord[], weeks = 8, nowMs = Date.no
     })
   }
   return rows
+}
+
+// ---------------------------------------------------------------------------
+// Performance & improvement (§29–§42) — SEMUA dihitung dari data historis
+// nyata (tabel agentTasks + agentEvents). Metric tanpa data = null, UI wajib
+// menampilkan "Not enough data yet" — tidak ada angka karangan (§2/§36).
+// ---------------------------------------------------------------------------
+
+export interface TaskSuccessWindow {
+  completed: number
+  failed: number
+  /** 0..1 — null kalau tidak ada outcome di jendela ini */
+  rate: number | null
+  /** rata-rata durasi task completed (ms) — null bila tak ada yang selesai */
+  avgDurationMs: number | null
+  /** retry rate: task yang pernah gagal-then-retry / total task beroutcome */
+  retryRate: number | null
+}
+
+function windowStats(tasks: AgentTask[], fromMs: number, toMs: number): TaskSuccessWindow {
+  const inWindow = tasks.filter((t) => {
+    const at = new Date(t.updatedAt).getTime()
+    return at >= fromMs && at < toMs && (t.status === 'completed' || t.status === 'failed')
+  })
+  const completedRows = inWindow.filter((t) => t.status === 'completed')
+  const completed = completedRows.length
+  const failed = inWindow.length - completed
+  const durations = completedRows
+    .map((t) => new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime())
+    .filter((d) => d >= 0)
+  const retried = inWindow.filter((t) => t.attempts > 1).length
+  return {
+    completed,
+    failed,
+    rate: inWindow.length ? completed / inWindow.length : null,
+    avgDurationMs: durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : null,
+    retryRate: inWindow.length ? retried / inWindow.length : null
+  }
+}
+
+export interface PerformanceSummary {
+  all: TaskSuccessWindow
+  recent: TaskSuccessWindow
+  previous: TaskSuccessWindow
+  /** task selesai tanpa campur tangan user (source != 'user') / semua selesai */
+  independentRate: number | null
+  autonomy: { user: number; autonomous: number; schedule: number }
+  /** perbandingan recent vs previous — null bila salah satu jendela kosong */
+  improvement: {
+    successDelta: number | null
+    durationDeltaMs: number | null
+    retryDelta: number | null
+  }
+}
+
+const DAY = 86_400_000
+
+/** Ringkasan performa dari tabel task agent. `nowMs` injectable untuk test. */
+export function performanceSummary(tasks: AgentTask[], nowMs = Date.now()): PerformanceSummary {
+  const all = windowStats(tasks, 0, nowMs + DAY)
+  const recent = windowStats(tasks, nowMs - 7 * DAY, nowMs)
+  const previous = windowStats(tasks, nowMs - 14 * DAY, nowMs - 7 * DAY)
+  const done = tasks.filter((t) => t.status === 'completed')
+  const independent = done.filter((t) => t.source !== 'user').length
+  const autonomy = {
+    user: done.filter((t) => t.source === 'user').length,
+    autonomous: done.filter((t) => t.source === 'autonomous').length,
+    schedule: done.filter((t) => t.source === 'schedule').length
+  }
+  return {
+    all,
+    recent,
+    previous,
+    independentRate: done.length ? independent / done.length : null,
+    autonomy,
+    improvement: {
+      successDelta:
+        recent.rate !== null && previous.rate !== null ? recent.rate - previous.rate : null,
+      durationDeltaMs:
+        recent.avgDurationMs !== null && previous.avgDurationMs !== null
+          ? recent.avgDurationMs - previous.avgDurationMs
+          : null,
+      retryDelta: recent.retryRate !== null && previous.retryRate !== null ? recent.retryRate - previous.retryRate : null
+    }
+  }
+}
+
+export interface ToolReliabilityRow {
+  tool: string
+  ok: number
+  failed: number
+  rate: number
+  avgMs: number | null
+}
+
+/** Keandalan per tool dari event tool.completed/tool.failed (detail = id tool).
+ * Hanya tool yang benar-benar pernah dipanggil yang tampil (§37). */
+export function toolReliability(events: AgentEventRecord[]): ToolReliabilityRow[] {
+  const rows = new Map<string, { ok: number; failed: number; totalMs: number; timed: number }>()
+  for (const e of events) {
+    if (e.kind !== 'tool.completed' && e.kind !== 'tool.failed') continue
+    const tool = (e.detail ?? '').split(' ')[0].split('—')[0].trim()
+    if (!tool) continue
+    const row = rows.get(tool) ?? { ok: 0, failed: 0, totalMs: 0, timed: 0 }
+    if (e.kind === 'tool.completed') row.ok++
+    else row.failed++
+    if (typeof e.elapsedMs === 'number' && e.elapsedMs >= 0) {
+      row.totalMs += e.elapsedMs
+      row.timed++
+    }
+    rows.set(tool, row)
+  }
+  return [...rows.entries()]
+    .map(([tool, r]) => ({
+      tool,
+      ok: r.ok,
+      failed: r.failed,
+      rate: r.ok / (r.ok + r.failed),
+      avgMs: r.timed ? r.totalMs / r.timed : null
+    }))
+    .sort((a, b) => b.ok + b.failed - (a.ok + a.failed))
+}
+
+export interface AgentHealth {
+  runtime: 'on' | 'off'
+  memory: 'open' | 'closed'
+  toolsAvailable: number
+  toolsTotal: number
+  scheduler: 'running' | 'idle' | 'off'
+  background: 'looping' | 'stopped'
+}
+
+/** Health dari state nyata — tidak pernah "Healthy" tanpa dasar (§40). */
+export async function agentHealth(enabled: boolean): Promise<Omit<AgentHealth, 'toolsAvailable' | 'toolsTotal'>> {
+  let memory: AgentHealth['memory'] = 'closed'
+  try {
+    memory = db.isOpen() ? 'open' : 'closed'
+  } catch {
+    memory = 'closed'
+  }
+  return {
+    runtime: enabled ? 'on' : 'off',
+    memory,
+    scheduler: enabled ? 'running' : 'off',
+    background: enabled ? 'looping' : 'stopped'
+  }
+}
+
+/** Deret mingguan success rate — bahan sparkline §31 (minimal data = []). */
+export function weeklySuccess(tasks: AgentTask[], weeks = 6, nowMs = Date.now()): { weekISO: string; rate: number | null }[] {
+  const out: { weekISO: string; rate: number | null }[] = []
+  const now = new Date(nowMs)
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const dow = (monday.getUTCDay() + 6) % 7
+  monday.setUTCDate(monday.getUTCDate() - dow)
+  for (let w = weeks - 1; w >= 0; w--) {
+    const from = monday.getTime() - w * 7 * DAY
+    const slice = tasks.filter((t) => {
+      const at = new Date(t.updatedAt).getTime()
+      return at >= from && at < from + 7 * DAY && (t.status === 'completed' || t.status === 'failed')
+    })
+    out.push({
+      weekISO: new Date(from).toISOString().slice(0, 10),
+      rate: slice.length ? slice.filter((t) => t.status === 'completed').length / slice.length : null
+    })
+  }
+  return out
 }

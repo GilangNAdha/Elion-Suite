@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, Search, Sparkle, UserRound, ChevronRight, ShieldCheck } from 'lucide-react'
 import { IconBtn, Kbd, Menu, MenuItem, MenuLabel, MenuSep } from '../ui'
 import { DictationButton } from '../Dictation'
 import { NotificationCenter } from './NotificationCenter'
+import { useRuntimeStore } from '../../lib/agentRuntime'
 import { useNotifyStore } from '../../stores/notifyStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { useItemsStore } from '../../stores/itemsStore'
@@ -62,6 +63,8 @@ export function TopBar() {
   const seg = location.pathname.split('/')[1]
   const title = seg === '' ? 'Dashboard' : seg.charAt(0).toUpperCase() + seg.slice(1)
 
+  const rtEnabled = useRuntimeStore((st) => st.enabled)
+
   const nextPreset = () => {
     const i = presets.findIndex((p) => p.id === activeTheme.id)
     if (presets.length) applyPreset(presets[(i + 1) % presets.length].id)
@@ -76,6 +79,13 @@ export function TopBar() {
           <strong>{title}</strong>
         </div>
       </div>
+
+      {/* §86: indikator agent-state global — agent, bukan koneksi monitor */}
+      {rtEnabled && (
+        <Link to="/agent" className="topbar-elion-pill" title="Sentient Mode is on — open ELION monitor">
+          <span className="agent-dot is-work" aria-hidden /> ELION active
+        </Link>
+      )}
 
       {/* Global search */}
       <div className="topbar-search relative hidden w-72 sm:block">

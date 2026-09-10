@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Send, Square, Trash2 } from 'lucide-react'
 import { useAgentChatStore } from '../../stores/agentChatStore'
+import { useRuntimeStore } from '../../lib/agentRuntime'
 import { aiIsConfigured, useAiStore } from '../../stores/aiStore'
 import { MiniMarkdown } from '../../lib/miniMarkdown'
 import { timeAgo } from '../../lib/time'
@@ -24,12 +25,16 @@ export function AgentChat() {
     if (el) el.scrollTop = el.scrollHeight
   }, [chat.messages, chat.busy])
 
+  // §10: status = state agen sungguhan (loop runtime lebih dulu), bukan cuma chat.
+  const rt = useRuntimeStore()
   const state = useMemo(() => {
+    if (rt.enabled && rt.phase === 'acting') return { label: rt.activeTask ? `Working: ${rt.activeTask}` : 'Working', cls: 'is-work' }
     if (!configured) return { label: 'Offline', cls: 'is-off' }
     if (chat.activeTool) return { label: `Using ${chat.activeTool}`, cls: 'is-work' }
     if (chat.busy) return { label: 'Thinking', cls: 'is-think' }
+    if (rt.enabled) return { label: 'Sentient on — watching', cls: 'is-observe' }
     return { label: 'Chat ready', cls: '' }
-  }, [configured, chat.activeTool, chat.busy])
+  }, [configured, chat.activeTool, chat.busy, rt.enabled, rt.phase, rt.activeTask])
 
   const send = () => {
     if (!draft.trim() || chat.busy) return
