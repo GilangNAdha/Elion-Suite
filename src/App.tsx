@@ -23,6 +23,7 @@ import { useLockdownStore } from './stores/lockdownStore'
 import { useNotifyStore } from './stores/notifyStore'
 import { useSettingsStore } from './stores/settingsStore'
 import { seedIfEmpty } from './lib/seed'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { DictationBridge } from './components/Dictation'
 import { FloatingCompanion } from './components/pet/FloatingCompanion'
 import { PetActivity } from './components/pet/PetActivity'
@@ -44,21 +45,37 @@ const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
 export default function App() {
   const [ready, setReady] = useState(false)
   const [palette, setPalette] = useState(false)
+  const [bootError, setBootError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      await seedIfEmpty()
-      await Promise.all([
-        useItemsStore.getState().init(),
-        usePagesStore.getState().init(),
-        useLockdownStore.getState().init(),
-        useNotifyStore.getState().init(),
-        // runtime agent: permission + feed event + loop (kalau user mengizinkan)
-        import('./lib/permissions').then((m) => m.usePermissionStore.getState().init()),
-        import('./lib/activity').then((m) => m.useActivityFeed.getState().init()),
-        import('./lib/agentRuntime').then((m) => m.initRuntime())
-      ])
+      // IndexedDB/local storage can be unavailable (private browsing with
+      // storage blocked, corrupt profile, quota). Without this catch the app
+      // hung on the splash forever with no explanation and no recovery.
+      try {
+        await seedIfEmpty()
+        await Promise.all([
+          useItemsStore.getState().init(),
+          usePagesStore.getState().init(),
+          useLockdownStore.getState().init(),
+          useNotifyStore.getState().init(),
+          // runtime agent: permission + feed event + loop (kalau user mengizinkan)
+          import('./lib/permissions').then((m) => m.usePermissionStore.getState().init()),
+          import('./lib/activity').then((m) => m.useActivityFeed.getState().init()),
+          import('./lib/agentRuntime').then((m) => m.initRuntime())
+        ])
+      } catch (error) {
+        console.warn('[elion] boot failed:', error)
+        if (!cancelled) {
+          const detail =
+            error instanceof Error && error.name === 'QuotaExceededError'
+              ? 'Device storage is full, so the local database could not open. Free some space and retry.'
+              : 'The local database could not open. This usually means private browsing with storage blocked, or a corrupt browser profile.'
+          setBootError(detail)
+        }
+        return
+      }
       if (!cancelled) {
         useSettingsStore.getState().setReady()
         setReady(true)
@@ -83,6 +100,23 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  if (bootError) {
+    return (
+      <div className="flex h-full min-h-screen flex-col items-center justify-center gap-3 bg-bg px-6 text-center text-ink">
+        <img src={assetUrl('favicon.svg')} alt="Elion" className="h-14 w-14" />
+        <div className="text-[0.95em] font-medium">Elion Suite could not start</div>
+        <p className="max-w-md text-[0.9em] text-ink-muted">{bootError}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-1 rounded-lg bg-primary px-4 py-2 text-[0.9em] font-medium text-white"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   if (!ready) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-bg text-ink">
@@ -97,38 +131,40 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* immersive routes — bypass the app shell entirely (§3) */}
-          <Route path="/workspace/:pageId/edit" element={<StudioWorkspacePage immersive />} />
-          <Route path="/workspace/:pageId/legacy-edit" element={<EditorPage />} />
-          <Route path="/notes/:pageId/edit" element={<EditorPage />} />
-          <Route path="/lockdown" element={<LockdownPage />} />
+      <ErrorBoundary>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            {/* immersive routes — bypass the app shell entirely (§3) */}
+            <Route path="/workspace/:pageId/edit" element={<StudioWorkspacePage immersive />} />
+            <Route path="/workspace/:pageId/legacy-edit" element={<EditorPage />} />
+            <Route path="/notes/:pageId/edit" element={<EditorPage />} />
+            <Route path="/lockdown" element={<LockdownPage />} />
 
-          <Route element={<AppShell />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/workspace" element={<StudioWorkspacePage />} />
-            <Route path="/workspace/:pageId" element={<StudioWorkspacePage />} />
-            <Route path="/workspace/items/:dbId" element={<DatabaseRoutePage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/habits" element={<HabitsPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/notes/:pageId" element={<NotesPage />} />
-            <Route path="/alarms" element={<AlarmsPage />} />
-            <Route path="/music" element={<MusicPage />} />
-            <Route path="/pet" element={<Navigate to="/settings#companion" replace />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-        <MusicPlayerCore />
-        <PetActivity />
-        <FloatingCompanion />
-        <DictationBridge />
-        <GlobalPalette open={palette} onClose={() => setPalette(false)} />
-      </Router>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/workspace" element={<StudioWorkspacePage />} />
+              <Route path="/workspace/:pageId" element={<StudioWorkspacePage />} />
+              <Route path="/workspace/items/:dbId" element={<DatabaseRoutePage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/habits" element={<HabitsPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/notes" element={<NotesPage />} />
+              <Route path="/notes/:pageId" element={<NotesPage />} />
+              <Route path="/alarms" element={<AlarmsPage />} />
+              <Route path="/music" element={<MusicPage />} />
+              <Route path="/pet" element={<Navigate to="/settings#companion" replace />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+          <MusicPlayerCore />
+          <PetActivity />
+          <FloatingCompanion />
+          <DictationBridge />
+          <GlobalPalette open={palette} onClose={() => setPalette(false)} />
+        </Router>
+      </ErrorBoundary>
     </ThemeProvider>
   )
 }

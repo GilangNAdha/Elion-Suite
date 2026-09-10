@@ -315,7 +315,15 @@ async function readThroughBridge(
     text = await response.text()
   }
   if (!text) return {}
-  return JSON.parse(text)
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Gateways sometimes answer 200 with an HTML error page (proxy login,
+    // maintenance). A raw SyntaxError would confuse; say what happened.
+    throw new Error(
+      'The provider returned a non-JSON response. Check the base URL — it may point at a login page or proxy instead of the API.'
+    )
+  }
 }
 
 async function statusError(response: Response): Promise<Error> {
