@@ -50,6 +50,7 @@ describe('capability boundaries (Part IV)', () => {
         'agent.jobs.list [workspace.read]',
         'agent.reason [none]',
         'skills.create [workspace.write]',
+        'skills.improve [workspace.write]',
         'skills.list [workspace.read]',
         'skills.run [workspace.write]',
         'memory.recall [workspace.read]',

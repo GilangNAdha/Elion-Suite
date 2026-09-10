@@ -20,7 +20,7 @@ Elion is a tool-capable agent embedded in the app — not a chat wrapper:
 
 - **Real work, real gates.** Chat turns can call registered tools (create tasks, documents, reminders, read/write memory, read pages). Every tool passes a permission table (all capabilities default to allow per the owner policy; tighten any of them in Settings › ELION runtime; provider keys are never agent-accessible).
 - **Sentient Mode.** A runtime loop (separate from the chat UI) that works the task queue, surfaces due work and objectives, consolidates memory, and preempts for your instructions. State lives in IndexedDB; stopping is always one click.
-- **Skills.** Named, executable packs of tool steps. Author them in Settings, run them from chat or the loop, and skills Elion authors itself land in the permanent, auditable Skill Ledger.
+- **Skills.** Named, executable packs of tool steps. Author them in Settings, run them from chat or the loop, and skills Elion authors itself land in the permanent, auditable Skill Ledger — and on idle the loop distills repeated successful work into new skills automatically (≥3 identical successful runs, success ratio ≥ 60%, deletions respected).
 - **Scheduled jobs (in-app cron).** "Every morning at 09:00, brief me on today's calendar." Jobs enter the same priority queue as every other task and run while the app is open with the runtime on.
 - **Persistent sessions.** Chat history survives refresh.
 - **Memory.** A six-layer memory engine with contextual recall, reinforcement, conflict resolution and semantic consolidation — only relevant memories enter a prompt.

@@ -15,6 +15,7 @@ import {
   type AgentTask
 } from './agentTasks'
 import { scheduleDueJobs, msUntilNextJob } from './agentJobs'
+import { maybeDistill } from './selfImprove'
 import { useItemsStore } from '../stores/itemsStore'
 import { useNotifyStore } from '../stores/notifyStore'
 
@@ -163,10 +164,18 @@ async function tickInner(store: ReturnType<typeof useRuntimeStore.getState>): Pr
   }
   useRuntimeStore.setState({ phase: 'observing' })
   const acted = await observe()
+  // Self-improvement (Part VII): idle dipakai untuk men-distill pola kerja
+  // yang terbukti berhasil menjadi skill baru di Skill Ledger.
+  let promoted = 0
+  try {
+    promoted = (await maybeDistill()).length
+  } catch {
+    /* distil gagal — siklus berikutnya */
+  }
   useRuntimeStore.setState({ phase: 'idle' })
   // §33: idle itu SAH hanya kalau memang tak ada kerja berguna yang diizinkan.
   // Job cron berikutnya boleh mempercepat wake biar eksekusi tepat waktu.
-  let gap = acted ? ACTIVE_GAP : IDLE_GAP
+  let gap = acted || promoted ? ACTIVE_GAP : IDLE_GAP
   try {
     const jobMs = await msUntilNextJob()
     if (jobMs !== null && jobMs < gap) gap = Math.max(1_000, jobMs)

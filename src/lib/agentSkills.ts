@@ -2,7 +2,7 @@ import { db } from './db'
 import { uid } from './types'
 import { logActivity } from './activity'
 import { runTool, getTool, type ToolResult } from './tools'
-import { recordSkill } from './skills'
+import { recordSkill, type SkillOrigin as LedgerOrigin } from './skills'
 
 /**
  * Executable skill packs (bagian dari agent core bawaan).
@@ -68,6 +68,10 @@ export async function createSkill(input: {
   steps: unknown
   origin?: SkillOrigin
   enabled?: boolean
+  /** metadata ledger (§13): asal + skor + bukti — default utk agent = authored */
+  ledgerOrigin?: LedgerOrigin
+  ledgerScore?: number
+  ledgerEvidence?: string
 }): Promise<AgentSkill> {
   const name = input.name.trim().slice(0, 120)
   if (!name) throw new Error('A skill needs a name.')
@@ -89,7 +93,12 @@ export async function createSkill(input: {
   await logActivity('agent.skill.created', { detail: `${skill.name} · ${steps.length} step${steps.length === 1 ? '' : 's'}` })
   // Skill yang Elion buat untuk dirinya sendiri masuk ledger permanen (§13).
   if (skill.origin === 'agent') {
-    await recordSkill({ name: skill.name, origin: 'authored', score: 0.7, evidence: `executable skill (${steps.length} steps)` })
+    await recordSkill({
+      name: skill.name,
+      origin: input.ledgerOrigin ?? 'authored',
+      score: input.ledgerScore ?? 0.7,
+      evidence: input.ledgerEvidence ?? `executable skill (${steps.length} steps)`
+    })
   }
   return skill
 }

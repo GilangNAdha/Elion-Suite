@@ -499,6 +499,25 @@ registerTool({
 })
 
 registerTool({
+  id: 'skills.improve',
+  label: 'Distill repeated successful work into new skills',
+  permission: 'workspace.write',
+  run: async () => {
+    const { distillSkills } = await import('./selfImprove')
+    const res = await distillSkills()
+    if (!res.promoted.length)
+      return {
+        ok: true,
+        output: `no new skills promoted — no unlearned pattern with ${3}+ identical successful runs yet (${res.skipped} known pattern${res.skipped === 1 ? '' : 's'} skipped)`
+      }
+    return {
+      ok: true,
+      output: ['promoted to the Skill Ledger:', ...res.promoted.map((n) => `• ${n}`)].join('\n')
+    }
+  }
+})
+
+registerTool({
   id: 'skills.run',
   label: 'Run a stored skill by name',
   permission: 'workspace.write',
