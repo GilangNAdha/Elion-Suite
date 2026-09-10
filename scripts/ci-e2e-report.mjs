@@ -10,19 +10,22 @@ const walk = (suite, titlePath) => {
   for (const spec of suite.specs ?? [])
     for (const test of spec.tests ?? []) {
       const results = test.results ?? []
-      if (results.length > 1 && results.at(-1).status === 'passed')
-        flaky.push(`${[...titlePath, spec.title].join(' › ')} (perlu ${results.length} percobaan)`)
-      for (const result of results)
-        if (result.status === 'failed' || result.status === 'timedOut')
-          failed.push({
-            where: [...titlePath, spec.title].join(' › '),
-            message: (result.error?.message ?? result.error?.value ?? 'no error message')
-              .replace(/\u001b\[[0-9;]*m/g, '')
-              .split('\n')
-              .slice(0, 4)
-              .join(' | ')
-              .slice(0, 400)
-          })
+      // Hanya hasil TERAKHIR yang menentukan vonis; kegagalan sebelumnya di
+      // test yang akhirnya lolos = flaky (notice), bukan merah.
+      const result = results.at(-1)
+      if (!result) continue
+      if (result.status === 'failed' || result.status === 'timedOut')
+        failed.push({
+          where: [...titlePath, spec.title].join(' › '),
+          message: (result.error?.message ?? result.error?.value ?? 'no error message')
+            .replace(/\u001b\[[0-9;]*m/g, '')
+            .split('\n')
+            .slice(0, 4)
+            .join(' | ')
+            .slice(0, 400)
+        })
+      else if (results.length > 1)
+        flaky.push(`${[...titlePath, spec.title].join(' › ')} (lolos di percobaan ke-${results.length})`)
     }
   for (const child of suite.suites ?? []) walk(child, [...titlePath, suite.title ?? ''])
 }
