@@ -34,9 +34,23 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      - name: Playwright e2e
         env:
           CI: true
+        # Ringkasan nempel di job summary (log mentah lebih gampang hilang),
+        # supaya kegagalan bisa dibaca dari API tanpa unduh artefak.
+        run: |
+          set -o pipefail
+          status=0
+          npx playwright test 2>&1 | tee pw-e2e.log || status=$?
+          {
+            echo "### Playwright e2e (exit $status)"
+            echo '```'
+            tail -c 11000 pw-e2e.log
+            echo ''
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
