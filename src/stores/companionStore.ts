@@ -5,6 +5,7 @@ import { miniCpmRequest, streamMiniCpm, type CompanionMessage, type MiniCpmHealt
 import { aiIsConfigured, effectivePersona, useAiStore } from './aiStore'
 import { providerPreset, streamChatCompletion, type ChatTurn } from '../lib/aiProviders'
 import { buildMemoryContext, captureFromUserText, reinforce } from '../lib/memory'
+import { userActivityStart, userActivityEnd } from '../lib/agentRuntime'
 
 let activeRequest: AbortController | null = null
 let connectionSequence = 0
@@ -154,6 +155,8 @@ export const useCompanionStore = create<CompanionState>()(
       send: async (text, context) => {
         const prompt = text.trim().slice(0, 4000)
         if (!prompt || !get().pinned || activeRequest) return
+        // §25 user instruction selalu menang: tahan antrean autonomous sementara
+        userActivityStart()
         const ai = useAiStore.getState()
         const preset = providerPreset(ai.settings.providerId)
         const cloud = preset.api !== 'minicpm' && aiIsConfigured(ai.settings)
@@ -250,6 +253,7 @@ export const useCompanionStore = create<CompanionState>()(
           if (activeRequest === controller) {
             activeRequest = null
             set({ activity: 'idle' })
+            userActivityEnd()
           }
         }
       },

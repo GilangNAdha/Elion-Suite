@@ -53,7 +53,11 @@ export default function App() {
         useItemsStore.getState().init(),
         usePagesStore.getState().init(),
         useLockdownStore.getState().init(),
-        useNotifyStore.getState().init()
+        useNotifyStore.getState().init(),
+        // runtime agent: permission + feed event + loop (kalau user mengizinkan)
+        import('./lib/permissions').then((m) => m.usePermissionStore.getState().init()),
+        import('./lib/activity').then((m) => m.useActivityFeed.getState().init()),
+        import('./lib/agentRuntime').then((m) => m.initRuntime())
       ])
       if (!cancelled) {
         useSettingsStore.getState().setReady()

@@ -44,6 +44,9 @@ class ElionDB extends Dexie {
   blobs!: Table<BlobRecord, string>
   memories!: Table<import('./memory').MemoryRecord, string>
   agentEvents!: Table<import('./activity').AgentEventRecord, string>
+  permissions!: Table<import('./permissions').PermissionRow, string>
+  agentTasks!: Table<import('./agentTasks').AgentTask, string>
+  objectives!: Table<import('./agentTasks').Objective, string>
 
   constructor() {
     super('elion-suite')
@@ -67,6 +70,12 @@ class ElionDB extends Dexie {
     this.version(2).stores({
       memories: 'id, type, factKey, updatedAt, lastAccessedAt, retention, *relatedEntities',
       agentEvents: 'id, at, kind, taskId'
+    })
+    // Phase 3 — agent runtime. Tabel baru, skema lama tetap utuh.
+    this.version(3).stores({
+      permissions: 'key, mode',
+      agentTasks: 'id, status, priority, createdAt, objectiveId',
+      objectives: 'id, done'
     })
   }
 }

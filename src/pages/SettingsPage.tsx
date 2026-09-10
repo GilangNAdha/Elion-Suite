@@ -1,8 +1,9 @@
 import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
+import { AgentPanel } from '../components/settings/AgentPanel'
 import { assetUrl } from '../lib/assets'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { useMemo, useRef, useState } from 'react'
-import {
+import { Cpu,
   Palette,
   Download,
   Upload,
@@ -299,6 +300,11 @@ export function SettingsPage() {
         <VoiceSettings />
       </Section>
 
+      {/* ---------------- agent runtime ---------------- */}
+      <Section title="ELION runtime" icon={<Cpu size={15} />} id="runtime">
+        <AgentPanel />
+      </Section>
+
       {/* ---------------- distraction guard ---------------- */}
       <Section title="Distraction guard (Lockdown)" icon={<ShieldAlert size={15} />}>
         <Toggle
@@ -417,14 +423,16 @@ export function SettingsPage() {
 function Section({
   title,
   icon,
+  id,
   children
 }: {
   title: string
   icon: React.ReactNode
+  id?: string
   children: React.ReactNode
 }) {
   return (
-    <section className="settings-section" aria-label={title}>
+    <section id={id} className="settings-section" aria-label={title}>
       <h2 className="ios-group-title settings-section-title">
         <span className="text-primary">{icon}</span>
         {title}

@@ -54,6 +54,21 @@ platform ini diisolasi di belakang antarmuka — tidak dipura-purakan.
 | §54 cek schedule via website | Sama seperti browser control | `ScheduleProvider` interface; Google Calendar API via key user; tanpa key → `unconfigured` |
 | §8 adaptasi perilaku | Tidak ada "self-improvement" mistis | Yang ada: memory + reinforcement + consolidation + preference-driven context — teruji, terlihat di timeline |
 
+## Status terbaru
+
+| Fase | Isi | Status |
+|---|---|---|
+| 1 Audit | dokumen ini | ✅ |
+| 2 Persistent state | memory engine + Dexie v2 + chat wiring | ✅ (10 test) |
+| 3 Agent runtime | `permissions.ts` (allow/ask/deny + approval queue), `tools.ts` (router + 8 tool nyata + 5 gap tergunaci), `agentTasks.ts` (antrean prioritas, backoff, pause/resume, recover), `agentRuntime.ts` (loop §24, preemption §25–27, idle hanya bila tak ada kerja) | ✅ (17 test) |
+| 4 Event system | `activity.ts` + instrumentasi nyata (document.created di pagesStore, notification.created di notifyStore, task.* & tool.* di engine) | ✅ |
+| 5 Tools | workspace/docs/tasks/schedule/notifications/memory/browser.read = NYATA. Gmail/Calendar/browser.interact/files/system = interface siap, `unconfigured` jujur — butuh host Electron + credential user | ◐ (adapter Electron = kerja berikutnya) |
+| 6 Sentient mode | loop nyata, stop/pause/resume, event sentient.*, persist enable; background hanya selagi app terbuka (web) — jujur di UI | ◐ (worker/Electron always-on menyusul) |
+| 7 Workspace | create/edit/version/restore SUDAH ada; export multi-dokumen UI = belum | ◐ |
+| 8 UI | Settings › ELION runtime: status, approval, objectives, antrean task, permission center, timeline event (semua baca state asli) | ◐ (/elion page, dock modes, separators = menyusul) |
+| 9 Bugs | §44 fixed by root cause; race re-entrancy tick + abort-selesai-retrieval ditemukan & diperbaiki oleh test | ✅ (slice) |
+| 10 Validasi | 147 unit/integration test hijau; e2e CI 26/26 | ✅ (berjalan terus) |
+
 ## Sisa fase (urutan kerja berikutnya)
 
 1. **PHASE 3 — Agent runtime**: tool router + permission manager (tabel

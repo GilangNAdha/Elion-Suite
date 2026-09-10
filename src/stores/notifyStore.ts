@@ -32,6 +32,7 @@ export const useNotifyStore = create<NotifyState>()((set, get) => ({
       link: n.link
     }
     await db.notifications.add(rec)
+    void import('../lib/activity').then(({ logActivity }) => logActivity('notification.created', { detail: rec.title }))
     set({ items: [rec, ...get().items].slice(0, 100) })
     // System notification surface (graceful no-op without permission)
     try {
