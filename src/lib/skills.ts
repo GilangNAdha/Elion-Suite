@@ -14,12 +14,11 @@ import { logActivity } from './activity'
  * dan dashboard menampilkan "Not enough data yet".
  */
 
-export type SkillOrigin = 'evolve' | 'gepa-pr' | 'hermes-import' | 'authored'
+export type SkillOrigin = 'evolve' | 'gepa-pr' | 'authored'
 
 export const SKILL_ORIGIN_LABEL: Record<SkillOrigin, string> = {
   evolve: '/evolve auto-promotion',
   'gepa-pr': 'GEPA-evolved + PR-reviewed',
-  'hermes-import': 'Imported from the Hermes gateway',
   authored: 'Authored executable skill (in-app)'
 }
 

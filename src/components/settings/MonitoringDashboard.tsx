@@ -292,10 +292,9 @@ export function MonitoringDashboard() {
                   <span className="monitor-bars" aria-hidden>
                     <i style={{ width: `${Math.min(100, w.evolve * 25)}%` }} data-src="evolve" />
                     <i style={{ width: `${Math.min(100, w.gepaPr * 25)}%` }} data-src="gepa" />
-                    <i style={{ width: `${Math.min(100, w.hermes * 25)}%` }} data-src="hermes" />
                   </span>
                   <small>
-                    {w.evolve} /evolve · {w.gepaPr} GEPA-PR · {w.hermes} Hermes
+                    {w.evolve} /evolve · {w.gepaPr} GEPA-PR
                   </small>
                 </li>
               ))}

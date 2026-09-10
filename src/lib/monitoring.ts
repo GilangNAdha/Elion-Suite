@@ -253,7 +253,6 @@ export interface VelocityWeek {
   weekISO: string
   evolve: number
   gepaPr: number
-  hermes: number
 }
 
 /** Skill per minggu, dipisah per sumber — 8 minggu terakhir. */
@@ -276,8 +275,7 @@ export function velocityByWeek(skills: SkillRecord[], weeks = 8, nowMs = Date.no
     rows.push({
       weekISO: new Date(from).toISOString().slice(0, 10),
       evolve: inWeek.filter((s) => s.origin === 'evolve').length,
-      gepaPr: inWeek.filter((s) => s.origin === 'gepa-pr').length,
-      hermes: inWeek.filter((s) => s.origin === 'hermes-import').length
+      gepaPr: inWeek.filter((s) => s.origin === 'gepa-pr').length
     })
   }
   return rows

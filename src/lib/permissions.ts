@@ -41,13 +41,6 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'email.send', label: 'Send email', risk: 'high', default: 'deny' },
   { key: 'files.write', label: 'Write local files', risk: 'high', default: 'deny' },
   { key: 'system.action', label: 'Run system commands', risk: 'high', default: 'deny' },
-  // Hermes gateway (docs/HERMES-SETUP.md): delegasi = egress via provider
-  // Hermes; job terjadwal = kerja unattended yang juga egress → confirm first.
-  // Impor skill = tulis lokal aditif ke ledger → low-risk (aturan Part VII:
-  // skill BARU boleh otonom; yang diubah tetap lewat review).
-  { key: 'hermes.delegate', label: 'Delegate work to the Hermes agent', risk: 'high', default: 'ask' },
-  { key: 'hermes.control', label: 'Create / change scheduled Hermes jobs', risk: 'high', default: 'ask' },
-  { key: 'hermes.skills', label: 'Import Hermes skills into the ledger', risk: 'low', default: 'allow' }
 ]
 
 const def = (key: string) => PERMISSIONS.find((p) => p.key === key)

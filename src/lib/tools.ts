@@ -8,7 +8,6 @@ import { usePagesStore } from '../stores/pagesStore'
 import { useNotifyStore } from '../stores/notifyStore'
 import { db } from './db'
 import { uid, type Alarm, type Block, type BlockType } from './types'
-import { probeHermes, hermesCreateJob, hermesDelegate, hermesListJobs, hermesProbablyOnline } from './hermes'
 import { listSkills, recordSkill } from './skills'
 import { markJobRun } from './agentJobs'
 
@@ -261,110 +260,6 @@ const UNCONFIGURED = (why: string): ToolDef['run'] => async () => ({
 
 registerTool({ id: 'browser.interact', label: 'Interact with websites', permission: 'browser.interact', run: UNCONFIGURED('requires the Electron host (webContents automation)') })
 
-// ---------------- Hermes bridge (docs/HERMES-SETUP.md) ----------------
-// Runtime Hermes = pilihan Part VI spek v4.3. Gateway dijalankan user
-// (`hermes gateway`); Elion memakainya sebagai lengan panjang: delegasi kerja
-// dengan toolset server-side, sinkronisasi skill ke ledger, dan cron unattended.
-// Gateway mati → hasil `offline` yang jujur, bukan jawaban karangan.
-
-registerTool({
-  id: 'hermes.status',
-  label: 'Check the Hermes gateway',
-  permission: 'workspace.read',
-  run: async () => {
-    const status = await probeHermes()
-    if (!status.online) return { ok: true, output: `Hermes gateway: OFFLINE. ${status.error ?? ''} Setup: docs/HERMES-SETUP.md (run \`hermes gateway\` with the API server enabled).` }
-    if (status.unauthorized) return { ok: true, output: `Hermes gateway: UP but unauthorized — ${status.error}. Set API_SERVER_KEY in Settings › ELION runtime › Hermes.` }
-    const parts = [
-      `Hermes gateway: ONLINE`,
-      status.model ? `model ${status.model}` : undefined,
-      `${status.skills.length} skill${status.skills.length === 1 ? '' : 's'}`,
-      `${status.toolsets.length} toolset${status.toolsets.length === 1 ? '' : 's'}`,
-      `${status.jobs.length} scheduled job${status.jobs.length === 1 ? '' : 's'}`
-    ].filter(Boolean)
-    return { ok: true, output: parts.join(' · ') }
-  }
-})
-
-registerTool({
-  id: 'hermes.ask',
-  label: 'Delegate work to Hermes',
-  permission: 'hermes.delegate',
-  // Ketersediaan dibaca dari cache probe (hermes.ts) — schema tool tidak
-  // pernah menembak jaringan tiap giliran.
-  available: () => hermesProbablyOnline(),
-  run: async (args) => {
-    const input = str(args, 'prompt', 8000) || str(args, 'task', 8000)
-    if (!input) return { ok: false, error: 'prompt required' }
-    const context = str(args, 'context', 2000)
-    const reply = await hermesDelegate(context ? `${input}\n\nContext: ${context}` : input)
-    return { ok: true, output: reply }
-  }
-})
-
-registerTool({
-  id: 'hermes.skills.import',
-  label: 'Import Hermes skills into the ledger',
-  permission: 'hermes.skills',
-  run: async () => {
-    const status = await probeHermes()
-    if (!status.online) return { ok: false, unconfigured: true, error: `Hermes gateway offline — ${status.error ?? 'run `hermes gateway` first'}` }
-    if (status.unauthorized) return { ok: false, error: 'gateway rejected the API key — set API_SERVER_KEY in Settings › ELION runtime › Hermes.' }
-    const existing = new Set((await listSkills()).filter((s) => s.origin === 'hermes-import').map((s) => s.name))
-    let added = 0
-    let skipped = 0
-    for (const skill of status.skills.slice(0, 50)) {
-      if (existing.has(skill.name)) {
-        skipped++
-        continue
-      }
-      await recordSkill({
-        name: skill.name,
-        origin: 'hermes-import',
-        score: 0.6,
-        evidence: skill.description ? `Hermes gateway skill: ${skill.description.slice(0, 120)}` : 'imported from Hermes /v1/skills'
-      })
-      added++
-    }
-    return { ok: true, output: `ledger: ${added} imported, ${skipped} already present (${status.skills.length} skills on the gateway)` }
-  }
-})
-
-registerTool({
-  id: 'hermes.job.create',
-  label: 'Schedule an unattended Hermes job',
-  permission: 'hermes.control',
-  available: () => hermesProbablyOnline(),
-  run: async (args) => {
-    const prompt = str(args, 'prompt', 4000)
-    const schedule = str(args, 'schedule', 120)
-    const name = str(args, 'name', 120) || undefined
-    if (!prompt || !schedule) return { ok: false, error: 'prompt and schedule are required (schedule in hermes cron form, e.g. "daily 09:00")' }
-    const job = await hermesCreateJob({ prompt, schedule, name })
-    return { ok: true, output: `scheduled on Hermes: ${job.id} (${schedule})` }
-  }
-})
-
-registerTool({
-  id: 'hermes.jobs.list',
-  label: 'List scheduled Hermes jobs',
-  permission: 'workspace.read',
-  run: async () => {
-    try {
-      const jobs = await hermesListJobs()
-      if (!jobs.length) return { ok: true, output: 'no scheduled Hermes jobs' }
-      return {
-        ok: true,
-        output: jobs
-          .map((j) => `• ${j.name ?? j.id} — ${j.schedule ?? '?'}${j.paused ? ' (paused)' : ''}${j.prompt ? ` — ${j.prompt.slice(0, 80)}` : ''}`)
-          .join('\n')
-      }
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : 'jobs list failed' }
-    }
-  }
-})
-
 registerTool({
   id: 'email.read',
   label: "Read Elion's mail",
@@ -485,9 +380,9 @@ registerTool({
   }
 })
 
-// ---------------- agent core (embedded Hermes lineage) ----------------
-// Cron, skill packs, dan reasoning-step ber-LLM jalan DI DALAM app — tidak
-// perlu instal apa pun. Gateway Hermes eksternal tetap opsional (di atas).
+// ---------------- agent core ----------------
+// Cron, skill packs, dan reasoning-step ber-LLM jalan DI DALAM app —
+// feature-set agent kelas berat (skills, cron, session), native di app.
 
 registerTool({
   id: 'agent.reason',

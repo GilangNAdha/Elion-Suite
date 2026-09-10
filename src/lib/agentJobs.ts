@@ -4,14 +4,15 @@ import { logActivity } from './activity'
 import { enqueueTask, PRIORITY } from './agentTasks'
 
 /**
- * Agent cron (Hermes lineage, embedded — docs/HERMES-SETUP.md Part VI).
+ * Agent cron (bagian dari agent core bawaan).
  * Job terjadwal = instruksi untuk Elion sendiri yang dieksekusi oleh loop
  * Sentient di dalam app: prompt → antrean task (priority: scheduledCommitment)
  * → agent.reason (LLM + tools) → hasil disimpan + notifikasi + event.
  *
  * Jujur soal batas: job jalan selagi app terbuka dan runtime ON — bukan
- * daemon OS. Untuk kerja saat app tertutup, hubungkan gateway Hermes
- * eksternal (Settings › ELION runtime › Hermes gateway).
+ * daemon OS. Di build desktop (Electron), menutup jendela ke tray membiarkan
+ * loop tetap hidup; web menghentikan eksekusi saat tab ditutup (batas
+ * platform, tidak dipura-pura).
  */
 
 export type AgentJobKind = 'daily' | 'interval' | 'once'

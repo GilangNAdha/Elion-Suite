@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { StudioWorkspacePage } from './pages/StudioWorkspacePage'
 import { WorkspacePage, DatabaseRoutePage } from './pages/WorkspacePage'
 import { ElionPage } from './pages/ElionPage'
+import { AgentPage } from './pages/AgentPage'
 import { TasksPage } from './pages/TasksPage'
 import { HabitsPage } from './pages/HabitsPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -144,6 +145,7 @@ export default function App() {
             <Route element={<AppShell />}>
               <Route path="/" element={<DashboardPage />} />
             <Route path="/elion" element={<ElionPage />} />
+            <Route path="/agent" element={<AgentPage />} />
               <Route path="/workspace" element={<StudioWorkspacePage />} />
               <Route path="/workspace/:pageId" element={<StudioWorkspacePage />} />
               <Route path="/workspace/items/:dbId" element={<DatabaseRoutePage />} />

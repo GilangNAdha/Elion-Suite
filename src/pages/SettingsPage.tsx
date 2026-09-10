@@ -2,7 +2,6 @@ import { FloatingPetSettings } from '../components/pet/FloatingPetSettings'
 import { AgentPanel } from '../components/settings/AgentPanel'
 import { AgentJobsPanel } from '../components/settings/AgentJobsPanel'
 import { AgentSkillsPanel } from '../components/settings/AgentSkillsPanel'
-import { HermesPanel } from '../components/settings/HermesPanel'
 import { MonitoringDashboard } from '../components/settings/MonitoringDashboard'
 import { EmailSettings } from '../components/settings/EmailSettings'
 import { SystemAccessSettings } from '../components/settings/SystemAccessSettings'
@@ -315,8 +314,6 @@ export function SettingsPage() {
         <h3 className="monitor-title">Skills</h3>
         <AgentSkillsPanel />
         <MonitoringDashboard />
-        <h3 className="monitor-title">Hermes gateway (optional)</h3>
-        <HermesPanel />
         <h3 className="monitor-title">System access (desktop)</h3>
         <SystemAccessSettings />
       </Section>

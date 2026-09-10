@@ -4,10 +4,9 @@ import { Button, Input, Select } from '../ui'
 import { timeAgo } from '../../lib/time'
 
 /**
- * In-app cron (Hermes lineage, embedded) — job jalan lewat loop Sentient di
- * dalam app: instruksi → antrean → agent.reason (LLM + tools) → hasil nyata.
- * Jujur di UI: butuh app terbuka + runtime ON; gateway Hermes eksternal
- * menutup kasus "app tertutup".
+ * In-app cron (agent core) — job jalan lewat loop Sentient di dalam app:
+ * instruksi → antrean prioritas → agent.reason (LLM + tools) → hasil nyata.
+ * Jujur di UI: butuh app terbuka + runtime ON — bukan daemon OS.
  */
 export function AgentJobsPanel() {
   const [jobs, setJobs] = useState<AgentJob[]>([])
@@ -59,7 +58,7 @@ export function AgentJobsPanel() {
           <em>
             {j.lastStatus ? `last ${j.lastStatus} ${j.lastRunAt ? timeAgo(new Date(j.lastRunAt).toISOString()) : ''}` : 'never ran'}
           </em>
-          <span className="hermes-job-actions">
+          <span className="agent-inline-actions">
             <button type="button" className="mini-inline-action" onClick={() => void runJobNow(j.id).then(refresh)}>
               run now
             </button>
@@ -126,7 +125,7 @@ export function AgentJobsPanel() {
       )}
       <p className="agent-note">
         Jobs execute while the app is open and Sentient Mode is on — they enter the same priority queue as every
-        other task (scheduled commitments). For work while the app is closed, use the external Hermes gateway below.
+        other task (scheduled commitments). The desktop build keeps the loop alive while the window runs in the tray.
       </p>
     </div>
   )

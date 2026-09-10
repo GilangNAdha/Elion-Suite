@@ -177,41 +177,6 @@ const TOOL_SCHEMAS: Record<string, { description: string; parameters: JsonSchema
       required: ['command']
     }
   },
-  'hermes.status': {
-    description: 'Check the local Hermes agent gateway (online, skills, toolsets, scheduled jobs).',
-    parameters: { type: 'object', properties: {}, required: [] }
-  },
-  'hermes.ask': {
-    description: "Delegate a task to the local Hermes agent runtime and return its final answer. Hermes has its own server-side tools (terminal, files, web, skills) — use for work beyond this app and report the answer as Hermes' answer.",
-    parameters: {
-      type: 'object',
-      properties: {
-        prompt: { type: 'string', description: 'The task for Hermes, one clear instruction.' },
-        context: { type: 'string', description: 'Optional short context Hermes needs.' }
-      },
-      required: ['prompt']
-    }
-  },
-  'hermes.skills.import': {
-    description: 'Import the skills known to the Hermes gateway into the Elion Skill Ledger (duplicates are skipped).',
-    parameters: { type: 'object', properties: {}, required: [] }
-  },
-  'hermes.job.create': {
-    description: 'Schedule an unattended job on the Hermes gateway (hermes cron). Runs even when this app is closed.',
-    parameters: {
-      type: 'object',
-      properties: {
-        prompt: { type: 'string', description: 'What Hermes should do on each run.' },
-        schedule: { type: 'string', description: 'Schedule in hermes cron form, e.g. "daily 09:00" or a cron expression.' },
-        name: { type: 'string', description: 'Short name for the job.' }
-      },
-      required: ['prompt', 'schedule']
-    }
-  },
-  'hermes.jobs.list': {
-    description: 'List the jobs currently scheduled on the Hermes gateway.',
-    parameters: { type: 'object', properties: {}, required: [] }
-  },
   'agent.jobs.create': {
     description: 'Schedule a recurring IN-APP agent job (in-app cron). Runs inside this app while it is open and the runtime is on — no external gateway needed.',
     parameters: {
@@ -260,7 +225,7 @@ const TOOL_SCHEMAS: Record<string, { description: string; parameters: JsonSchema
 }
 
 export const AGENT_SYSTEM_SUFFIX =
-  'You are operating as an agent inside the Elion Suite app: you CAN act — call the provided tools to do real work (create tasks, documents, reminders, read memory, read pages) instead of only describing what to do. Only report an action as done after its tool result confirms it. If a tool errors or is denied, say what happened and what the user can do (e.g. approve the permission, connect the integration). Never claim to have done something you did not call a tool for. The hermes.* tools reach the local Hermes agent runtime — a separate agent with its own server-side tools; use hermes.ask for work beyond this app and report its answer as Hermes\' answer.'
+  'You are operating as an agent inside the Elion Suite app: you CAN act — call the provided tools to do real work (create tasks, documents, reminders, read memory, read pages) instead of only describing what to do. Only report an action as done after its tool result confirms it. If a tool errors or is denied, say what happened and what the user can do (e.g. approve the permission, connect the integration). Never claim to have done something you did not call a tool for.'
 
 const MAX_ITERATIONS = 6
 const MAX_TOOL_OUTPUT = 4000

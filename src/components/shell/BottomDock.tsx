@@ -11,10 +11,11 @@ import {
   AnimatePresence,
   type MotionValue
 } from 'motion/react'
-import { LayoutDashboard, Blocks, NotebookPen, Music2, Lock } from 'lucide-react'
+import { LayoutDashboard, Blocks, NotebookPen, Music2, Lock, Bot } from 'lucide-react'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 const DOCK = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/agent', label: 'Agent', icon: Bot },
   { to: '/workspace', label: 'Workspace', icon: Blocks },
   { to: '/notes', label: 'Notes', icon: NotebookPen },
   { to: '/music', label: 'Music', icon: Music2 },

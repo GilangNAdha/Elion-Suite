@@ -31,7 +31,7 @@ describe('provider registry', () => {
     expect(providerPreset('unknown-provider').id).toBe('custom')
   })
 
-  it('covers the agentic lineup: Kimi, Antigravity, Claude Code Router, Hermes', () => {
+  it('covers the agentic lineup: Kimi, Antigravity, Claude Code Router', () => {
     const kimi = providerPreset('kimi')
     expect(kimi.baseUrl).toBe('https://api.moonshot.cn/v1')
     expect(kimi.examples).toContain('kimi-k3')
@@ -39,9 +39,8 @@ describe('provider registry', () => {
     const ccr = providerPreset('claudecoderouter')
     expect(ccr.api).toBe('anthropic') // CCR speaks the Anthropic Messages format natively
     expect(ccr.baseUrl).toBe('http://127.0.0.1:3456/v1')
-    expect(providerPreset('hermes').baseUrl).toContain(':8642')
     // local gateways tidak wajib key
-    for (const id of ['antigravity', 'claudecoderouter', 'hermes', '9router']) {
+    for (const id of ['antigravity', 'claudecoderouter', '9router']) {
       expect(providerPreset(id).needsKey).toBe(false)
     }
   })

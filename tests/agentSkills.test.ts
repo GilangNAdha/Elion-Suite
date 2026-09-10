@@ -15,7 +15,7 @@ import { listSkills as ledgerRows } from '../src/lib/skills'
 import { registerTool } from '../src/lib/tools'
 
 /**
- * Executable skills (Hermes lineage, embedded) — langkah nyata lewat runTool
+ * Executable skills (agent core) — langkah nyata lewat runTool
  * yang sama (permission tetap jalan), ledger terisi untuk skill buatan agent.
  */
 

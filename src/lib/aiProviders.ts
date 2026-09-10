@@ -44,17 +44,6 @@ export const AI_PROVIDER_PRESETS: AiProviderPreset[] = [
     ]
   },
   {
-    id: 'hermes',
-    name: 'Hermes Agent (local runtime)',
-    tagline: 'Your own hermes-agent gateway — its full toolset (terminal, files, web, skills) runs server-side; Elion tools stay available in-app.',
-    api: 'openai',
-    baseUrl: 'http://127.0.0.1:8642/v1',
-    needsKey: false,
-    keyHint: 'API_SERVER_KEY (leave empty if the gateway runs without one)',
-    docsUrl: 'https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md',
-    examples: ['hermes-agent']
-  },
-  {
     id: '9router',
     name: '9Router',
     tagline: 'Self-hosted OpenAI-compatible gateway routing Claude Code, Codex and 40+ providers.',
@@ -345,7 +334,7 @@ export async function readThroughBridge(
   method: 'GET' | 'POST',
   headers: Record<string, string>,
   body?: string,
-  /** Agent turns dan delegasi Hermes bisa jalan menit-melintang —
+  /** Agent turns (tool loops) bisa jalan menit-melintang —
    * pemanggil yang tahu berapa lama wajarnya (default 15s dipertahankan). */
   timeoutMs = 15000
 ): Promise<unknown> {

@@ -2,7 +2,7 @@ import { db } from './db'
 import type { AgentToolCall } from './agentChat'
 
 /**
- * Session persistence (Hermes lineage — state.db/sessions, embedded).
+ * Session persistence (bagian dari agent core bawaan).
  * Chat agent tidak lagi hilang saat refresh: tiap pesan disimpan Dexie dan
  * sesi terakhir dimuat ulang saat app dibuka. Sesi lama dipangkas (simpan
  * 10 terakhir) biar tabel tetap kecil.

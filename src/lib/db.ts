@@ -86,7 +86,7 @@ class ElionDB extends Dexie {
     this.version(4).stores({
       skills: 'id, origin, createdAt'
     })
-    // Agent core (Hermes lineage, embedded): cron jobs, executable skill
+    // Agent core bawaan: cron jobs, executable skill
     // packs, dan chat session persistence. Tabel baru — skema lama utuh.
     this.version(5).stores({
       agentJobs: 'id, kind, nextRunAt',

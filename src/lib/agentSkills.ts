@@ -5,14 +5,14 @@ import { runTool, getTool, type ToolResult } from './tools'
 import { recordSkill } from './skills'
 
 /**
- * Executable skill packs (Hermes lineage, embedded — docs/HERMES-SETUP.md).
+ * Executable skill packs (bagian dari agent core bawaan).
  * Skill = urutan langkah tool nyata (masing-masing tetap lewat gerbang
  * permission runTool) yang bisa dijalankan ulang: dari UI, dari chat, atau
  * oleh loop Sentient. Skill BARU bersifat aditif → otonom (aturan Part VII);
  * mengubah skill yang sudah ada lewat review/edit manual di UI.
  */
 
-export type SkillOrigin = 'user' | 'agent' | 'hermes-import'
+export type SkillOrigin = 'user' | 'agent'
 
 export interface SkillStep {
   /** judul singkat langkah, untuk riwayat eksekusi */

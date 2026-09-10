@@ -16,7 +16,7 @@ import {
 import { registerTool, runTool, getTool } from '../src/lib/tools'
 
 /**
- * In-app cron (Hermes lineage, embedded) — jadwal murni terukur, eksekusi
+ * In-app cron (agent core) — jadwal murni terukur, eksekusi
  * lewat antrean prioritas yang sama, hasil tersimpan di job.
  */
 

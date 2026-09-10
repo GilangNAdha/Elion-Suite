@@ -19,6 +19,7 @@ describe('ElionPage (/elion — agent chat + Sentient di UI)', () => {
     expect(screen.getByLabelText('Agent conversation')).toBeTruthy()
     // AI belum dikonfigurasi di worker baru → jujur offline + ada jalan keluar.
     expect(screen.getByText('Offline')).toBeTruthy()
-    expect(screen.getByText(/Set it in Settings/)).toBeTruthy()
+    expect(screen.getByText(/needs a provider/)).toBeTruthy()
+    expect(screen.getByText(/Full agent hub/)).toBeTruthy()
   })
 })

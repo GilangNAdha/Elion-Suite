@@ -30,7 +30,7 @@ interface AgentChatState {
   activeTool: string | null
   error: string | null
   plainFallback: boolean
-  /** sesi persisten (Hermes lineage) — chat selamat dari refresh */
+  /** sesi persisten — chat selamat dari refresh */
   sessionId: string
   send: (text: string) => void
   cancel: () => void

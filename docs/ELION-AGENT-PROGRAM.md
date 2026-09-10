@@ -84,8 +84,8 @@ deep-detail tetap otoritatif). Yang dikerjakan turn ini:
 | §12 known fix (string provider) | ✅ sudah | diverifikasi: grep 0 hasil di `src/` |
 | §44/§12 object-switch bug | ✅ sudah | `ItemModal` remount per id + regression test tetap hijau |
 | Part IV tabel → Gateway enforcement | ◐ eksternal | butuh pilihan runtime Gilang (lihat bawah) |
-| Part VI OpenClaw ATAU Hermes | ✅ Hermes dipilih + **inti embedded** | Agent core bawaan = feature-set Hermes versi native: skills `skills.*`, cron `agent.jobs.*` + `agent.reason`, chat sessions persisten, permission table — tanpa instalasi; `src/lib/hermes.ts` = lengan opsional ke gateway Hermes sungguhan (health/skills/toolsets/jobs/chat, offline = status jujur). Setup fisik gateway: `docs/HERMES-SETUP.md` |
-| Part VII /evolve + GEPA-PR | ⏳ eksternal | ledger + heatmap siap menerima; mekanisme evolusi jalan di Hermes |
+| Part VI OpenClaw ATAU Hermes | ✅ resolved natively | Agent core bawaan mengimplementasikan feature-set kelas ini TANPA runtime eksternal: skills `skills.*`, cron `agent.jobs.*` + `agent.reason`, chat sessions persisten, permission table. Tidak ada gateway/daemon eksternal yang dibutuhkan atau disertakan |
+| Part VII /evolve + GEPA-PR | ◐ partial | Skill Ledger + heatmap siap; skill buatan agent (`skills.create`, origin `authored`) terpromosi otomatis ke ledger; GEPA/PR eksternal = kerja berikutnya |
 | Gmail milik Elion | ✅ | login di UI (Settings › Elion's email) + vault token main process + `docs/GMAIL-SETUP.md`; tool `email.*` nyata kalau connected |
 | Electron system adapter | ✅ | `electron/sys.cjs`: files.read + allow-list perintah; UI di runtime section; desktop-only jujur |
 | /elion agent chat + Sentient di UI | ✅ | `src/pages/ElionPage.tsx`: chat tool-capable (function calling OpenAI/Anthropic, fallback jujur buat MiniCPM), panel Sentient §11, While-you-were-away dari event |

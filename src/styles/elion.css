@@ -3396,20 +3396,20 @@ html[data-transition='lockdown']::view-transition-new(root) {
   margin-top: var(--space-2);
 }
 
-/* ——— Hermes bridge panel (Settings › ELION runtime) docs/HERMES-SETUP.md ——— */
-.hermes-skill-list {
+/* ——— Agent jobs/skills panels (Settings › ELION runtime + /agent) ——— */
+.agent-skill-list {
   list-style: none;
   margin-block: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
-.hermes-skill-list li {
+.agent-skill-list li {
   font-size: var(--type-body-s);
   color: var(--ink-muted);
   overflow-wrap: anywhere;
 }
-.hermes-job-actions {
+.agent-inline-actions {
   display: inline-flex;
   gap: var(--space-1);
   flex-shrink: 0;
@@ -3560,9 +3560,6 @@ html[data-transition='lockdown']::view-transition-new(root) {
 .monitor-bars > i[data-src='gepa'] {
   background: var(--info);
 }
-.monitor-bars > i[data-src='hermes'] {
-  background: var(--current);
-}
 .monitor-ledger {
   width: 100%;
   border-collapse: collapse;
@@ -3622,14 +3619,6 @@ html[data-transition='lockdown']::view-transition-new(root) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-}
-.elion-hermes-chip {
-  font-size: var(--type-body-s);
-  color: var(--tint);
-  border: var(--hairline-width) solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--space-0_5) var(--space-1_5);
-  white-space: nowrap;
 }
 .elion-dot {
   width: var(--space-2);
@@ -3869,4 +3858,163 @@ html[data-transition='lockdown']::view-transition-new(root) {
 .sentient-more {
   font-size: var(--type-body-s);
   color: var(--tint);
+}
+
+/* ——— /agent hub (Part V) — chat + connect + jobs/skills/activity ——— */
+.agent-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  max-width: 87.5rem;
+  margin-inline: auto;
+  width: 100%;
+}
+.agent-page-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.agent-page-head h1 {
+  font-size: var(--type-title-m);
+  color: var(--ink);
+}
+.agent-page-head p {
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+}
+.agent-hub {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .agent-hub {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.agent-hub-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.agent-hub-main .elion-chat {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.agent-hub-tabs {
+  display: inline-flex;
+  gap: var(--space-1);
+  border-bottom: var(--hairline-width) solid var(--line-subtle);
+}
+.hub-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font-size: var(--type-body-s);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  border-bottom: var(--hairline-width) solid transparent;
+}
+.hub-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--tint);
+}
+/* garis aktif tab sedikit tebal agar terbaca — tetap token-based */
+.agent-hub-panel {
+  padding-block: var(--space-2);
+}
+.agent-hub-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.agent-timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.agent-timeline li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding-block: var(--space-1);
+  border-bottom: var(--hairline-width) solid var(--line-subtle);
+  font-size: var(--type-body-s);
+}
+.agent-timeline li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+}
+.agent-timeline time {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  font-size: 0.9em;
+}
+
+/* ——— Connect AI (satu tombol ke semua provider) ——— */
+.agent-connect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.agent-connect h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--type-body);
+  color: var(--ink);
+}
+.connect-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.connect-chip {
+  appearance: none;
+  border: var(--hairline-width) solid var(--line);
+  background: none;
+  color: var(--ink-muted);
+  border-radius: var(--radius-sm);
+  font-size: var(--type-caption);
+  padding: var(--space-0_5) var(--space-1_5);
+  cursor: pointer;
+}
+.connect-chip.is-active {
+  border-color: var(--tint);
+  color: var(--tint);
+}
+.connect-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.connect-status {
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.connect-spin {
+  animation: connect-rotate 0.9s linear infinite;
+}
+@keyframes connect-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connect-spin {
+    animation: none;
+  }
 }

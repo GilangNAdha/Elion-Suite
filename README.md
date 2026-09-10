@@ -24,11 +24,11 @@ Elion is a tool-capable agent embedded in the app — not a chat wrapper:
 - **Scheduled jobs (in-app cron).** "Every morning at 09:00, brief me on today's calendar." Jobs enter the same priority queue as every other task and run while the app is open with the runtime on.
 - **Persistent sessions.** Chat history survives refresh.
 - **Memory.** A six-layer memory engine with contextual recall, reinforcement, conflict resolution and semantic consolidation — only relevant memories enter a prompt.
-- **Hermes lineage.** The agent core (skills, cron, sessions, tool gating) is a native implementation of the feature set of [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) — nothing to install. An external `hermes gateway` is optionally supported for server-side tools and work while the app is closed. See [docs/HERMES-SETUP.md](docs/HERMES-SETUP.md).
+- **Agent hub.** A dedicated Agent page in the dock: chat, Sentient control, scheduled jobs, skills, permissions and the live activity timeline in one place — plus a one-click **Connect** panel for any provider's API key.
 
 ### AI providers
 
-Settings › AI assistant accepts any of: **OpenRouter** (any key/model), **9Router**, **Anthropic**, **OpenAI / Codex**, **Google Gemini**, **Kimi (Moonshot)**, **Groq**, **Ollama**, **LM Studio**, **Claude Code Router** (local), **Antigravity gateway** (local), the local **MiniCPM** gateway, a **Hermes gateway**, or any custom OpenAI-compatible endpoint. Models are discovered live, replies stream, keys stay in local storage, and the desktop build routes requests through the Electron main process so CORS never blocks a local gateway.
+Settings › AI assistant — or the Connect panel on the Agent page — accepts any of: **OpenRouter** (any key/model), **9Router**, **Anthropic**, **OpenAI / Codex**, **Google Gemini**, **Kimi (Moonshot)**, **Groq**, **Ollama**, **LM Studio**, **Claude Code Router** (local), **Antigravity gateway** (local), the local **MiniCPM** gateway, or any custom OpenAI-compatible endpoint. Models are discovered live, replies stream, keys stay in local storage, and the desktop build routes requests through the Electron main process so CORS never blocks a local gateway.
 
 ## Development
 
@@ -46,7 +46,7 @@ npm run dist:win       # Windows installer + portable
 
 - [Master build spec (v6)](docs/MASTER-BUILD-PROMPT-v6.md) — the current build contract
 - [Agent program & capability map](docs/ELION-AGENT-PROGRAM.md) · [ELION identity](docs/ELION-IDENTITY.md)
-- [Hermes setup / bridge](docs/HERMES-SETUP.md) · [Gmail setup](docs/GMAIL-SETUP.md)
+- [Gmail setup](docs/GMAIL-SETUP.md)
 - [Design system](docs/ELION-FRONTEND-DESIGN.md) · [Voice dictation](docs/VOICE-DICTATION.md) · [Studio integration](docs/STUDIO-INTEGRATION.md)
 
 ## Honest limitations

@@ -182,12 +182,11 @@ describe('monitoring derivations (§13 — one data source, pure functions)', ()
       { id: 'a', name: 'a', origin: 'evolve', score: 0.7, createdAt: '2026-09-08T01:00:00Z' },
       { id: 'b', name: 'b', origin: 'evolve', score: 0.7, createdAt: '2026-09-09T01:00:00Z' },
       { id: 'c', name: 'c', origin: 'gepa-pr', score: 0.9, createdAt: '2026-08-20T01:00:00Z' },
-      { id: 'd', name: 'd', origin: 'hermes-import', score: 0.6, createdAt: '2026-09-09T02:00:00Z' }
     ]
     const weeks = velocityByWeek(skills, 8, new Date('2026-09-10T12:00:00Z').getTime())
     expect(weeks).toHaveLength(8)
     const current = weeks.find((w) => w.weekISO === '2026-09-07')
-    expect(current).toEqual({ weekISO: '2026-09-07', evolve: 2, gepaPr: 0, hermes: 1 })
-    expect(weeks.reduce((n, w) => n + w.evolve + w.gepaPr + w.hermes, 0)).toBe(4)
+    expect(current).toEqual({ weekISO: '2026-09-07', evolve: 2, gepaPr: 0 })
+    expect(weeks.reduce((n, w) => n + w.evolve + w.gepaPr, 0)).toBe(3)
   })
 })

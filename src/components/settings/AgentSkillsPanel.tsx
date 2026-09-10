@@ -18,7 +18,7 @@ interface DraftStep {
 }
 
 /**
- * Executable skills (Hermes lineage, embedded) — named packs of real tool
+ * Executable skills (agent core) — named packs of real tool
  * steps. Ditulis manual di sini atau di-author Elion sendiri dari chat
  * (skills.create → ledger). Tiap langkah tetap lewat gerbang permission.
  */
@@ -78,7 +78,7 @@ export function AgentSkillsPanel() {
           <em>
             {s.runCount > 0 ? `ran ×${s.runCount} · ${s.lastStatus} · ${s.lastRunAt ? timeAgo(s.lastRunAt) : ''}` : 'never ran'}
           </em>
-          <span className="hermes-job-actions">
+          <span className="agent-inline-actions">
             <button type="button" className="mini-inline-action" onClick={() => void run(s.id)}>
               run
             </button>

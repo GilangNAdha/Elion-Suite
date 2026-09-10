@@ -4,7 +4,7 @@ import { db } from '../src/lib/db'
 import { appendSessionMessage, clearSession, loadLatestSession, pruneSessions } from '../src/lib/agentSessions'
 
 /**
- * Session persistence (Hermes lineage, embedded) — chat selamat dari refresh:
+ * Session persistence (agent core) — chat selamat dari refresh:
  * pesan tersimpan per sesi, sesi terakhir dimuat ulang, lama dipangkas.
  */
 
