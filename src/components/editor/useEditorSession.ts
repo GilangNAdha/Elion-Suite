@@ -89,6 +89,29 @@ export function useEditorSession(page: PageRecord): EditorSession {
     [page.id, setBlocksPersist]
   )
 
+  /** Tulis segera kalau masih ada debounce yang menggantung. Tanpa ini,
+   * reload/exit dalam <350ms setelah mengetik bisa menghilangkan karakter
+   * terakhir — 'survives an immediate reload' harus jadi janji sungguhan. */
+  const flushPersist = useCallback(() => {
+    if (persistTimer.current) {
+      window.clearTimeout(persistTimer.current)
+      persistTimer.current = null
+      void setBlocksPersist(page.id, blocksRef.current)
+    }
+  }, [page.id, setBlocksPersist])
+
+  useEffect(() => {
+    const onHide = () => flushPersist()
+    window.addEventListener('pagehide', onHide)
+    window.addEventListener('beforeunload', onHide)
+    return () => {
+      window.removeEventListener('pagehide', onHide)
+      window.removeEventListener('beforeunload', onHide)
+      // pindah rute di dalam app = unmount — flush juga, kalau ada yang menggantung
+      flushPersist()
+    }
+  }, [flushPersist])
+
   /** Record a new history entry + persist. No-op when `fn` returns the same
    *  array reference (no change). */
   const commit = useCallback(
