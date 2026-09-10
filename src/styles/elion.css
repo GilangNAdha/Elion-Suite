@@ -3566,3 +3566,274 @@ html[data-transition='lockdown']::view-transition-new(root) {
     stroke-width: 2;
   }
 }
+
+/* ——— Halaman /elion: agent chat + Sentient di UI (Part V spek v4.3) ——— */
+.elion-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+.elion-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 70vh;
+}
+.elion-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.elion-head h1 {
+  font-size: var(--type-body);
+  margin: 0;
+  color: var(--ink);
+}
+.elion-head p {
+  margin: 0;
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.elion-head-actions {
+  margin-left: auto;
+}
+.elion-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-round);
+  background: var(--ink-faint);
+  flex-shrink: 0;
+}
+.elion-dot.is-think {
+  background: var(--tint);
+}
+.elion-dot.is-work {
+  background: var(--tint);
+  animation: agent-pulse var(--duration-slow, 1.2s) var(--ease) infinite alternate;
+}
+.elion-dot.is-attn {
+  background: var(--warn);
+}
+.elion-dot.is-off {
+  background: var(--bad);
+}
+.elion-warn,
+.elion-error,
+.elion-note {
+  margin: 0;
+  font-size: var(--type-body-s);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  border: var(--hairline-width) solid var(--line);
+}
+.elion-warn {
+  color: var(--ink);
+  background: var(--surface);
+}
+.elion-error {
+  color: var(--bad);
+}
+.elion-note {
+  color: var(--ink-muted);
+}
+.elion-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  max-height: 60vh;
+  padding-right: var(--space-1);
+}
+.elion-empty {
+  color: var(--ink-faint);
+  font-size: var(--type-body-s);
+}
+.elion-empty p {
+  margin: 0 0 var(--space-1);
+}
+.elion-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 46rem;
+}
+.elion-msg time {
+  font-size: var(--type-caption);
+  color: var(--ink-faint);
+}
+.elion-msg.is-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.elion-msg.is-user .elion-bubble {
+  background: var(--tint);
+  color: var(--on-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--type-body-s);
+  white-space: pre-wrap;
+}
+.elion-msg.is-assistant .elion-bubble {
+  font-size: var(--type-body-s);
+  color: var(--ink);
+}
+.elion-typing {
+  color: var(--ink-faint);
+}
+.elion-tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.elion-tools li[data-ok='true'] > span {
+  color: var(--ok);
+}
+.elion-tools li[data-ok='false'] > span {
+  color: var(--bad);
+}
+.elion-tools code {
+  font-family: var(--font-mono);
+}
+.elion-live {
+  margin: 0;
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.elion-composer {
+  display: flex;
+  gap: var(--space-2);
+}
+.elion-composer input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-height);
+  border-radius: var(--radius);
+  border: var(--hairline-width) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 var(--space-3);
+  font-size: var(--type-body-s);
+}
+.elion-composer input:focus-visible {
+  outline: var(--focus-width) solid var(--tint);
+  outline-offset: var(--focus-offset);
+}
+.elion-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.elion-mini {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--space-3);
+}
+.elion-mini > h2 {
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-1);
+}
+.elion-mini p {
+  margin: 0;
+  font-size: var(--type-body-s);
+  color: var(--ink-faint);
+}
+.elion-mini ul {
+  list-style: none;
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--type-body-s);
+  color: var(--ink-muted);
+}
+.elion-mini a {
+  font-size: var(--type-body-s);
+  color: var(--tint);
+}
+@media (max-width: 60rem) {
+  .elion-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ——— Panel Sentient kompak (§11) ——— */
+.sentient-panel {
+  border: var(--hairline-width) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sentient-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-s);
+  color: var(--ink);
+}
+.sentient-head button {
+  margin-left: auto;
+}
+.sentient-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-round);
+  background: var(--ink-faint);
+  flex-shrink: 0;
+}
+.sentient-dot.is-on {
+  background: var(--ok);
+}
+.sentient-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sentient-rows > div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2);
+  font-size: var(--type-body-s);
+}
+.sentient-rows dt {
+  color: var(--ink-faint);
+}
+.sentient-rows dd {
+  margin: 0;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sentient-perms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--ink-muted);
+}
+.sentient-perms [data-mode='allow'] {
+  color: var(--ok);
+}
+.sentient-perms [data-mode='deny'] {
+  color: var(--ink-faint);
+}
+.sentient-perms [data-mode='ask'] {
+  color: var(--warn);
+}
+.sentient-more {
+  font-size: var(--type-body-s);
+  color: var(--tint);
+}

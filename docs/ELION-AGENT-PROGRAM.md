@@ -84,9 +84,11 @@ deep-detail tetap otoritatif). Yang dikerjakan turn ini:
 | §12 known fix (string provider) | ✅ sudah | diverifikasi: grep 0 hasil di `src/` |
 | §44/§12 object-switch bug | ✅ sudah | `ItemModal` remount per id + regression test tetap hijau |
 | Part IV tabel → Gateway enforcement | ◐ eksternal | butuh pilihan runtime Gilang (lihat bawah) |
-| Part VI OpenClaw ATAU Hermes | ⏳ keputusan Gilang | install di mesin Gilang, bukan di repo; rekomendasi spek: OpenClaw (`openclaw/openclaw`) |
-| Part VII /evolve + GEPA-PR | ⏳ eksternal | ledger + heatmap siap menerima; mekanisme evolusi jalan di runtime pilihan |
-| Gmail milik Elion + channels | ⏳ Gilang | butuh akun + OAuth; tool `email.*` tetap `unconfigured` jujur sampai ada |
+| Part VI OpenClaw ATAU Hermes | ✅ Hermes dipilih | `docs/HERMES-SETUP.md` — install + peta Suite→Hermes; perintah final cek `--help` |
+| Part VII /evolve + GEPA-PR | ⏳ eksternal | ledger + heatmap siap menerima; mekanisme evolusi jalan di Hermes |
+| Gmail milik Elion | ✅ | login di UI (Settings › Elion's email) + vault token main process + `docs/GMAIL-SETUP.md`; tool `email.*` nyata kalau connected |
+| Electron system adapter | ✅ | `electron/sys.cjs`: files.read + allow-list perintah; UI di runtime section; desktop-only jujur |
+| /elion agent chat + Sentient di UI | ✅ | `src/pages/ElionPage.tsx`: chat tool-capable (function calling OpenAI/Anthropic, fallback jujur buat MiniCPM), panel Sentient §11, While-you-were-away dari event |
 | /elion page + dock side/below | ◐ menyusul | monitor tinggal pindah ke tab Monitoring saat halaman /elion dibangun |
 | Cost/token di dashboard | ◐ jujur-kosong | runtime belum expose → "Not enough data yet" + catatan |
 

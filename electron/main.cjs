@@ -6,6 +6,8 @@ const path = require('node:path')
 const fs = require('node:fs')
 require('./minicpm.cjs').installMiniCpmIpc(ipcMain)
 require('./ai.cjs').installAiIpc(ipcMain)
+require('./email.cjs').installMailIpc(ipcMain)
+require('./sys.cjs').installSysIpc(ipcMain)
 
 let win = null
 let nudgeThresholdMs = 8000

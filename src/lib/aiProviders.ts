@@ -153,7 +153,7 @@ export interface AiChatConfig {
 export const joinUrl = (baseUrl: string, path: string) =>
   `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 
-function assertHttpUrl(raw: string): string {
+export function assertHttpUrl(raw: string): string {
   let url: URL
   try {
     url = new URL(raw)
@@ -296,7 +296,7 @@ const bridge = (): AiBridge | undefined => (window as unknown as { elion?: { ai?
 
 export const isDesktopBridge = () => bridge() !== undefined
 
-async function readThroughBridge(
+export async function readThroughBridge(
   url: string,
   method: 'GET' | 'POST',
   headers: Record<string, string>,

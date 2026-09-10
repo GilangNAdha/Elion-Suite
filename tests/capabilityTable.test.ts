@@ -43,7 +43,9 @@ describe('capability boundaries (Part IV)', () => {
         'browser.read [browser.read]',
         'docs.create [workspace.write]',
         'email.read [email.read]',
-        'email.send [email.send]',
+        // email.send fondasinya notifications.send (surat ke user sendiri);
+        // ke orang lain dijaga guard email.send di DALAM run() (Part IV 🔒).
+        'email.send [notifications.send]',
         'files.read [files.read]',
         'memory.recall [workspace.read]',
         'memory.remember [memory.write]',

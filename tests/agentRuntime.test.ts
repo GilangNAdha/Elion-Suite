@@ -104,13 +104,12 @@ describe('tool router (§10/§11/§67/§68)', () => {
   })
 
   it('unconfigured capabilities report the gap, never fake results', async () => {
-    // buka policy dulu — dengan default 'deny' router menolak SEBELUM tool
-    // jalan (itu perilaku benar), jadi 'unconfigured' tak pernah muncul.
+    // Tanpa bridge desktop (worker test = web), email jujur unconfigured.
     await usePermissionStore.getState().setMode('email.send', 'allow')
-    const r = await runTool('email.send', { to: 'x', body: 'y' })
+    const r = await runTool('email.send', { to: 'x@y.zz', subject: 's', body: 'y' })
     expect(r.ok).toBe(false)
     expect(r.unconfigured).toBe(true)
-    expect(r.error).toContain('Electron')
+    expect(r.error).toContain('desktop app')
     expect(getTool('browser.interact')).toBeTruthy()
   })
 
